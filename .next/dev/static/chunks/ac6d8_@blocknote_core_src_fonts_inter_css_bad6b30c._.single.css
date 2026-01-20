@@ -1,0 +1,65 @@
+/* [project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@blocknote/core/src/fonts/inter.css [app-client] (css) */
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 100;
+  src: local(""), url("../media/inter-v12-latin-100.afac082e.woff2") format("woff2"), url("../media/inter-v12-latin-100.2dc7a877.woff") format("woff");
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 200;
+  src: local(""), url("../media/inter-v12-latin-200.be636d4e.woff2") format("woff2"), url("../media/inter-v12-latin-200.7d451503.woff") format("woff");
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 300;
+  src: local(""), url("../media/inter-v12-latin-300.99c18108.woff2") format("woff2"), url("../media/inter-v12-latin-300.e63a55b7.woff") format("woff");
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 400;
+  src: local(""), url("../media/inter-v12-latin-regular.79eb233d.woff2") format("woff2"), url("../media/inter-v12-latin-regular.a567008f.woff") format("woff");
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 500;
+  src: local(""), url("../media/inter-v12-latin-500.cbdf7c09.woff2") format("woff2"), url("../media/inter-v12-latin-500.03c7c07f.woff") format("woff");
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 600;
+  src: local(""), url("../media/inter-v12-latin-600.00bbb924.woff2") format("woff2"), url("../media/inter-v12-latin-600.16f2d3ae.woff") format("woff");
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 700;
+  src: local(""), url("../media/inter-v12-latin-700.26e8c912.woff2") format("woff2"), url("../media/inter-v12-latin-700.9a68835d.woff") format("woff");
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 800;
+  src: local(""), url("../media/inter-v12-latin-800.74a075f6.woff2") format("woff2"), url("../media/inter-v12-latin-800.ce06e202.woff") format("woff");
+}
+
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 900;
+  src: local(""), url("../media/inter-v12-latin-900.b33b74a5.woff2") format("woff2"), url("../media/inter-v12-latin-900.9222088e.woff") format("woff");
+}
+
+/*# sourceMappingURL=ac6d8_%40blocknote_core_src_fonts_inter_css_bad6b30c._.single.css.map*/

@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/Group.css"],"sourcesContent":[".m_4081bf90 {\n  display: flex;\n  flex-direction: row;\n  flex-wrap: var(--group-wrap, wrap);\n  justify-content: var(--group-justify, flex-start);\n  align-items: var(--group-align, center);\n  gap: var(--group-gap, var(--mantine-spacing-md));\n}\n\n  .m_4081bf90:where([data-grow]) > * {\n      flex-grow: 1;\n      max-width: var(--group-child-width);\n    }\n"],"names":[],"mappings":"AAAA;;;;;;;;;AASE","ignoreList":[0]}}]
+}

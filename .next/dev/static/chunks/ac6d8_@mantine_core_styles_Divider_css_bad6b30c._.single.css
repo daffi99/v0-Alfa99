@@ -1,0 +1,61 @@
+/* [project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/Divider.css [app-client] (css) */
+.m_3eebeb36 {
+  --divider-size-xs: 1px;
+  --divider-size-sm: 2px;
+  --divider-size-md: 3px;
+  --divider-size-lg: 4px;
+  --divider-size-xl: 5px;
+  --divider-size: var(--divider-size-xs);
+}
+
+:where([data-mantine-color-scheme="light"]) .m_3eebeb36 {
+  --divider-color: var(--mantine-color-gray-3);
+}
+
+:where([data-mantine-color-scheme="dark"]) .m_3eebeb36 {
+  --divider-color: var(--mantine-color-dark-4);
+}
+
+.m_3eebeb36:where([data-orientation="horizontal"]) {
+  border-top: var(--divider-size) var(--divider-border-style, solid) var(--divider-color);
+}
+
+.m_3eebeb36:where([data-orientation="vertical"]) {
+  border-inline-start: var(--divider-size) var(--divider-border-style, solid) var(--divider-color);
+  align-self: stretch;
+  height: auto;
+}
+
+.m_3eebeb36:where([data-with-label]) {
+  border: 0;
+}
+
+.m_9e365f20 {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+  white-space: nowrap;
+  align-items: center;
+  display: flex;
+}
+
+.m_9e365f20:where([data-position="left"]):before, .m_9e365f20:where([data-position="right"]):after {
+  display: none;
+}
+
+.m_9e365f20:before {
+  content: "";
+  border-top: var(--divider-size) var(--divider-border-style, solid) var(--divider-color);
+  height: 1px;
+  flex: 1;
+  margin-inline-end: var(--mantine-spacing-xs);
+}
+
+.m_9e365f20:after {
+  content: "";
+  border-top: var(--divider-size) var(--divider-border-style, solid) var(--divider-color);
+  height: 1px;
+  flex: 1;
+  margin-inline-start: var(--mantine-spacing-xs);
+}
+
+/*# sourceMappingURL=ac6d8_%40mantine_core_styles_Divider_css_bad6b30c._.single.css.map*/

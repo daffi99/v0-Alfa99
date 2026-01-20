@@ -1,0 +1,36 @@
+/* [project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/Drawer.css [app-client] (css) */
+.m_f11b401e {
+  --drawer-size-xs: 320px;
+  --drawer-size-sm: 380px;
+  --drawer-size-md: 440px;
+  --drawer-size-lg: 620px;
+  --drawer-size-xl: 780px;
+  --drawer-size: var(--drawer-size-md);
+  --drawer-offset: 0rem;
+}
+
+.m_5a7c2c9 {
+  z-index: 1000;
+}
+
+.m_b8a05bbd {
+  flex: var(--drawer-flex, 0 0 var(--drawer-size));
+  height: var(--drawer-height, calc(100% - var(--drawer-offset) * 2));
+  margin: var(--drawer-offset);
+  max-width: calc(100% - var(--drawer-offset) * 2);
+  max-height: calc(100% - var(--drawer-offset) * 2);
+  overflow-y: auto;
+}
+
+.m_b8a05bbd[data-hidden] {
+  pointer-events: none;
+  opacity: 0 !important;
+}
+
+.m_31cd769a {
+  justify-content: var(--drawer-justify, flex-start);
+  align-items: var(--drawer-align, flex-start);
+  display: flex;
+}
+
+/*# sourceMappingURL=ac6d8_%40mantine_core_styles_Drawer_css_bad6b30c._.single.css.map*/

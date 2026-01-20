@@ -1,0 +1,69 @@
+/* [project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/Avatar.css [app-client] (css) */
+.m_11def92b {
+  --ag-spacing: var(--mantine-spacing-sm);
+  --ag-offset: calc(var(--ag-spacing) * -1);
+  padding-inline-start: var(--ag-spacing);
+  display: flex;
+}
+
+.m_f85678b6 {
+  --avatar-size-xs: 16px;
+  --avatar-size-sm: 26px;
+  --avatar-size-md: 38px;
+  --avatar-size-lg: 56px;
+  --avatar-size-xl: 84px;
+  --avatar-size: var(--avatar-size-md);
+  --avatar-radius: 1000px;
+  --avatar-bg: var(--mantine-color-gray-light);
+  --avatar-bd: 1px solid transparent;
+  --avatar-color: var(--mantine-color-gray-light-color);
+  --avatar-placeholder-fz: calc(var(--avatar-size) / 2.5);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  border-radius: var(--avatar-radius);
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  min-width: var(--avatar-size);
+  padding: 0;
+  text-decoration: none;
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+
+.m_f85678b6:where([data-within-group]) {
+  border: 2px solid var(--mantine-color-body);
+  background: var(--mantine-color-body);
+  margin-inline-start: var(--ag-offset);
+}
+
+.m_11f8ac07 {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.m_104cd71f {
+  -webkit-user-select: none;
+  user-select: none;
+  border-radius: var(--avatar-radius);
+  width: 100%;
+  height: 100%;
+  font-weight: 700;
+  font-size: var(--avatar-placeholder-fz);
+  background: var(--avatar-bg);
+  border: var(--avatar-bd);
+  color: var(--avatar-color);
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+.m_104cd71f > [data-avatar-placeholder-icon] {
+  width: 70%;
+  height: 70%;
+}
+
+/*# sourceMappingURL=ac6d8_%40mantine_core_styles_Avatar_css_bad6b30c._.single.css.map*/

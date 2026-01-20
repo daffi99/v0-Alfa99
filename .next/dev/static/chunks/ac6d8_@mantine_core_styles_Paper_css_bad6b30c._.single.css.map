@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/Paper.css"],"sourcesContent":[".m_1b7284a3 {\n  --paper-radius: var(--mantine-radius-default);\n\n  outline: 0;\n  -webkit-tap-highlight-color: transparent;\n  display: block;\n  touch-action: manipulation;\n  text-decoration: none;\n  border-radius: var(--paper-radius);\n  box-shadow: var(--paper-shadow);\n  background-color: var(--mantine-color-body);\n}\n\n  [data-mantine-color-scheme='light'] .m_1b7284a3 {\n    --paper-border-color: var(--mantine-color-gray-3);\n}\n\n  [data-mantine-color-scheme='dark'] .m_1b7284a3 {\n    --paper-border-color: var(--mantine-color-dark-4);\n}\n\n  .m_1b7284a3:where([data-with-border]) {\n    border: calc(0.0625rem * var(--mantine-scale)) solid var(--paper-border-color);\n  }\n"],"names":[],"mappings":"AAAA;;;;;;;;;;;;AAaE;;;;AAIA;;;;AAIA","ignoreList":[0]}}]
+}

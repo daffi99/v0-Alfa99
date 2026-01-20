@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/Stack.css"],"sourcesContent":[".m_6d731127 {\n  display: flex;\n  flex-direction: column;\n  align-items: var(--stack-align, stretch);\n  justify-content: var(--stack-justify, flex-start);\n  gap: var(--stack-gap, var(--mantine-spacing-md));\n}\n"],"names":[],"mappings":"AAAA","ignoreList":[0]}}]
+}

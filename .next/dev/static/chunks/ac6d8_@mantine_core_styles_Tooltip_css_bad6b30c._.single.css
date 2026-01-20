@@ -1,0 +1,36 @@
+/* [project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/Tooltip.css [app-client] (css) */
+.m_1b3c8819 {
+  --tooltip-radius: var(--mantine-radius-default);
+  padding: calc(var(--mantine-spacing-xs) / 2) var(--mantine-spacing-xs);
+  pointer-events: none;
+  font-size: var(--mantine-font-size-sm);
+  white-space: nowrap;
+  border-radius: var(--tooltip-radius);
+  position: absolute;
+}
+
+:where([data-mantine-color-scheme="light"]) .m_1b3c8819 {
+  background-color: var(--tooltip-bg, var(--mantine-color-gray-9));
+  color: var(--tooltip-color, var(--mantine-color-white));
+}
+
+:where([data-mantine-color-scheme="dark"]) .m_1b3c8819 {
+  background-color: var(--tooltip-bg, var(--mantine-color-gray-2));
+  color: var(--tooltip-color, var(--mantine-color-black));
+}
+
+.m_1b3c8819:where([data-multiline]) {
+  white-space: normal;
+}
+
+.m_1b3c8819:where([data-fixed]) {
+  position: fixed;
+}
+
+.m_f898399f {
+  background-color: inherit;
+  z-index: 1;
+  border: 0;
+}
+
+/*# sourceMappingURL=ac6d8_%40mantine_core_styles_Tooltip_css_bad6b30c._.single.css.map*/

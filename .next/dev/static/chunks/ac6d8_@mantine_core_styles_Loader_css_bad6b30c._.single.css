@@ -1,0 +1,112 @@
+/* [project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/Loader.css [app-client] (css) */
+.m_5ae2e3c {
+  --loader-size-xs: 18px;
+  --loader-size-sm: 22px;
+  --loader-size-md: 36px;
+  --loader-size-lg: 44px;
+  --loader-size-xl: 58px;
+  --loader-size: var(--loader-size-md);
+  --loader-color: var(--mantine-primary-color-filled);
+}
+
+@keyframes m_5d2b3b9d {
+  0% {
+    opacity: 0;
+    transform: scale(.6);
+  }
+
+  50%, 100% {
+    transform: scale(1);
+  }
+}
+
+.m_7a2bd4cd {
+  width: var(--loader-size);
+  height: var(--loader-size);
+  gap: calc(var(--loader-size) / 5);
+  display: flex;
+  position: relative;
+}
+
+.m_870bb79 {
+  background: var(--loader-color);
+  border-radius: 2px;
+  flex: 1;
+  animation: 1.2s cubic-bezier(0, .5, .5, 1) infinite m_5d2b3b9d;
+}
+
+.m_870bb79:first-of-type {
+  animation-delay: -240ms;
+}
+
+.m_870bb79:nth-of-type(2) {
+  animation-delay: -120ms;
+}
+
+.m_870bb79:nth-of-type(3) {
+  animation-delay: 0;
+}
+
+@keyframes m_aac34a1 {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: .5;
+    transform: scale(.6);
+  }
+}
+
+.m_4e3f22d7 {
+  justify-content: center;
+  align-items: center;
+  gap: calc(var(--loader-size) / 10);
+  width: var(--loader-size);
+  height: var(--loader-size);
+  display: flex;
+  position: relative;
+}
+
+.m_870c4af {
+  width: calc(var(--loader-size) / 3 - var(--loader-size) / 15);
+  height: calc(var(--loader-size) / 3 - var(--loader-size) / 15);
+  background: var(--loader-color);
+  border-radius: 50%;
+  animation: .8s linear infinite m_aac34a1;
+}
+
+.m_870c4af:nth-child(2) {
+  animation-delay: .4s;
+}
+
+@keyframes m_f8e89c4b {
+  0% {
+    transform: rotate(0);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.m_b34414df {
+  width: var(--loader-size);
+  height: var(--loader-size);
+  display: inline-block;
+}
+
+.m_b34414df:after {
+  content: "";
+  width: var(--loader-size);
+  height: var(--loader-size);
+  border-width: calc(var(--loader-size) / 8);
+  border-style: solid;
+  border-color: var(--loader-color) var(--loader-color) var(--loader-color) transparent;
+  border-radius: 10000px;
+  animation: 1.2s linear infinite m_f8e89c4b;
+  display: block;
+}
+
+/*# sourceMappingURL=ac6d8_%40mantine_core_styles_Loader_css_bad6b30c._.single.css.map*/
