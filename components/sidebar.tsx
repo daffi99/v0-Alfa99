@@ -23,8 +23,8 @@ export function Sidebar() {
   return (
     <>
       <aside className="w-20 bg-white border-r border-border flex flex-col items-center py-6 space-y-4">
-        <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-          S
+        <div className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden">
+          <img src="/logo_kanban.png" alt="Logo" className="w-full h-full object-contain" />
         </div>
 
         <button
