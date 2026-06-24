@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/BackgroundImage.css"],"sourcesContent":[".m_2ce0de02 {\n  background-size: cover;\n  background-position: center;\n  display: block;\n  width: 100%;\n  border: 0;\n  text-decoration: none;\n  border-radius: var(--bi-radius, 0);\n}\n"],"names":[],"mappings":"AAAA","ignoreList":[0]}}]
-}

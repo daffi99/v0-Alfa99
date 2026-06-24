@@ -2169,7 +2169,11 @@
 
 /* Force BlockNote/Mantine popups to escape overflow containers */
 [data-radix-popper-content-wrapper],
-[data-floating-ui-portal] {
+[data-floating-ui-portal],
+[data-floating-ui-portal] > div,
+.mantine-Portal-root > div,
+[class*="portal"] > div,
+[class*="Portal"] > div {
   /* Use fixed position so they escape any parent overflow container constraints */
   position: fixed !important;
   z-index: 2147483647 !important;

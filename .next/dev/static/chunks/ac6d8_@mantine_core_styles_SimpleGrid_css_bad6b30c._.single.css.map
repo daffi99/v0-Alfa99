@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/SimpleGrid.css"],"sourcesContent":[".m_925c2d2c {\n  container: simple-grid / inline-size;\n}\n\n.m_2415a157 {\n  display: grid;\n  grid-template-columns: repeat(var(--sg-cols), minmax(0, 1fr));\n  gap: var(--sg-spacing-y) var(--sg-spacing-x);\n}\n"],"names":[],"mappings":"AAAA;;;;AAIA","ignoreList":[0]}}]
-}

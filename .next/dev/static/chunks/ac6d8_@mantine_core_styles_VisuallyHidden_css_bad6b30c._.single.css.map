@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/VisuallyHidden.css"],"sourcesContent":[".m_515a97f8 {\n  border: 0;\n  clip: rect(0 0 0 0);\n  height: 1px;\n  width: 1px;\n  margin: -1px;\n  overflow: hidden;\n  padding: 0;\n  position: absolute;\n  white-space: nowrap;\n}\n"],"names":[],"mappings":"AAAA","ignoreList":[0]}}]
-}

@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/OneDrive/Desktop/v0-Alfa99-master/node_modules/@mantine/core/styles/RingProgress.css"],"sourcesContent":[".m_b32e4812 {\n  position: relative;\n  width: var(--rp-size);\n  height: var(--rp-size);\n  min-width: var(--rp-size);\n  min-height: var(--rp-size);\n  --rp-transition-duration: 0ms;\n}\n\n.m_d43b5134 {\n  width: var(--rp-size);\n  height: var(--rp-size);\n  min-width: var(--rp-size);\n  min-height: var(--rp-size);\n  transform: rotate(-90deg);\n}\n\n.m_b1ca1fbf {\n  stroke: var(--curve-color, var(--rp-curve-root-color));\n  transition:\n    stroke-dashoffset var(--rp-transition-duration) ease,\n    stroke-dasharray var(--rp-transition-duration) ease,\n    stroke var(--rp-transition-duration);\n}\n\n[data-mantine-color-scheme='light'] .m_b1ca1fbf {\n    --rp-curve-root-color: var(--mantine-color-gray-2);\n}\n\n[data-mantine-color-scheme='dark'] .m_b1ca1fbf {\n    --rp-curve-root-color: var(--mantine-color-dark-4);\n}\n\n.m_b23f9dc4 {\n  position: absolute;\n  top: 50%;\n  transform: translateY(-50%);\n  inset-inline: var(--rp-label-offset);\n}\n"],"names":[],"mappings":"AAAA;;;;;;;;;AASA;;;;;;;;AAQA;;;;;AAQA;;;;AAIA;;;;AAIA","ignoreList":[0]}}]
-}

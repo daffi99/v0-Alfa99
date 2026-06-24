@@ -336,6 +336,9 @@ export function BlockNoteNote({
                 <BlockNoteView
                     editor={editor}
                     theme="light"
+                    portalElements={{
+                        default: typeof document !== "undefined" ? document.body : undefined,
+                    }}
                 />
             </div>
 

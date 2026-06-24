@@ -156,6 +156,9 @@ export function BlockNotePopup({
               editor={editor}
               theme="light"
               data-theming-css-variables-demo
+              portalElements={{
+                default: typeof document !== "undefined" ? document.body : undefined,
+              }}
             />
           </div>
         </div>
