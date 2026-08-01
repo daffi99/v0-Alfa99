@@ -7,6 +7,15 @@ import "@blocknote/core/fonts/inter.css"
 import { Save, X } from "lucide-react"
 import { useEffect, useState, useCallback, useRef } from "react"
 import { Block, BlockNoteEditor } from "@blocknote/core"
+import tippy from "tippy.js"
+
+// Configure global Tippy.js default properties to force all tooltips, slash menus,
+// and floating panels to mount on document.body, escaping overflow constraints.
+if (typeof window !== "undefined") {
+    tippy.setDefaultProps({
+        appendTo: () => document.body,
+    })
+}
 
 interface BlockNoteNoteProps {
     initialData?: string | null
@@ -336,17 +345,6 @@ export function BlockNoteNote({
                 <BlockNoteView
                     editor={editor}
                     theme="light"
-                    portalElements={{
-                        default: typeof document !== "undefined" ? document.body : null,
-                        slashMenu: typeof document !== "undefined" ? document.body : null,
-                        formattingToolbar: typeof document !== "undefined" ? document.body : null,
-                        linkToolbar: typeof document !== "undefined" ? document.body : null,
-                        emojiPicker: typeof document !== "undefined" ? document.body : null,
-                        sideMenu: typeof document !== "undefined" ? document.body : null,
-                        filePanel: typeof document !== "undefined" ? document.body : null,
-                        tableHandles: typeof document !== "undefined" ? document.body : null,
-                        comments: typeof document !== "undefined" ? document.body : null,
-                    }}
                 />
             </div>
 
