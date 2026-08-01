@@ -221,11 +221,28 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
 
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false)
   const statusDropdownRef = useRef<HTMLDivElement>(null)
+  const statusButtonRef = useRef<HTMLButtonElement>(null)
+  const [statusDropdownPosition, setStatusDropdownPosition] = useState({ top: 0, left: 0 })
+
+  const updateStatusDropdownPosition = () => {
+    if (statusButtonRef.current) {
+      const rect = statusButtonRef.current.getBoundingClientRect()
+      setStatusDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+      })
+    }
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(event.target as Node) &&
+        statusButtonRef.current &&
+        !statusButtonRef.current.contains(event.target as Node)
+      ) {
         setIsStatusDropdownOpen(false)
       }
     }
@@ -236,6 +253,18 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isStatusDropdownOpen])
+
+  // Update status dropdown position on scroll/resize when open
+  useEffect(() => {
+    if (!isStatusDropdownOpen) return
+    const updatePosition = () => updateStatusDropdownPosition()
+    window.addEventListener("scroll", updatePosition, true)
+    window.addEventListener("resize", updatePosition)
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true)
+      window.removeEventListener("resize", updatePosition)
     }
   }, [isStatusDropdownOpen])
 
@@ -337,10 +366,14 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                 {task.category}
               </span>
             )}
-            <div className="relative" ref={statusDropdownRef}>
+            <div>
               <button
+                ref={statusButtonRef}
                 onClick={(e) => {
                   e.stopPropagation()
+                  if (!isStatusDropdownOpen) {
+                    updateStatusDropdownPosition()
+                  }
                   setIsStatusDropdownOpen(!isStatusDropdownOpen)
                 }}
                 onMouseDown={(e) => {
@@ -357,7 +390,13 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
               </button>
               {isStatusDropdownOpen && (
                 <div
-                  className="absolute top-full left-0 mt-1 bg-white border border-border rounded-md shadow-lg z-50 min-w-[120px]"
+                  ref={statusDropdownRef}
+                  className="fixed bg-white border border-border rounded-md shadow-lg z-[9999] min-w-[120px]"
+                  style={{
+                    top: `${statusDropdownPosition.top}px`,
+                    left: `${statusDropdownPosition.left}px`,
+                    animation: "fadeInScale 0.15s ease-out",
+                  }}
                   onMouseDown={(e) => {
                     e.stopPropagation()
                   }}
