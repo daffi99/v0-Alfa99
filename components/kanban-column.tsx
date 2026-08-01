@@ -21,6 +21,7 @@ interface KanbanColumnProps {
   onEditTask: (task: Task, columnId: string) => void
   onUpdateNote: (columnId: string, taskId: string, notes: string) => void
   onUpdateStatus: (columnId: string, taskId: string, status: "Not started" | "In progress" | "Wait VO" | "Finished" | null) => void
+  onMoveTask?: (task: Task, fromColumnId: string, toColumnId: string) => void
   searchQuery?: string
 }
 
@@ -35,6 +36,7 @@ export function KanbanColumn({
   onEditTask,
   onUpdateNote,
   onUpdateStatus,
+  onMoveTask,
   searchQuery = "",
 }: KanbanColumnProps) {
   const [hasEditingCard, setHasEditingCard] = useState(false)
@@ -137,6 +139,7 @@ export function KanbanColumn({
                 onEditTask={onEditTask}
                 onUpdateNote={onUpdateNote}
                 onUpdateStatus={onUpdateStatus}
+                onMoveTask={onMoveTask}
               />
             </div>
           )

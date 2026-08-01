@@ -423,6 +423,86 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
       })
   }
 
+  const moveTaskDirectly = async (task: Task, fromColumnId: string, toColumnId: string) => {
+    const stageMap: { [key: string]: string } = {
+      backlog: "Backlog",
+      "in-progress": "In Progress",
+      finished: "Finished",
+      revision: "Revision",
+      "customer-revision": "Customer Revision",
+      done: "Done",
+    }
+
+    const newStage = stageMap[toColumnId]
+    if (!newStage) return
+
+    const actualFromColumnId = mapColumnId(fromColumnId)
+    const actualToColumnId = mapColumnId(toColumnId)
+
+    // Save current state for potential revert
+    const previousBoard = board
+
+    // Optimistically update UI
+    const newBoard = board.map((col) => {
+      // Same column - just update stage
+      if (col.id === actualFromColumnId && col.id === actualToColumnId) {
+        return {
+          ...col,
+          tasks: col.tasks.map((t) =>
+            t.id === task.id ? { ...t, stage: newStage } : t
+          ),
+        }
+      }
+
+      // Remove from source column
+      if (col.id === actualFromColumnId) {
+        return {
+          ...col,
+          tasks: col.tasks.filter((t) => t.id !== task.id),
+        }
+      }
+
+      // Add to target column
+      if (col.id === actualToColumnId) {
+        return {
+          ...col,
+          tasks: [...col.tasks, { ...task, stage: newStage }],
+        }
+      }
+      return col
+    })
+
+    setBoard(sortFinishedColumn(newBoard))
+
+    try {
+      const dbTaskId = await ensureTaskExists(task, newStage)
+      const response = await fetch(`/api/tasks/${dbTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage: newStage }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to update task: ${response.statusText}`)
+      }
+      const updatedTask = await response.json()
+
+      // Update task ID in board if it was created
+      if (!isValidUUID(task.id)) {
+        setBoard((prevBoard) =>
+          prevBoard.map((col) => ({
+            ...col,
+            tasks: col.tasks.map((t) => (t.id === task.id ? { ...t, id: updatedTask.id } : t)),
+          })),
+        )
+      }
+    } catch (error) {
+      console.error("[v0] Failed to update task stage:", error)
+      setBoard(previousBoard)
+      alert("Failed to save changes. Please try again.")
+    }
+  }
+
   const handleToggleEpisode = async (columnId: string, taskId: string, episodeId: string) => {
     const actualColumnId = mapColumnId(columnId)
     // Set loading state immediately for UI feedback
@@ -880,6 +960,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                 onEditTask={handleEditTask}
                 onUpdateNote={handleUpdateNote}
                 onUpdateStatus={handleUpdateStatus}
+                onMoveTask={moveTaskDirectly}
                 searchQuery={searchQuery}
               />
             )}
@@ -963,6 +1044,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                           onEditTask={handleEditTask}
                           onUpdateNote={handleUpdateNote}
                           onUpdateStatus={handleUpdateStatus}
+                          onMoveTask={moveTaskDirectly}
                         />
                       </div>
                     ))}
@@ -1041,6 +1123,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                           onEditTask={handleEditTask}
                           onUpdateNote={handleUpdateNote}
                           onUpdateStatus={handleUpdateStatus}
+                          onMoveTask={moveTaskDirectly}
                         />
                       </div>
                     ))}
@@ -1068,6 +1151,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                 onEditTask={handleEditTask}
                 onUpdateNote={handleUpdateNote}
                 onUpdateStatus={handleUpdateStatus}
+                onMoveTask={moveTaskDirectly}
                 searchQuery={searchQuery}
               />
             ))}
@@ -1173,6 +1257,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                               onEditTask={handleEditTask}
                               onUpdateNote={handleUpdateNote}
                               onUpdateStatus={handleUpdateStatus}
+                              onMoveTask={moveTaskDirectly}
                             />
                           </div>
                         ))}
@@ -1242,6 +1327,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                               onEditTask={handleEditTask}
                               onUpdateNote={handleUpdateNote}
                               onUpdateStatus={handleUpdateStatus}
+                              onMoveTask={moveTaskDirectly}
                             />
                           </div>
                         ))}
@@ -1311,6 +1397,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                               onEditTask={handleEditTask}
                               onUpdateNote={handleUpdateNote}
                               onUpdateStatus={handleUpdateStatus}
+                              onMoveTask={moveTaskDirectly}
                             />
                           </div>
                         ))}

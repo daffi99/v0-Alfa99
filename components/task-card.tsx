@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import type { Task } from "./kanban-board"
-import { CheckCircle2, Circle, Pencil, Loader2, ChevronDown, ChevronUp, ChevronRight, Trash2 } from "lucide-react"
+import { CheckCircle2, Circle, Pencil, Loader2, ChevronDown, ChevronUp, ChevronRight, Trash2, ArrowRightLeft } from "lucide-react"
 import { renderBlockNoteContent } from "./blocknote-note"
 
 // Dynamic imports with SSR disabled to avoid "window is not defined" error
@@ -24,9 +24,10 @@ interface TaskCardProps {
   onEditTask: (task: Task, columnId: string) => void
   onUpdateNote: (columnId: string, taskId: string, notes: string) => void
   onUpdateStatus: (columnId: string, taskId: string, status: "Not started" | "In progress" | "Wait VO" | "Finished" | null) => void
+  onMoveTask?: (task: Task, fromColumnId: string, toColumnId: string) => void
 }
 
-export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onEditTask, onUpdateNote, onUpdateStatus }: TaskCardProps) {
+export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onEditTask, onUpdateNote, onUpdateStatus, onMoveTask }: TaskCardProps) {
   const completedEpisodes = task.episodes.filter((ep) => ep.completed).length
   const percentComplete = Math.round((completedEpisodes / task.episodes.length) * 100) || 0
   const [localNotes, setLocalNotes] = useState(task.notes || "")
@@ -238,6 +239,26 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
     }
   }, [isStatusDropdownOpen])
 
+  const [isMoveDropdownOpen, setIsMoveDropdownOpen] = useState(false)
+  const moveDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close move dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moveDropdownRef.current && !moveDropdownRef.current.contains(event.target as Node)) {
+        setIsMoveDropdownOpen(false)
+      }
+    }
+
+    if (isMoveDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isMoveDropdownOpen])
+
   return (
     <div
       className={`bg-white rounded-lg p-4 shadow-sm border border-border hover:shadow-md transition-shadow group relative ${task.loading ? "opacity-60" : ""} ${isEditingNote ? "overflow-visible z-[100]" : ""}`}
@@ -342,6 +363,65 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {onMoveTask && (
+              <div className="relative" ref={moveDropdownRef}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsMoveDropdownOpen(!isMoveDropdownOpen)
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation()
+                  }}
+                  onDragStart={(e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded flex-shrink-0 cursor-pointer"
+                  title="Move to stage"
+                >
+                  <ArrowRightLeft className="w-4 h-4 text-muted-foreground" />
+                </button>
+                {isMoveDropdownOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-1 bg-white border border-border rounded-md shadow-lg z-50 min-w-[150px]"
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                    }}
+                    onDragStart={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                    }}
+                  >
+                    {[
+                      { id: "backlog", title: "Backlog" },
+                      { id: "in-progress", title: "In Progress" },
+                      { id: "finished", title: "Finished" },
+                      { id: "revision", title: "Revision" },
+                      { id: "customer-revision", title: "Customer Revision" },
+                      { id: "done", title: "Done" },
+                    ]
+                      .filter((col) => col.id !== columnId)
+                      .map((col) => (
+                        <button
+                          key={col.id}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onMoveTask(task, columnId, col.id)
+                            setIsMoveDropdownOpen(false)
+                          }}
+                          onMouseDown={(e) => {
+                            e.stopPropagation()
+                          }}
+                          className="w-full text-left text-[11px] px-3 py-2 hover:bg-muted text-gray-700 transition-colors first:rounded-t-md last:rounded-b-md cursor-pointer"
+                        >
+                          {col.title}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
             {isFinished && (
               <button
                 onClick={(e) => {
@@ -376,7 +456,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
         </div>
       )}
 
-      <div className="mb-2">
+      <div className={isFinished ? "mb-0" : "mb-2"}>
         <h3 className="font-bold text-black text-lg ">{task.title}</h3>
         {!isTodayTask && (
           <div className="flex items-center gap-1">
@@ -548,25 +628,6 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       )}
 
 
-      {/* Progress indicator - at bottom for finished tasks, above notes */}
-      {isFinished && !isTodayTask && task.episodes.length > 0 && (
-        <div className={`${shouldCollapse ? "mt-2" : "mt-3 pt-3 border-t border-border"}`}>
-          {!shouldCollapse && (
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-medium text-muted-foreground">
-                {completedEpisodes} of {task.episodes.length} episodes completed
-              </span>
-              <span className="text-[10px] font-semibold text-emerald-600">{percentComplete}%</span>
-            </div>
-          )}
-          <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="bg-emerald-500 h-full rounded-full transition-all duration-300"
-              style={{ width: `${percentComplete}%` }}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Notes field at very bottom - hidden when collapsed */}
       {!shouldCollapse && (
