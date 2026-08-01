@@ -157,7 +157,15 @@ export function BlockNotePopup({
               theme="light"
               data-theming-css-variables-demo
               portalElements={{
-                default: typeof document !== "undefined" ? document.body : undefined,
+                default: typeof document !== "undefined" ? document.body : null,
+                slashMenu: typeof document !== "undefined" ? document.body : null,
+                formattingToolbar: typeof document !== "undefined" ? document.body : null,
+                linkToolbar: typeof document !== "undefined" ? document.body : null,
+                emojiPicker: typeof document !== "undefined" ? document.body : null,
+                sideMenu: typeof document !== "undefined" ? document.body : null,
+                filePanel: typeof document !== "undefined" ? document.body : null,
+                tableHandles: typeof document !== "undefined" ? document.body : null,
+                comments: typeof document !== "undefined" ? document.body : null,
               }}
             />
           </div>
