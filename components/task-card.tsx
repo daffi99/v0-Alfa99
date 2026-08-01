@@ -418,7 +418,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                 {isMoveDropdownOpen && (
                   <div
                     ref={moveDropdownRef}
-                    className="fixed bg-white border border-border rounded-md shadow-lg z-[9999] min-w-[150px]"
+                    className="fixed bg-white border border-border rounded-md shadow-lg z-[9999] w-[130px]"
                     style={{
                       top: `${moveDropdownPosition.top}px`,
                       right: `${moveDropdownPosition.right}px`,
