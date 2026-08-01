@@ -241,11 +241,28 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
 
   const [isMoveDropdownOpen, setIsMoveDropdownOpen] = useState(false)
   const moveDropdownRef = useRef<HTMLDivElement>(null)
+  const moveButtonRef = useRef<HTMLButtonElement>(null)
+  const [moveDropdownPosition, setMoveDropdownPosition] = useState({ top: 0, right: 0 })
+
+  const updateMoveDropdownPosition = () => {
+    if (moveButtonRef.current) {
+      const rect = moveButtonRef.current.getBoundingClientRect()
+      setMoveDropdownPosition({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      })
+    }
+  }
 
   // Close move dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (moveDropdownRef.current && !moveDropdownRef.current.contains(event.target as Node)) {
+      if (
+        moveDropdownRef.current &&
+        !moveDropdownRef.current.contains(event.target as Node) &&
+        moveButtonRef.current &&
+        !moveButtonRef.current.contains(event.target as Node)
+      ) {
         setIsMoveDropdownOpen(false)
       }
     }
@@ -256,6 +273,18 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isMoveDropdownOpen])
+
+  // Update position on scroll/resize when open
+  useEffect(() => {
+    if (!isMoveDropdownOpen) return
+    const updatePosition = () => updateMoveDropdownPosition()
+    window.addEventListener("scroll", updatePosition, true)
+    window.addEventListener("resize", updatePosition)
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true)
+      window.removeEventListener("resize", updatePosition)
     }
   }, [isMoveDropdownOpen])
 
@@ -364,10 +393,14 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
           </div>
           <div className="flex items-center gap-1">
             {onMoveTask && (
-              <div className="relative" ref={moveDropdownRef}>
+              <div>
                 <button
+                  ref={moveButtonRef}
                   onClick={(e) => {
                     e.stopPropagation()
+                    if (!isMoveDropdownOpen) {
+                      updateMoveDropdownPosition()
+                    }
                     setIsMoveDropdownOpen(!isMoveDropdownOpen)
                   }}
                   onMouseDown={(e) => {
@@ -384,7 +417,13 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                 </button>
                 {isMoveDropdownOpen && (
                   <div
-                    className="absolute right-0 top-full mt-1 bg-white border border-border rounded-md shadow-lg z-50 min-w-[150px]"
+                    ref={moveDropdownRef}
+                    className="fixed bg-white border border-border rounded-md shadow-lg z-[9999] min-w-[150px]"
+                    style={{
+                      top: `${moveDropdownPosition.top}px`,
+                      right: `${moveDropdownPosition.right}px`,
+                      animation: "fadeInScale 0.15s ease-out",
+                    }}
                     onMouseDown={(e) => {
                       e.stopPropagation()
                     }}
