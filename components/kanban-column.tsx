@@ -68,7 +68,7 @@ export function KanbanColumn({
       onDrop={(e) => onDrop(e, column.id)}
     >
       <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">{column.title}</h2>
-      <div className="flex-1 space-y-3 pr-2 overflow-y-auto">
+      <div className="flex-1 space-y-3 pr-2 overflow-y-auto kanban-column-scroll-container">
         {column.tasks.map((task) => {
           // Check if this card is being edited by looking at the rendered element
           const isEditing = false // Will be determined by the DOM

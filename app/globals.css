@@ -2163,9 +2163,12 @@
    That changed overflow on the main scroll containers when a note was edited,
    which in turn reset scroll position and affected header layout.
 
-   If we need targeted overflow tweaks in the future, they should be applied
-   to specific, named containers instead of global selectors.
-*/
+/* Targeted overflow fix: if a column contains a card being edited, make it overflow visible */
+.kanban-column-scroll-container:has([data-editing-note="true"]) {
+  overflow: visible !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
 
 /* Force BlockNote/Mantine popups to escape overflow containers */
 [data-radix-popper-content-wrapper],

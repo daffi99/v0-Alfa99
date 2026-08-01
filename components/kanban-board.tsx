@@ -975,7 +975,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                 <div className="flex-1 grid grid-cols-2 gap-4">
                   {/* Column 1 */}
                   <div
-                    className="flex flex-col space-y-3 overflow-y-auto pr-2"
+                    className="flex flex-col space-y-3 overflow-y-auto pr-2 kanban-column-scroll-container"
                     onDragOver={handleDragOver}
                     onDrop={(e) => {
                       e.preventDefault()
@@ -1054,7 +1054,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                   </div>
                   {/* Column 2 */}
                   <div
-                    className="flex flex-col space-y-3 overflow-y-auto pr-2"
+                    className="flex flex-col space-y-3 overflow-y-auto pr-2 kanban-column-scroll-container"
                     onDragOver={handleDragOver}
                     onDrop={(e) => {
                       e.preventDefault()
@@ -1187,7 +1187,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                 {/* Scrollable container with max height and fade effect */}
                 <div className="relative flex-1" style={{ maxHeight: isDoneExpanded ? '600px' : '300px' }}>
                   <div
-                    className={`h-full pr-2 ${isDoneExpanded ? 'overflow-y-auto' : 'overflow-hidden'}`}
+                    className={`h-full pr-2 kanban-column-scroll-container ${isDoneExpanded ? 'overflow-y-auto' : 'overflow-hidden'}`}
                     style={isDoneExpanded ? {
                       scrollbarWidth: 'thin',
                       scrollbarColor: '#cbd5e1 transparent'
