@@ -941,6 +941,9 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
     }
   })
 
+  const inProgressUnfinishedCount = inProgressTasks.filter((t) => t.status !== "Finished").length
+  const doneUnfinishedCount = doneTasks.filter((t) => t.status !== "Finished").length
+
   return (
     <>
       <div className="p-8 h-full">
@@ -968,8 +971,13 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
             {inProgressColumn && (
               <div className={`col-span-2 flex flex-col bg-muted/30 rounded-lg p-4 ${searchQuery && inProgressTasks.length === 0 ? "" : "min-h-96"}`}>
                 {/* Single title spanning both columns */}
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-                  {inProgressColumn.title}
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4 flex items-center gap-2">
+                  <span>{inProgressColumn.title}</span>
+                  {inProgressUnfinishedCount > 0 && (
+                    <span className="inline-flex items-center justify-center bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full lowercase tracking-normal">
+                      {inProgressUnfinishedCount}
+                    </span>
+                  )}
                 </h2>
                 {/* Two columns side by side */}
                 <div className="flex-1 grid grid-cols-2 gap-4">
@@ -1163,8 +1171,13 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
               <div className={`col-span-3 flex flex-col bg-muted/30 rounded-lg p-4 ${searchQuery && doneTasks.length === 0 ? "" : "min-h-96"}`}>
                 {/* Single title spanning all columns with expand/collapse button */}
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    {doneColumn.title}
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                    <span>{doneColumn.title}</span>
+                    {doneUnfinishedCount > 0 && (
+                      <span className="inline-flex items-center justify-center bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full lowercase tracking-normal">
+                        {doneUnfinishedCount}
+                      </span>
+                    )}
                   </h2>
                   <button
                     onClick={() => setIsDoneExpanded(!isDoneExpanded)}

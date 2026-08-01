@@ -59,6 +59,7 @@ export function KanbanColumn({
   }, [column.id])
 
   const isSearchEmpty = searchQuery && column.tasks.length === 0
+  const unfinishedCount = column.tasks.filter((t) => t.status !== "Finished").length
 
   return (
     <div
@@ -67,7 +68,14 @@ export function KanbanColumn({
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, column.id)}
     >
-      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">{column.title}</h2>
+      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4 flex items-center gap-2">
+        <span>{column.title}</span>
+        {unfinishedCount > 0 && (
+          <span className="inline-flex items-center justify-center bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full lowercase tracking-normal">
+            {unfinishedCount}
+          </span>
+        )}
+      </h2>
       <div className="flex-1 space-y-3 pr-2 overflow-y-auto kanban-column-scroll-container">
         {column.tasks.map((task) => {
           // Check if this card is being edited by looking at the rendered element
