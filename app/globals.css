@@ -2070,25 +2070,22 @@
   z-index: 9999 !important;
 }
 
-/* Slash menu popup */
+/* Slash menu popup – only override position/z-index to escape overflow.
+   Let BlockNote handle its own internal sizing and item layout. */
 .blocknote-note-editor .bn-slash-menu,
 .blocknote-note-editor [data-bn-slash-menu],
 .blocknote-note-wrapper .bn-slash-menu,
 .blocknote-note-wrapper [data-bn-slash-menu],
 .blocknote-note-editor .bn-suggestion-menu,
 .blocknote-note-wrapper .bn-suggestion-menu {
-  position: fixed !important;
   z-index: 9999 !important;
   background: #ffffff !important;
   border: 1px solid #e5e7eb !important;
   border-radius: 10px !important;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
-  max-height: 260px !important;
-  max-width: 220px !important;
-  width: 220px !important;
+  max-height: 280px !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
-  padding: 4px !important;
 }
 
 /* Formatting toolbar popup */
@@ -2205,14 +2202,12 @@
   z-index: 2147483647 !important;
 }
 
-/* Suggestion / slash menus – compact sizing */
+/* Suggestion / slash menus – only constrain height */
 .bn-suggestion-menu,
 .bn-slash-menu,
 [data-bn-suggestion-menu],
 [data-bn-slash-menu] {
-  width: 220px !important;
-  max-width: 220px !important;
-  max-height: 240px !important;
+  max-height: 280px !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
 }
