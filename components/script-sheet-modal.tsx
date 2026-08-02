@@ -119,6 +119,8 @@ export function ScriptSheetModal({
         actor: string
         ps: string
         linesCount: number
+        inputtedLinesCount: number
+        belumanLinesCount: number
         episodes: Set<string>
         isChecked: boolean
       }
@@ -137,6 +139,8 @@ export function ScriptSheetModal({
           actor: master?.finalArtist || "Unassigned",
           ps: master?.pitchSpeed || "-",
           linesCount: 0,
+          inputtedLinesCount: 0,
+          belumanLinesCount: 0,
           episodes: new Set<string>(),
           isChecked: data.checkedCharacters?.[key] ?? hasPs,
         })
@@ -144,6 +148,11 @@ export function ScriptSheetModal({
 
       const item = summaryMap.get(key)!
       item.linesCount += 1
+      if (line.status === "Inputted") {
+        item.inputtedLinesCount += 1
+      } else {
+        item.belumanLinesCount += 1
+      }
       if (line.eps) item.episodes.add(line.eps)
     })
 
@@ -155,6 +164,8 @@ export function ScriptSheetModal({
           actor: ma.finalArtist,
           ps: ma.pitchSpeed || "-",
           linesCount: 0,
+          inputtedLinesCount: 0,
+          belumanLinesCount: 0,
           episodes: new Set<string>(),
           isChecked: data.checkedCharacters?.[ma.characterName] ?? hasPs,
         })
@@ -384,6 +395,18 @@ export function ScriptSheetModal({
       }
     })
     updateData({ ...data, checkedCharacters: currentChecks })
+  }
+
+  // Batch update line status for a specific character across all script lines
+  const handleBatchUpdateCharacterStatus = (charName: string, newStatus: "Inputted" | "Beluman") => {
+    const targetName = charName.trim().toLowerCase()
+    const updatedLines = data.lines.map((line) => {
+      if (line.character && line.character.trim().toLowerCase() === targetName) {
+        return { ...line, status: newStatus }
+      }
+      return line
+    })
+    updateData({ ...data, lines: updatedLines })
   }
 
   const totalLines = data.lines.length
@@ -746,6 +769,7 @@ export function ScriptSheetModal({
                       <th className="p-2.5 w-28 text-center">Count</th>
                       <th className="p-2.5">Actor</th>
                       <th className="p-2.5">Appear in</th>
+                      <th className="p-2.5 w-64">Status Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -787,11 +811,32 @@ export function ScriptSheetModal({
                         <td className="p-2.5 font-mono text-[11px] text-muted-foreground">
                           {cs.episodesList || "None"}
                         </td>
+                        <td className="p-2.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap mr-1">
+                              <b className="text-emerald-700">{cs.inputtedLinesCount}</b> In / <b className="text-red-700">{cs.belumanLinesCount}</b> Bel
+                            </span>
+                            <button
+                              onClick={() => handleBatchUpdateCharacterStatus(cs.character, "Inputted")}
+                              className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded transition-colors whitespace-nowrap"
+                              title={`Mark all ${cs.linesCount} lines for ${cs.character} as Inputted`}
+                            >
+                              All Inputted
+                            </button>
+                            <button
+                              onClick={() => handleBatchUpdateCharacterStatus(cs.character, "Beluman")}
+                              className="px-2 py-0.5 text-[10px] font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded transition-colors whitespace-nowrap"
+                              title={`Mark all ${cs.linesCount} lines for ${cs.character} as Beluman`}
+                            >
+                              All Beluman
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                     {activeCharacterSummaries.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={7} className="p-8 text-center text-muted-foreground">
                           No active characters with lines.
                         </td>
                       </tr>
@@ -829,6 +874,7 @@ export function ScriptSheetModal({
                               <th className="p-2.5 w-28 text-center">Count</th>
                               <th className="p-2.5">Actor</th>
                               <th className="p-2.5">Appear in</th>
+                              <th className="p-2.5 w-64">Status Action</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y opacity-75">
@@ -848,6 +894,7 @@ export function ScriptSheetModal({
                                 <td className="p-2.5 font-medium text-muted-foreground">{cs.character}</td>
                                 <td className="p-2.5 text-center font-mono text-muted-foreground">0</td>
                                 <td className="p-2.5 text-muted-foreground">{cs.actor}</td>
+                                <td className="p-2.5 font-mono text-muted-foreground">-</td>
                                 <td className="p-2.5 font-mono text-muted-foreground">-</td>
                               </tr>
                             ))}
