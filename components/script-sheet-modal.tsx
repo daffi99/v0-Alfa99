@@ -379,6 +379,40 @@ export function ScriptSheetModal({
     return reports.sort((a, b) => a.minEps - b.minEps)
   }, [data.lines, data.masterArtists, taskTitle])
 
+  // Sorted character options for Wrong Cast selection:
+  // Characters with lines > 0 sorted highest to lowest line count, followed by 0-line characters.
+  const wrongCastCharacterOptions = useMemo(() => {
+    if (!wrongCastModal.isOpen) return []
+
+    const lineCountMap = new Map<string, number>()
+    data.lines.forEach((l) => {
+      if (!l.character) return
+      const key = l.character.trim().toLowerCase()
+      lineCountMap.set(key, (lineCountMap.get(key) || 0) + 1)
+    })
+
+    const filtered = data.masterArtists.filter(
+      (ma) => ma.characterName.trim().toLowerCase() !== wrongCastModal.currentCharacter.trim().toLowerCase()
+    )
+
+    return filtered
+      .map((ma) => {
+        const lineCount = lineCountMap.get(ma.characterName.trim().toLowerCase()) || 0
+        return {
+          ...ma,
+          lineCount,
+        }
+      })
+      .sort((a, b) => {
+        if (a.lineCount > 0 && b.lineCount > 0) {
+          return b.lineCount - a.lineCount
+        }
+        if (a.lineCount > 0 && b.lineCount === 0) return -1
+        if (a.lineCount === 0 && b.lineCount > 0) return 1
+        return a.characterName.localeCompare(b.characterName)
+      })
+  }, [data.masterArtists, data.lines, wrongCastModal.isOpen, wrongCastModal.currentCharacter])
+
   // Single Column PS Data Update - preserving blank line index mapping
   const handleApplySingleColumnPs = () => {
     if (!psPasteText) return
@@ -1316,22 +1350,33 @@ export function ScriptSheetModal({
               {/* 7 Rows X N Columns Grid */}
               <div className="p-3 bg-muted/20 border rounded-lg overflow-x-auto max-w-full">
                 <div className="grid grid-rows-7 grid-flow-col gap-1.5 min-w-max">
-                  {data.masterArtists
-                    .filter((ma) => ma.characterName.trim().toLowerCase() !== wrongCastModal.currentCharacter.trim().toLowerCase())
-                    .map((ma, idx) => (
+                  {wrongCastCharacterOptions.map((item, idx) => {
+                    const isUnused = item.lineCount === 0
+                    return (
                       <button
                         key={idx}
-                        onClick={() => handleSelectWrongCastCharacter(ma.characterName)}
-                        className="px-3 py-1.5 rounded-md border border-border bg-card hover:bg-amber-500/10 hover:border-amber-500 transition-all text-xs font-semibold text-foreground flex items-center justify-between gap-3 min-w-[140px] shadow-2xs group active:scale-95 cursor-pointer whitespace-nowrap"
+                        onClick={() => handleSelectWrongCastCharacter(item.characterName)}
+                        className={`px-2.5 py-1.5 rounded-md border text-xs transition-all flex items-center justify-between gap-2.5 min-w-[125px] shadow-2xs group active:scale-95 cursor-pointer whitespace-nowrap ${
+                          isUnused
+                            ? "border-border/50 bg-muted/30 text-muted-foreground opacity-50 hover:opacity-100 hover:border-amber-400 hover:text-foreground"
+                            : "border-border bg-card hover:bg-amber-500/10 hover:border-amber-500 text-foreground font-semibold"
+                        }`}
                       >
-                        <span className="group-hover:text-amber-700">{ma.characterName}</span>
-                        {ma.finalArtist && (
-                          <span className="text-[10px] font-mono text-emerald-700 font-medium">
-                            {ma.finalArtist}
-                          </span>
-                        )}
+                        <span className={isUnused ? "font-normal text-muted-foreground" : "font-bold group-hover:text-amber-700"}>
+                          {item.characterName}
+                        </span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-bold ${
+                            isUnused
+                              ? "bg-muted/80 text-muted-foreground"
+                              : "bg-amber-50 text-amber-800 border border-amber-200"
+                          }`}
+                        >
+                          {item.lineCount}
+                        </span>
                       </button>
-                    ))}
+                    )
+                  })}
                 </div>
               </div>
 
