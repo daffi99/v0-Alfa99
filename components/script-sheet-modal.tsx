@@ -17,6 +17,9 @@ import {
   CheckCircle2,
   Clock,
   X,
+  Layers,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
 import type { ScriptData, ScriptLine, MasterArtistMapping } from "./script-wizard-modal"
 
@@ -47,7 +50,7 @@ export function ScriptSheetModal({
   onSave,
   onReRunWizard,
 }: ScriptSheetModalProps) {
-  const [activeTab, setActiveTab] = useState<"lines" | "master" | "summary" | "report">("lines")
+  const [activeTab, setActiveTab] = useState<"lines" | "master" | "summary" | "episodes" | "report">("lines")
   const [data, setData] = useState<ScriptData>(scriptData)
 
   // Tab 1 Filters
@@ -61,6 +64,9 @@ export function ScriptSheetModal({
   // Single-Column PS Paste Modal State
   const [isPsModalOpen, setIsPsModalOpen] = useState(false)
   const [psPasteText, setPsPasteText] = useState("")
+
+  // Unused Characters Collapsible Panel State
+  const [isUnusedExpanded, setIsUnusedExpanded] = useState(false)
 
   if (!isOpen) return null
 
@@ -99,7 +105,7 @@ export function ScriptSheetModal({
     })
   }, [data.lines, searchQuery, selectedCharacterFilter, selectedStatusFilter])
 
-  // Character Summary Calculation (Tab 3 - Original Sheet Image 3)
+  // Character Summary Calculation (Tab 3)
   const characterSummaries = useMemo(() => {
     const masterMap = new Map<string, MasterArtistMapping>()
     data.masterArtists.forEach((ma) => {
@@ -162,7 +168,67 @@ export function ScriptSheetModal({
     }))
   }, [data.lines, data.masterArtists, data.checkedCharacters])
 
-  // Missing Audio Report Lines Calculation (Tab 4 - Original Sheet Image 2)
+  // Active (linesCount > 0 sorted highest to lowest) & Unused (linesCount === 0 collapsed)
+  const { activeCharacterSummaries, unusedCharacterSummaries } = useMemo(() => {
+    const active = characterSummaries
+      .filter((cs) => cs.linesCount > 0)
+      .sort((a, b) => b.linesCount - a.linesCount)
+
+    const unused = characterSummaries
+      .filter((cs) => cs.linesCount === 0)
+      .sort((a, b) => a.character.localeCompare(b.character))
+
+    return { activeCharacterSummaries: active, unusedCharacterSummaries: unused }
+  }, [characterSummaries])
+
+  // Episode Character Summary Calculation (Tab 5)
+  const episodeCharacterSummaries = useMemo(() => {
+    const epMap = new Map<string, Map<string, number>>()
+
+    data.lines.forEach((line) => {
+      if (!line.eps || !line.character) return
+      const epsKey = line.eps.trim()
+      const charKey = line.character.trim()
+
+      if (!epMap.has(epsKey)) {
+        epMap.set(epsKey, new Map<string, number>())
+      }
+
+      const charCounts = epMap.get(epsKey)!
+      charCounts.set(charKey, (charCounts.get(charKey) || 0) + 1)
+    })
+
+    const masterMap = new Map<string, string>()
+    data.masterArtists.forEach((ma) => {
+      masterMap.set(ma.characterName.toLowerCase(), ma.finalArtist)
+    })
+
+    const episodes = Array.from(epMap.entries()).map(([eps, charCounts]) => {
+      // Sort characters in this episode by line count in this episode descending
+      const charactersInEp = Array.from(charCounts.entries())
+        .map(([character, count]) => ({
+          character,
+          actor: masterMap.get(character.toLowerCase()) || "Unassigned",
+          count,
+        }))
+        .sort((a, b) => b.count - a.count)
+
+      const formattedEps = eps.length === 1 ? `0${eps}` : eps
+      const characterNamesList = charactersInEp.map((c) => c.character).join(", ")
+
+      return {
+        eps,
+        formattedEps,
+        charactersCount: charactersInEp.length,
+        characterNamesList,
+        charactersInEp,
+      }
+    })
+
+    return episodes.sort((a, b) => Number(a.eps) - Number(b.eps))
+  }, [data.lines, data.masterArtists])
+
+  // Missing Audio Report Lines Calculation (Tab 4)
   const missingReports = useMemo(() => {
     const masterMap = new Map<string, string>()
     data.masterArtists.forEach((ma) => {
@@ -344,10 +410,10 @@ export function ScriptSheetModal({
         </div>
 
         {/* Tab Buttons */}
-        <div className="px-4 pt-3 bg-card border-b flex items-center gap-2">
+        <div className="px-4 pt-3 bg-card border-b flex items-center gap-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab("lines")}
-            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
               activeTab === "lines"
                 ? "border-primary text-primary font-semibold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -358,7 +424,7 @@ export function ScriptSheetModal({
 
           <button
             onClick={() => setActiveTab("master")}
-            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
               activeTab === "master"
                 ? "border-primary text-primary font-semibold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -369,7 +435,7 @@ export function ScriptSheetModal({
 
           <button
             onClick={() => setActiveTab("summary")}
-            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
               activeTab === "summary"
                 ? "border-primary text-primary font-semibold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -379,8 +445,19 @@ export function ScriptSheetModal({
           </button>
 
           <button
+            onClick={() => setActiveTab("episodes")}
+            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
+              activeTab === "episodes"
+                ? "border-primary text-primary font-semibold"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-indigo-500" /> Episode Character ({episodeCharacterSummaries.length})
+          </button>
+
+          <button
             onClick={() => setActiveTab("report")}
-            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
               activeTab === "report"
                 ? "border-primary text-primary font-semibold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -397,7 +474,7 @@ export function ScriptSheetModal({
 
         {/* Tab Content Container */}
         <div className="flex-1 overflow-hidden p-4 flex flex-col bg-background">
-          {/* TAB 1: SCRIPT LINES MANAGER (Original Sheet Images 1 & 5) */}
+          {/* TAB 1: SCRIPT LINES MANAGER */}
           {activeTab === "lines" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 bg-muted/30 p-2.5 rounded-lg border text-xs">
@@ -531,7 +608,7 @@ export function ScriptSheetModal({
             </div>
           )}
 
-          {/* TAB 2: MASTER ARTIST MAPPING (Original Sheet Image 4) */}
+          {/* TAB 2: MASTER ARTIST MAPPING */}
           {activeTab === "master" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-3">
               <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-lg border text-xs">
@@ -584,12 +661,12 @@ export function ScriptSheetModal({
             </div>
           )}
 
-          {/* TAB 3: CHARACTER & ACTOR SUMMARY REPORT (Original Sheet Image 3) */}
+          {/* TAB 3: CHARACTER & ACTOR SUMMARY REPORT (Sorted Highest to Lowest + Collapsed 0 Lines) */}
           {activeTab === "summary" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-3">
               <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-lg border text-xs">
                 <span className="text-muted-foreground font-medium">
-                  Calculated Line Statistics & Episode Appearances
+                  Sorted by line count (Highest to Lowest) • {activeCharacterSummaries.length} Active Characters
                 </span>
                 <button
                   onClick={() => setIsPsModalOpen(true)}
@@ -599,8 +676,9 @@ export function ScriptSheetModal({
                 </button>
               </div>
 
-              <div className="flex-1 overflow-auto border rounded-lg">
-                <table className="w-full text-xs text-left border-collapse">
+              <div className="flex-1 overflow-auto border rounded-lg space-y-4 p-1">
+                {/* Active Characters Table */}
+                <table className="w-full text-xs text-left border-collapse border rounded-md">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
                       <th className="p-2.5 w-14 text-center">Check</th>
@@ -612,7 +690,7 @@ export function ScriptSheetModal({
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {characterSummaries.map((cs, idx) => (
+                    {activeCharacterSummaries.map((cs, idx) => (
                       <tr
                         key={idx}
                         className={`hover:bg-muted/40 transition-colors ${
@@ -639,7 +717,7 @@ export function ScriptSheetModal({
                         <td className="p-2.5 font-bold text-foreground">
                           {cs.character}
                         </td>
-                        <td className="p-2.5 text-center font-semibold font-mono text-xs text-primary">
+                        <td className="p-2.5 text-center font-bold font-mono text-xs text-primary bg-primary/5">
                           {cs.linesCount}
                         </td>
                         <td className="p-2.5 font-medium text-emerald-700">
@@ -650,13 +728,140 @@ export function ScriptSheetModal({
                         </td>
                       </tr>
                     ))}
+                    {activeCharacterSummaries.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                          No active characters with lines.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Collapsible Section for 0 Line Characters */}
+                {unusedCharacterSummaries.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden bg-card">
+                    <button
+                      onClick={() => setIsUnusedExpanded(!isUnusedExpanded)}
+                      className="w-full p-3 bg-muted/40 hover:bg-muted flex items-center justify-between text-xs font-semibold text-muted-foreground transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>Unused Characters ({unusedCharacterSummaries.length})</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary font-medium">
+                          0 Lines in script
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-primary">
+                        {isUnusedExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        <span>{isUnusedExpanded ? "Hide Unused" : "Show Unused Characters"}</span>
+                      </div>
+                    </button>
+
+                    {isUnusedExpanded && (
+                      <div className="border-t divide-y">
+                        <table className="w-full text-xs text-left border-collapse">
+                          <thead className="bg-muted/60 text-muted-foreground text-[11px]">
+                            <tr>
+                              <th className="p-2.5 w-14 text-center">Check</th>
+                              <th className="p-2.5 w-24">PS</th>
+                              <th className="p-2.5">Character</th>
+                              <th className="p-2.5 w-28 text-center">Count</th>
+                              <th className="p-2.5">Actor</th>
+                              <th className="p-2.5">Appear in</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y opacity-75">
+                            {unusedCharacterSummaries.map((cs, idx) => (
+                              <tr key={idx} className="hover:bg-muted/20">
+                                <td className="p-2.5 text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={cs.isChecked}
+                                    onChange={() => handleToggleCharCheck(cs.character)}
+                                    className="rounded text-primary focus:ring-primary h-3.5 w-3.5"
+                                  />
+                                </td>
+                                <td className="p-2.5 font-mono">{cs.ps}</td>
+                                <td className="p-2.5 font-medium text-muted-foreground">{cs.character}</td>
+                                <td className="p-2.5 text-center font-mono text-muted-foreground">0</td>
+                                <td className="p-2.5 text-muted-foreground">{cs.actor}</td>
+                                <td className="p-2.5 font-mono text-muted-foreground">-</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: EPISODE CHARACTER */}
+          {activeTab === "episodes" && (
+            <div className="flex-1 flex flex-col overflow-hidden space-y-3">
+              <div className="flex items-center justify-between bg-indigo-50/50 border border-indigo-100 p-2.5 rounded-lg text-xs">
+                <span className="text-indigo-950 font-medium flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-indigo-600" />
+                  Showing <b>{episodeCharacterSummaries.length}</b> episodes with character list sorted by line count (highest to lowest).
+                </span>
+              </div>
+
+              <div className="flex-1 overflow-auto border rounded-lg bg-card">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
+                    <tr>
+                      <th className="p-2.5 w-16 text-center">Eps</th>
+                      <th className="p-2.5 w-28 text-center">Char Count</th>
+                      <th className="p-2.5">Character List (Highest Line Count First)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {episodeCharacterSummaries.map((ep, idx) => (
+                      <tr key={idx} className="hover:bg-muted/30 transition-colors">
+                        <td className="p-2.5 text-center font-bold font-mono text-sm text-foreground border-r">
+                          {ep.eps}
+                        </td>
+                        <td className="p-2.5 text-center font-extrabold font-mono text-sm text-indigo-600 border-r bg-indigo-50/20">
+                          {ep.charactersCount}
+                        </td>
+                        <td className="p-2.5">
+                          <div className="space-y-1.5">
+                            <div className="font-semibold text-foreground text-[12px] leading-relaxed">
+                              {ep.characterNamesList}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                              {ep.charactersInEp.map((c, cIdx) => (
+                                <span
+                                  key={cIdx}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary text-[11px] font-medium border border-border"
+                                >
+                                  <span>{c.character}</span>
+                                  <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1 rounded">
+                                    {c.count}
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {episodeCharacterSummaries.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="p-12 text-center text-muted-foreground">
+                          No episode script data found.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
 
-          {/* TAB 4: AUTO-GENERATED VOA MISSING AUDIO REPORT (Original Sheet Image 2) */}
+          {/* TAB 4: AUTO-GENERATED VOA MISSING AUDIO REPORT */}
           {activeTab === "report" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-3">
               <div className="flex items-center justify-between bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs">
