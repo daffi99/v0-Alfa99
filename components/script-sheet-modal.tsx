@@ -1293,8 +1293,8 @@ export function ScriptSheetModal({
 
         {/* Modal for Wrong Cast Character Selection */}
         {wrongCastModal.isOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-border rounded-xl shadow-2xl p-5 w-full max-w-3xl flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-border rounded-xl shadow-2xl p-5 w-full max-w-4xl flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between border-b pb-3">
                 <div>
                   <h3 className="text-base font-bold text-foreground flex items-center gap-2">
@@ -1313,23 +1313,23 @@ export function ScriptSheetModal({
                 </button>
               </div>
 
-              {/* 4 Rows X N Columns Grid */}
-              <div className="p-3 bg-muted/30 border rounded-lg overflow-x-auto max-w-full">
-                <div className="grid grid-rows-4 grid-flow-col gap-2 min-w-max">
+              {/* 7 Rows X N Columns Grid */}
+              <div className="p-3 bg-muted/20 border rounded-lg overflow-x-auto max-w-full">
+                <div className="grid grid-rows-7 grid-flow-col gap-1.5 min-w-max">
                   {data.masterArtists
                     .filter((ma) => ma.characterName.trim().toLowerCase() !== wrongCastModal.currentCharacter.trim().toLowerCase())
                     .map((ma, idx) => (
                       <button
                         key={idx}
                         onClick={() => handleSelectWrongCastCharacter(ma.characterName)}
-                        className="px-3.5 py-2.5 rounded-lg border border-border bg-card hover:bg-amber-500/10 hover:border-amber-500 transition-all text-left flex flex-col items-start min-w-[130px] shadow-2xs group active:scale-95 cursor-pointer"
+                        className="px-3 py-1.5 rounded-md border border-border bg-card hover:bg-amber-500/10 hover:border-amber-500 transition-all text-xs font-semibold text-foreground flex items-center justify-between gap-3 min-w-[140px] shadow-2xs group active:scale-95 cursor-pointer whitespace-nowrap"
                       >
-                        <span className="text-xs font-bold text-foreground group-hover:text-amber-700">
-                          {ma.characterName}
-                        </span>
-                        <span className="text-[10px] font-medium text-emerald-700 font-mono">
-                          {ma.finalArtist || "No VOA"}
-                        </span>
+                        <span className="group-hover:text-amber-700">{ma.characterName}</span>
+                        {ma.finalArtist && (
+                          <span className="text-[10px] font-mono text-emerald-700 font-medium">
+                            {ma.finalArtist}
+                          </span>
+                        )}
                       </button>
                     ))}
                 </div>
