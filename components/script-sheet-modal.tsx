@@ -540,8 +540,9 @@ export function ScriptSheetModal({
         if (l.id === wrongCastModal.targetLineId) {
           return {
             ...l,
-            status: "Wrong Cast" as ScriptLineStatus,
+            character: selectedCorrectCharacter,
             correctCharacter: selectedCorrectCharacter,
+            status: "Wrong Cast" as ScriptLineStatus,
           }
         }
         return l
@@ -552,8 +553,9 @@ export function ScriptSheetModal({
         if (l.character && l.character.trim().toLowerCase() === targetName) {
           return {
             ...l,
-            status: "Wrong Cast" as ScriptLineStatus,
+            character: selectedCorrectCharacter,
             correctCharacter: selectedCorrectCharacter,
+            status: "Wrong Cast" as ScriptLineStatus,
           }
         }
         return l
@@ -564,8 +566,9 @@ export function ScriptSheetModal({
         if (filteredIds.has(l.id)) {
           return {
             ...l,
-            status: "Wrong Cast" as ScriptLineStatus,
+            character: selectedCorrectCharacter,
             correctCharacter: selectedCorrectCharacter,
+            status: "Wrong Cast" as ScriptLineStatus,
           }
         }
         return l
