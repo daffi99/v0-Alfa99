@@ -35,29 +35,40 @@ interface ScriptWizardModalProps {
   onComplete: (data: ScriptData) => void
 }
 
-// Helper to sanitize Voice Actor Name and extract PS value
-export function sanitizeVoiceActorAndPs(colA: string, colB: string, colC?: string) {
-  const charName = colA.replace(/^["']|["']$/g, "").trim()
-  const rawB = (colB || "").replace(/^["']|["']$/g, "").trim()
-  const rawC = (colC || "").replace(/^["']|["']$/g, "").trim()
+// Helper to sanitize Voice Actor Name and extract PS value handling empty TSV columns (e.g. Sal\t\t\tRekha)
+export function sanitizeVoiceActorAndPsTokens(cols: string[]) {
+  const nonEmpty = cols.map((c) => c.replace(/^["']|["']$/g, "").trim()).filter(Boolean)
 
-  let artist = ""
+  if (nonEmpty.length === 0) return null
+
+  let charName = nonEmpty[0]
+  let artist = "Unassigned"
   let ps = ""
 
-  // Case: colB is numeric PS (e.g. 0.97) and colC is Artist (e.g. "Andreas 0.97")
-  if (rawB && !isNaN(Number(rawB)) && rawC) {
-    ps = rawB
-    artist = rawC
-  }
-  // Case: colB is Artist (e.g. Magda) and colC is PS (e.g. 0.97 or empty)
-  else if (rawB) {
-    artist = rawB
-    ps = rawC
-  } else {
-    artist = "Unassigned"
+  if (nonEmpty.length === 1) {
+    charName = nonEmpty[0]
+  } else if (nonEmpty.length === 2) {
+    // e.g. "Sal\t\t\tRekha" -> Sal (Character), Rekha (VOA)
+    // Or "Sal\t0.97" -> Sal (Character), 0.97 (PS)
+    if (!isNaN(Number(nonEmpty[1]))) {
+      ps = nonEmpty[1]
+    } else {
+      artist = nonEmpty[1]
+    }
+  } else if (nonEmpty.length >= 3) {
+    // 3 or more non-empty columns
+    if (!isNaN(Number(nonEmpty[1]))) {
+      ps = nonEmpty[1]
+      artist = nonEmpty[2]
+    } else if (!isNaN(Number(nonEmpty[2]))) {
+      artist = nonEmpty[1]
+      ps = nonEmpty[2]
+    } else {
+      artist = nonEmpty[1]
+    }
   }
 
-  // Strip trailing numbers/PS from artist name (e.g. "Andreas 0.97" -> "Andreas")
+  // Strip trailing numbers/PS from artist name if any (e.g. "Rekha 0.97" -> "Rekha")
   const match = artist.match(/^(.+?)\s+([0-9]+(?:\.[0-9]+)?)$/)
   if (match) {
     artist = match[1].trim()
@@ -113,11 +124,7 @@ export function ScriptWizardModal({
         return
       }
 
-      let charName = ""
-      let artist = ""
-      let ps = ""
-
-      // Image 3 Format (6+ cols): Check | PS | Character | Count | Actor | Appear in
+      // Handle Image 3 Format (6+ cols with checkboxes): Check | PS | Character | Count | Actor | Appear in
       if (
         cols.length >= 5 &&
         (cols[0] === "TRUE" ||
@@ -127,29 +134,33 @@ export function ScriptWizardModal({
           !isNaN(Number(cols[1])) ||
           cols[1] === "")
       ) {
-        charName = cols[2]
-        const cleaned = sanitizeVoiceActorAndPs(charName, cols[4], cols[1])
-        artist = cleaned.artist
-        ps = cleaned.ps
-      }
-      // Image 4 / Flexible Format (1+ cols): Character | PS/Artist | Artist/PS
-      else if (cols.length >= 1) {
-        const cleaned = sanitizeVoiceActorAndPs(cols[0], cols[1] || "", cols[2])
-        charName = cleaned.charName
-        artist = cleaned.artist
-        ps = cleaned.ps
-      }
+        const charName = cols[2]
+        const actor = cols[4] || "Unassigned"
+        const ps = cols[1] || ""
 
-      if (
-        charName &&
-        charName.toLowerCase() !== "character name" &&
-        charName.toLowerCase() !== "character"
-      ) {
-        results.push({
-          characterName: charName,
-          finalArtist: artist || "Unassigned",
-          pitchSpeed: ps || undefined,
-        })
+        const cleaned = sanitizeVoiceActorAndPsTokens([charName, actor, ps])
+        if (cleaned && cleaned.charName) {
+          results.push({
+            characterName: cleaned.charName,
+            finalArtist: cleaned.artist,
+            pitchSpeed: cleaned.ps || undefined,
+          })
+        }
+      } else {
+        // Standard / Flexible TSV format (e.g. Sal\t\t\tRekha or Elton\t0.97\t"Andreas 0.97")
+        const cleaned = sanitizeVoiceActorAndPsTokens(cols)
+        if (
+          cleaned &&
+          cleaned.charName &&
+          cleaned.charName.toLowerCase() !== "character name" &&
+          cleaned.charName.toLowerCase() !== "character"
+        ) {
+          results.push({
+            characterName: cleaned.charName,
+            finalArtist: cleaned.artist,
+            pitchSpeed: cleaned.ps || undefined,
+          })
+        }
       }
     })
 
@@ -293,13 +304,13 @@ export function ScriptWizardModal({
                     Copy Master Artist Table
                   </p>
                   <p className="text-muted-foreground mt-0.5">
-                    Select rows in Google Sheets (e.g. <b>Elton 0.97 &quot;Andreas 0.97&quot;</b> or <b>Character | Artist | PS</b>) and press <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Cmd+C</kbd> / <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Ctrl+C</kbd>, then paste below.
+                    Select rows in Google Sheets (e.g. <b>Sal&#92;t&#92;t&#92;tRekha</b>, <b>Elton 0.97 &quot;Andreas 0.97&quot;</b>) and press <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Cmd+C</kbd> / <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Ctrl+C</kbd>, then paste below.
                   </p>
                 </div>
               </div>
 
               <textarea
-                placeholder={`Paste here...\n\nExample:\nElton\t0.97\t"Andreas 0.97"\nLeah\t1.04\t"Viola 1.04"\nDeanna\tMagda`}
+                placeholder={`Paste here...\n\nExamples:\nSal\t\t\tRekha\nElton\t0.97\t"Andreas 0.97"\nLeah\t1.04\t"Viola 1.04"`}
                 value={masterText}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => parseMasterArtists(e.target.value)}
                 className="w-full font-mono text-xs min-h-[140px] p-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
