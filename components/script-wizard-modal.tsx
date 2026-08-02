@@ -35,6 +35,38 @@ interface ScriptWizardModalProps {
   onComplete: (data: ScriptData) => void
 }
 
+// Helper to sanitize Voice Actor Name and extract PS value
+export function sanitizeVoiceActorAndPs(colA: string, colB: string, colC?: string) {
+  const charName = colA.replace(/^["']|["']$/g, "").trim()
+  const rawB = (colB || "").replace(/^["']|["']$/g, "").trim()
+  const rawC = (colC || "").replace(/^["']|["']$/g, "").trim()
+
+  let artist = ""
+  let ps = ""
+
+  // Case: colB is numeric PS (e.g. 0.97) and colC is Artist (e.g. "Andreas 0.97")
+  if (rawB && !isNaN(Number(rawB)) && rawC) {
+    ps = rawB
+    artist = rawC
+  }
+  // Case: colB is Artist (e.g. Andreas) and colC is PS (e.g. 0.97)
+  else if (rawB) {
+    artist = rawB
+    ps = rawC
+  }
+
+  // Strip trailing numbers/PS from artist name (e.g. "Andreas 0.97" -> "Andreas")
+  const match = artist.match(/^(.+?)\s+([0-9]+(?:\.[0-9]+)?)$/)
+  if (match) {
+    artist = match[1].trim()
+    if (!ps) {
+      ps = match[2].trim()
+    }
+  }
+
+  return { charName, artist, ps }
+}
+
 export function ScriptWizardModal({
   isOpen,
   onClose,
@@ -58,7 +90,7 @@ export function ScriptWizardModal({
 
   if (!isOpen) return null
 
-  // Helper to parse TSV Master Artist data (Supports Image 4 & Image 3 layouts)
+  // Helper to parse TSV Master Artist data
   const parseMasterArtists = (rawText: string) => {
     setMasterText(rawText)
     if (!rawText.trim()) return
@@ -71,7 +103,6 @@ export function ScriptWizardModal({
       if (cols.length === 0) return
 
       const firstColLower = cols[0].toLowerCase()
-      // Skip header rows
       if (
         firstColLower.includes("character") ||
         firstColLower.includes("artist font") ||
@@ -85,19 +116,34 @@ export function ScriptWizardModal({
       let ps = ""
 
       // Image 3 Format (6+ cols): Check | PS | Character | Count | Actor | Appear in
-      if (cols.length >= 5 && (cols[0] === "TRUE" || cols[0] === "FALSE" || cols[0] === "☑" || cols[0] === "☐" || !isNaN(Number(cols[1])) || cols[1] === "")) {
-        ps = cols[1]
+      if (
+        cols.length >= 5 &&
+        (cols[0] === "TRUE" ||
+          cols[0] === "FALSE" ||
+          cols[0] === "☑" ||
+          cols[0] === "☐" ||
+          !isNaN(Number(cols[1])) ||
+          cols[1] === "")
+      ) {
         charName = cols[2]
-        artist = cols[4]
+        const cleaned = sanitizeVoiceActorAndPs(charName, cols[4], cols[1])
+        artist = cleaned.artist
+        ps = cleaned.ps
       }
-      // Image 4 Format (2 or 3 cols): Character name | Final artist | PS
+      // Image 4 / Flexible Format (2+ cols): Character | PS/Artist | Artist/PS
       else if (cols.length >= 2) {
-        charName = cols[0]
-        artist = cols[1]
-        ps = cols[2] || ""
+        const cleaned = sanitizeVoiceActorAndPs(cols[0], cols[1], cols[2])
+        charName = cleaned.charName
+        artist = cleaned.artist
+        ps = cleaned.ps
       }
 
-      if (charName && artist && charName.toLowerCase() !== "character name" && artist.toLowerCase() !== "final artist") {
+      if (
+        charName &&
+        artist &&
+        charName.toLowerCase() !== "character name" &&
+        artist.toLowerCase() !== "final artist"
+      ) {
         results.push({
           characterName: charName,
           finalArtist: artist,
@@ -111,7 +157,7 @@ export function ScriptWizardModal({
     }
   }
 
-  // Helper to parse TSV Script Lines data (Supports Image 5 & Image 1 layouts)
+  // Helper to parse TSV Script Lines data
   const parseScriptLines = (rawText: string) => {
     setScriptText(rawText)
     if (!rawText.trim()) return
@@ -148,23 +194,17 @@ export function ScriptWizardModal({
         batchTime = cols[3]
         character = cols[4]
         lineText = cols[5]
-      }
-      // 5-Column Format: Eps | Start Time | End Time | Character | Script file
-      else if (cols.length === 5) {
+      } else if (cols.length === 5) {
         eps = cols[0]
         startTime = cols[1]
         endTime = cols[2]
         character = cols[3]
         lineText = cols[4]
-      }
-      // Image 1 4-Column Format: z (Eps) | Lines (Script) | Artist (Character) | Status
-      else if (cols.length === 4) {
+      } else if (cols.length === 4) {
         eps = cols[0]
         lineText = cols[1]
         character = cols[2]
-      }
-      // 3-Column Format: Eps | Character | Line Text
-      else if (cols.length === 3) {
+      } else if (cols.length === 3) {
         eps = cols[0]
         character = cols[1]
         lineText = cols[2]
@@ -252,13 +292,13 @@ export function ScriptWizardModal({
                     Copy Master Artist Table
                   </p>
                   <p className="text-muted-foreground mt-0.5">
-                    Select rows in Google Sheets (e.g. <b>Character Name</b> | <b>Final Artist</b> | <b>PS</b>) and press <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Cmd+C</kbd> / <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Ctrl+C</kbd>, then paste below.
+                    Select rows in Google Sheets (e.g. <b>Elton 0.97 &quot;Andreas 0.97&quot;</b> or <b>Character | Artist | PS</b>) and press <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Cmd+C</kbd> / <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Ctrl+C</kbd>, then paste below.
                   </p>
                 </div>
               </div>
 
               <textarea
-                placeholder={`Paste here...\n\nExample (Image 4):\nElton\tAndreas\t0.97\nLeah\tViola\t1.04\nDeanna\tMagda\n\nOr Example (Image 3):\n☑\t0.97\tElton\t124\tAndreas\t011, 012`}
+                placeholder={`Paste here...\n\nExample:\nElton\t0.97\t"Andreas 0.97"\nLeah\t1.04\t"Viola 1.04"\nDeanna\tMagda`}
                 value={masterText}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => parseMasterArtists(e.target.value)}
                 className="w-full font-mono text-xs min-h-[140px] p-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
@@ -282,7 +322,7 @@ export function ScriptWizardModal({
                               PS: {m.pitchSpeed}
                             </span>
                           )}
-                          <span className="text-muted-foreground">➡ {m.finalArtist}</span>
+                          <span className="text-muted-foreground font-semibold text-emerald-700">➡ {m.finalArtist}</span>
                         </div>
                       </div>
                     ))}
@@ -301,7 +341,7 @@ export function ScriptWizardModal({
                     Copy Raw Script Lines
                   </p>
                   <p className="text-muted-foreground mt-0.5">
-                    Copy columns from your boss's script sheet (supports Image 5 format <b>Eps | Start Time | End Time | Batch tim | Character | Script file</b> or Image 1 format) and paste below.
+                    Copy columns from your boss&apos;s script sheet (supports Image 5 format <b>Eps | Start Time | End Time | Batch tim | Character | Script file</b> or Image 1 format) and paste below.
                   </p>
                 </div>
               </div>
