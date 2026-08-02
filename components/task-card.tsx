@@ -880,14 +880,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
         </div>
       )}
 
-      {/* Card Footer Duration */}
-      {task.duration && (
-        <div className="mt-3 flex items-center justify-between pt-2 border-t border-border/40 text-[10px]">
-          <span className="text-muted-foreground font-mono">
-            {task.duration}
-          </span>
-        </div>
-      )}
+
 
       {/* Script Modals */}
       {isWizardOpen && (
