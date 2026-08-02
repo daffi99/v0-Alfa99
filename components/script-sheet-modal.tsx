@@ -423,17 +423,6 @@ export function ScriptSheetModal({
           </button>
 
           <button
-            onClick={() => setActiveTab("master")}
-            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeTab === "master"
-                ? "border-primary text-primary font-semibold"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" /> Master Artist ({data.masterArtists.length})
-          </button>
-
-          <button
             onClick={() => setActiveTab("summary")}
             className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
               activeTab === "summary"
@@ -469,6 +458,17 @@ export function ScriptSheetModal({
                 {missingReports.length}
               </span>
             )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("master")}
+            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
+              activeTab === "master"
+                ? "border-primary text-primary font-semibold"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" /> Master Artist ({data.masterArtists.length})
           </button>
         </div>
 
