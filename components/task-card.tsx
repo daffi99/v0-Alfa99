@@ -487,31 +487,6 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <button
-              onClick={handleOpenScript}
-              onMouseDown={(e) => e.stopPropagation()}
-              onDragStart={(e) => {
-                e.stopPropagation()
-                e.preventDefault()
-              }}
-              className={`p-1 rounded-md flex-shrink-0 cursor-pointer transition-all flex items-center justify-center border shadow-2xs ${
-                localScriptData?.lines && localScriptData.lines.length > 0
-                  ? "bg-emerald-100/90 text-emerald-700 hover:bg-emerald-200 border-emerald-400/80"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 border-border"
-              }`}
-              title={
-                localScriptData?.lines && localScriptData.lines.length > 0
-                  ? `Script Sheet (${localScriptData.lines.filter((l) => l.status === "Inputted").length}/${localScriptData.lines.length} Inputted)`
-                  : "Script Setup"
-              }
-            >
-              <FileSpreadsheet
-                className={`w-3.5 h-3.5 ${
-                  localScriptData?.lines && localScriptData.lines.length > 0 ? "text-emerald-700 font-bold" : "text-muted-foreground/70"
-                }`}
-              />
-            </button>
-
             {onMoveTask && (
               <div>
                 <button
@@ -610,6 +585,30 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
               disabled={task.loading}
             >
               <Pencil className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <button
+              onClick={handleOpenScript}
+              onMouseDown={(e) => e.stopPropagation()}
+              onDragStart={(e) => {
+                e.stopPropagation()
+                e.preventDefault()
+              }}
+              className={`p-1 rounded-md flex-shrink-0 cursor-pointer transition-all flex items-center justify-center border shadow-2xs ${
+                localScriptData?.lines && localScriptData.lines.length > 0
+                  ? "bg-emerald-100/90 text-emerald-700 hover:bg-emerald-200 border-emerald-400/80"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80 border-border"
+              }`}
+              title={
+                localScriptData?.lines && localScriptData.lines.length > 0
+                  ? `Script Sheet (${localScriptData.lines.filter((l) => l.status === "Inputted").length}/${localScriptData.lines.length} Inputted)`
+                  : "Script Setup"
+              }
+            >
+              <FileSpreadsheet
+                className={`w-3.5 h-3.5 ${
+                  localScriptData?.lines && localScriptData.lines.length > 0 ? "text-emerald-700 font-bold" : "text-muted-foreground/70"
+                }`}
+              />
             </button>
           </div>
         </div>
