@@ -905,9 +905,8 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2.5 w-16 text-center">z</th>
-                      <th className="p-2.5 w-32">Status</th>
-                      <th className="p-2.5 w-16 text-center">z</th>
+                      <th className="p-2.5 w-24 text-center">Eps</th>
+                      <th className="p-2.5 w-28">Status</th>
                       <th className="p-2.5 w-36">Artist</th>
                       <th className="p-2.5">Auto-Generated VOA Report String</th>
                       <th className="p-2.5 w-40">EP Summary</th>
@@ -922,9 +921,8 @@ export function ScriptSheetModal({
                             Beluman
                           </span>
                         </td>
-                        <td className="p-2.5 text-center font-bold">{item.epsJoined}</td>
                         <td className="p-2.5 font-semibold text-foreground">
-                          ➡soon {item.character}
+                          {item.character}
                         </td>
                         <td className="p-2.5 font-medium text-slate-800 select-all bg-muted/20">
                           {item.reportString}
@@ -936,7 +934,7 @@ export function ScriptSheetModal({
                     ))}
                     {missingReports.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="p-12 text-center text-muted-foreground font-sans">
+                        <td colSpan={5} className="p-12 text-center text-muted-foreground font-sans">
                           <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                           <p className="font-semibold text-foreground">No Missing VOA Audio Files!</p>
                           <p className="text-xs mt-1">All script lines are marked as Inputted.</p>
