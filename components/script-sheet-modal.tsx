@@ -206,23 +206,26 @@ export function ScriptSheetModal({
     )
   }, [data.lines, data.masterArtists, taskTitle])
 
-  // Single Column PS Data Update
+  // Single Column PS Data Update - preserving blank line index mapping
   const handleApplySingleColumnPs = () => {
-    if (!psPasteText.trim()) return
+    if (!psPasteText) return
 
-    const psValues = psPasteText
-      .trim()
+    const psLines = psPasteText
+      .replace(/\r\n/g, "\n")
       .split("\n")
       .map((v) => v.trim())
-      .filter(Boolean)
 
-    if (psValues.length === 0) return
+    if (psLines.length === 0) return
 
-    const updatedMasters = [...data.masterArtists]
-    updatedMasters.forEach((ma, idx) => {
-      if (idx < psValues.length) {
-        ma.pitchSpeed = psValues[idx]
+    const updatedMasters = data.masterArtists.map((ma, idx) => {
+      if (idx < psLines.length) {
+        const val = psLines[idx]
+        if (!val || val === "-" || val.toLowerCase() === "null" || val.toLowerCase() === "undefined") {
+          return { ...ma, pitchSpeed: undefined }
+        }
+        return { ...ma, pitchSpeed: val }
       }
+      return ma
     })
 
     updateData({ ...data, masterArtists: updatedMasters })
