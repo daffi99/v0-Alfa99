@@ -228,7 +228,7 @@ export function ScriptSheetModal({
     return episodes.sort((a, b) => Number(a.eps) - Number(b.eps))
   }, [data.lines, data.masterArtists])
 
-  // Missing Audio Report Lines Calculation (Tab 4)
+  // Missing Audio Report Lines Calculation (Tab 4) - Join episode numbers for Beluman characters
   const missingReports = useMemo(() => {
     const masterMap = new Map<string, string>()
     data.masterArtists.forEach((ma) => {
@@ -238,38 +238,51 @@ export function ScriptSheetModal({
     const cleanTitle = taskTitle.trim()
     const belumanLines = data.lines.filter((l) => l.status === "Beluman")
 
-    const reportGroups = new Map<
-      string,
-      {
-        eps: string
-        character: string
-        actor: string
-        reportString: string
-        epSummary: string
-      }
-    >()
-
+    // Group Beluman lines by character to collect distinct episodes
+    const characterBelumanMap = new Map<string, Set<string>>()
     belumanLines.forEach((line) => {
-      const key = `${line.eps}_${line.character}`
-      if (!reportGroups.has(key)) {
-        const actor = masterMap.get(line.character.toLowerCase()) || "Unassigned"
-        const formattedEps = line.eps.length === 1 ? `0${line.eps}` : line.eps
-        const reportString = `${cleanTitle}_${formattedEps}_${line.character}/${actor}_Missing audio file`
-        const epSummary = `EP${line.eps} ${line.character}/${actor}`
-
-        reportGroups.set(key, {
-          eps: line.eps,
-          character: line.character,
-          actor,
-          reportString,
-          epSummary,
-        })
+      if (!line.character) return
+      const charKey = line.character.trim()
+      if (!characterBelumanMap.has(charKey)) {
+        characterBelumanMap.set(charKey, new Set<string>())
+      }
+      if (line.eps) {
+        characterBelumanMap.get(charKey)!.add(line.eps.trim())
       }
     })
 
-    return Array.from(reportGroups.values()).sort(
-      (a, b) => Number(a.eps) - Number(b.eps)
-    )
+    const reports: Array<{
+      epsJoined: string
+      character: string
+      actor: string
+      reportString: string
+      epSummary: string
+      minEps: number
+    }> = []
+
+    characterBelumanMap.forEach((epsSet, character) => {
+      const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
+      const sortedEps = Array.from(epsSet)
+        .sort((a, b) => Number(a) - Number(b))
+        .map((e) => (e.length === 1 ? `0${e}` : e))
+
+      const epsJoined = sortedEps.join(", ")
+      const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
+
+      const reportString = `${cleanTitle}_${epsJoined}_${character}/${actor}_Missing audio file`
+      const epSummary = `EP${epsJoined} ${character}/${actor}`
+
+      reports.push({
+        epsJoined,
+        character,
+        actor,
+        reportString,
+        epSummary,
+        minEps,
+      })
+    })
+
+    return reports.sort((a, b) => a.minEps - b.minEps)
   }, [data.lines, data.masterArtists, taskTitle])
 
   // Single Column PS Data Update - preserving blank line index mapping
@@ -903,13 +916,13 @@ export function ScriptSheetModal({
                   <tbody className="divide-y font-mono text-[11px]">
                     {missingReports.map((item, idx) => (
                       <tr key={idx} className="hover:bg-muted/30">
-                        <td className="p-2.5 text-center font-bold">{item.eps}</td>
+                        <td className="p-2.5 text-center font-bold">{item.epsJoined}</td>
                         <td className="p-2.5">
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold border border-red-200">
                             Beluman
                           </span>
                         </td>
-                        <td className="p-2.5 text-center font-bold">{item.eps}</td>
+                        <td className="p-2.5 text-center font-bold">{item.epsJoined}</td>
                         <td className="p-2.5 font-semibold text-foreground">
                           ➡soon {item.character}
                         </td>
