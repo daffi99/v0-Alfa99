@@ -56,7 +56,20 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       query = query.eq("user_id", user.id)
     }
 
-    const { data: task, error } = await query.select().single()
+    let { data: task, error } = await query.select().single()
+
+    // If error is due to missing script_data column in Supabase schema, retry without script_data
+    if (error && (error.code === "PGRST204" || error.message.includes("script_data"))) {
+      console.warn("[v0] script_data column not found in database, retrying update without script_data")
+      delete updateData.script_data
+      let retryQuery = supabase.from("tasks").update(updateData).eq("id", id)
+      if (user) {
+        retryQuery = retryQuery.eq("user_id", user.id)
+      }
+      const retryResult = await retryQuery.select().single()
+      task = retryResult.data
+      error = retryResult.error
+    }
 
     if (error) {
       console.error("[v0] Supabase update error:", error)

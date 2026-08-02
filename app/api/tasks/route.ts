@@ -43,7 +43,11 @@ export async function POST(request: NextRequest) {
       completed_episodes: JSON.stringify(body.completedEpisodes || []),
       notes: body.notes || null,
       billing_month: body.billingMonth ?? "December 2025",
-      script_data: body.scriptData ? (typeof body.scriptData === 'string' ? body.scriptData : JSON.stringify(body.scriptData)) : (body.script_data ? (typeof body.script_data === 'string' ? body.script_data : JSON.stringify(body.script_data)) : null),
+    }
+
+    if (body.scriptData || body.script_data) {
+      const sData = body.scriptData || body.script_data
+      insertData.script_data = typeof sData === "string" ? sData : JSON.stringify(sData)
     }
 
     // If user is authenticated, add user_id
@@ -55,9 +59,19 @@ export async function POST(request: NextRequest) {
       insertData.user_id = null
     }
 
-    const { data: task, error } = await supabase.from("tasks").insert(insertData).select().single()
+    let { data: task, error } = await supabase.from("tasks").insert(insertData).select().single()
+
+    // If error is due to missing script_data column in Supabase schema cache, retry without script_data
+    if (error && (error.code === "PGRST204" || error.message.includes("script_data"))) {
+      console.warn("[v0] script_data column not found in database, retrying without script_data")
+      delete insertData.script_data
+      const retryResult = await supabase.from("tasks").insert(insertData).select().single()
+      task = retryResult.data
+      error = retryResult.error
+    }
 
     if (error) {
+      console.error("[v0] Supabase insert error:", error)
       // If RLS error, provide more helpful message
       if (error.code === "42501" || error.message.includes("permission denied")) {
         return NextResponse.json(
@@ -65,12 +79,12 @@ export async function POST(request: NextRequest) {
           { status: 403 },
         )
       }
-      throw error
+      return NextResponse.json({ error: error.message || "Failed to create task" }, { status: 500 })
     }
 
     return NextResponse.json(task, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error("[v0] POST /api/tasks error:", error)
-    return NextResponse.json({ error: "Failed to create task" }, { status: 500 })
+    return NextResponse.json({ error: error?.message || "Failed to create task" }, { status: 500 })
   }
 }
