@@ -99,7 +99,7 @@ export function ScriptSheetModal({
     })
   }, [data.lines, searchQuery, selectedCharacterFilter, selectedStatusFilter])
 
-  // Character Summary Calculation (Tab 3)
+  // Character Summary Calculation (Tab 3 - Original Sheet Image 3)
   const characterSummaries = useMemo(() => {
     const masterMap = new Map<string, MasterArtistMapping>()
     data.masterArtists.forEach((ma) => {
@@ -162,7 +162,7 @@ export function ScriptSheetModal({
     }))
   }, [data.lines, data.masterArtists, data.checkedCharacters])
 
-  // Missing Audio Report Lines Calculation (Tab 4)
+  // Missing Audio Report Lines Calculation (Tab 4 - Original Sheet Image 2)
   const missingReports = useMemo(() => {
     const masterMap = new Map<string, string>()
     data.masterArtists.forEach((ma) => {
@@ -346,7 +346,7 @@ export function ScriptSheetModal({
             onClick={() => setActiveTab("lines")}
             className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors ${
               activeTab === "lines"
-                ? "border-primary text-primary"
+                ? "border-primary text-primary font-semibold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -357,7 +357,7 @@ export function ScriptSheetModal({
             onClick={() => setActiveTab("master")}
             className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors ${
               activeTab === "master"
-                ? "border-primary text-primary"
+                ? "border-primary text-primary font-semibold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -368,7 +368,7 @@ export function ScriptSheetModal({
             onClick={() => setActiveTab("summary")}
             className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors ${
               activeTab === "summary"
-                ? "border-primary text-primary"
+                ? "border-primary text-primary font-semibold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -379,7 +379,7 @@ export function ScriptSheetModal({
             onClick={() => setActiveTab("report")}
             className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors ${
               activeTab === "report"
-                ? "border-primary text-primary"
+                ? "border-primary text-primary font-semibold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -394,7 +394,7 @@ export function ScriptSheetModal({
 
         {/* Tab Content Container */}
         <div className="flex-1 overflow-hidden p-4 flex flex-col bg-background">
-          {/* TAB 1: SCRIPT LINES MANAGER */}
+          {/* TAB 1: SCRIPT LINES MANAGER (Original Sheet Images 1 & 5) */}
           {activeTab === "lines" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 bg-muted/30 p-2.5 rounded-lg border text-xs">
@@ -458,9 +458,11 @@ export function ScriptSheetModal({
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
                       <th className="p-2.5 w-16 text-center">Eps</th>
-                      <th className="p-2.5 w-28">Start/End</th>
-                      <th className="p-2.5 w-36">Artist / Character</th>
-                      <th className="p-2.5">Script Lines</th>
+                      <th className="p-2.5 w-24">Start Time</th>
+                      <th className="p-2.5 w-24">End Time</th>
+                      <th className="p-2.5 w-24">Batch tim</th>
+                      <th className="p-2.5 w-36">Character</th>
+                      <th className="p-2.5">Script file (Lines)</th>
                       <th className="p-2.5 w-28 text-center">Status</th>
                       <th className="p-2.5 w-12 text-center">Action</th>
                     </tr>
@@ -476,17 +478,14 @@ export function ScriptSheetModal({
                         <td className="p-2.5 font-bold text-center border-r font-mono">
                           {line.eps}
                         </td>
-                        <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground whitespace-nowrap">
-                          {line.startTime || line.endTime ? (
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-muted-foreground" />
-                              <span>
-                                {line.startTime || "--"} - {line.endTime || "--"}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-300">-</span>
-                          )}
+                        <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
+                          {line.startTime || "-"}
+                        </td>
+                        <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
+                          {line.endTime || "-"}
+                        </td>
+                        <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
+                          {line.batchTime || "-"}
                         </td>
                         <td className="p-2.5 border-r font-semibold">
                           {line.character}
@@ -518,7 +517,7 @@ export function ScriptSheetModal({
                     ))}
                     {filteredLines.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={8} className="p-8 text-center text-muted-foreground">
                           No script lines match your filters.
                         </td>
                       </tr>
@@ -529,7 +528,7 @@ export function ScriptSheetModal({
             </div>
           )}
 
-          {/* TAB 2: MASTER ARTIST MAPPING */}
+          {/* TAB 2: MASTER ARTIST MAPPING (Original Sheet Image 4) */}
           {activeTab === "master" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-3">
               <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-lg border text-xs">
@@ -549,9 +548,9 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2.5">Character Name</th>
-                      <th className="p-2.5">Final Artist (Voice Actor)</th>
-                      <th className="p-2.5 w-36">Pitch Shift / Speed (PS)</th>
+                      <th className="p-2.5">Character name</th>
+                      <th className="p-2.5">Final artist</th>
+                      <th className="p-2.5 w-36">PS</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -582,7 +581,7 @@ export function ScriptSheetModal({
             </div>
           )}
 
-          {/* TAB 3: CHARACTER & ACTOR SUMMARY REPORT */}
+          {/* TAB 3: CHARACTER & ACTOR SUMMARY REPORT (Original Sheet Image 3) */}
           {activeTab === "summary" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-3">
               <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-lg border text-xs">
@@ -601,12 +600,12 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2.5 w-12 text-center">Check</th>
+                      <th className="p-2.5 w-14 text-center">Check</th>
                       <th className="p-2.5 w-24">PS</th>
                       <th className="p-2.5">Character</th>
-                      <th className="p-2.5 w-28 text-center">Total Lines</th>
+                      <th className="p-2.5 w-28 text-center">Count</th>
                       <th className="p-2.5">Actor</th>
-                      <th className="p-2.5">Appear in Episodes</th>
+                      <th className="p-2.5">Appear in</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -654,7 +653,7 @@ export function ScriptSheetModal({
             </div>
           )}
 
-          {/* TAB 4: AUTO-GENERATED VOA MISSING AUDIO REPORT */}
+          {/* TAB 4: AUTO-GENERATED VOA MISSING AUDIO REPORT (Original Sheet Image 2) */}
           {activeTab === "report" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-3">
               <div className="flex items-center justify-between bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs">
@@ -685,8 +684,9 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2.5 w-16 text-center">Eps</th>
+                      <th className="p-2.5 w-16 text-center">z</th>
                       <th className="p-2.5 w-32">Status</th>
+                      <th className="p-2.5 w-16 text-center">z</th>
                       <th className="p-2.5 w-36">Artist</th>
                       <th className="p-2.5">Auto-Generated VOA Report String</th>
                       <th className="p-2.5 w-40">EP Summary</th>
@@ -701,6 +701,7 @@ export function ScriptSheetModal({
                             Beluman
                           </span>
                         </td>
+                        <td className="p-2.5 text-center font-bold">{item.eps}</td>
                         <td className="p-2.5 font-semibold text-foreground">
                           ➡soon {item.character}
                         </td>
@@ -714,7 +715,7 @@ export function ScriptSheetModal({
                     ))}
                     {missingReports.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="p-12 text-center text-muted-foreground font-sans">
+                        <td colSpan={6} className="p-12 text-center text-muted-foreground font-sans">
                           <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                           <p className="font-semibold text-foreground">No Missing VOA Audio Files!</p>
                           <p className="text-xs mt-1">All script lines are marked as Inputted.</p>
