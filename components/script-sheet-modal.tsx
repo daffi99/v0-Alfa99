@@ -431,22 +431,12 @@ export function ScriptSheetModal({
     updateData({ ...data, lines: updated })
   }
 
-  // Mark all filtered lines as target status
-  const handleMarkFilteredStatus = (targetStatus: ScriptLineStatus) => {
-    if (targetStatus === "Wrong Cast") {
-      const curChar = filteredLines.length > 0 ? filteredLines[0].character : ""
-      setWrongCastModal({
-        isOpen: true,
-        currentCharacter: curChar,
-        targetFiltered: true,
-      })
-      return
-    }
-
+  // Mark all filtered lines as Inputted
+  const handleMarkFilteredInputted = () => {
     const filteredIds = new Set(filteredLines.map((l) => l.id))
     const updated = data.lines.map((l) => {
       if (filteredIds.has(l.id)) {
-        return { ...l, status: targetStatus }
+        return { ...l, status: "Inputted" as const }
       }
       return l
     })
@@ -495,17 +485,8 @@ export function ScriptSheetModal({
     updateData({ ...data, checkedCharacters: currentChecks })
   }
 
-  // Batch update line status for a specific character across all script lines
-  const handleBatchUpdateCharacterStatus = (charName: string, newStatus: ScriptLineStatus) => {
-    if (newStatus === "Wrong Cast") {
-      setWrongCastModal({
-        isOpen: true,
-        currentCharacter: charName,
-        targetCharName: charName,
-      })
-      return
-    }
-
+  // Batch update line status for a specific character across all script lines (Inputted or Beluman)
+  const handleBatchUpdateCharacterStatus = (charName: string, newStatus: "Inputted" | "Beluman") => {
     const targetName = charName.trim().toLowerCase()
     const updatedLines = data.lines.map((line) => {
       if (line.character && line.character.trim().toLowerCase() === targetName) {
@@ -726,22 +707,13 @@ export function ScriptSheetModal({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <select
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        handleMarkFilteredStatus(e.target.value as ScriptLineStatus)
-                        e.target.value = ""
-                      }
-                    }}
-                    className="h-8 text-xs px-2.5 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold rounded-md transition-colors cursor-pointer outline-none"
+                  <button
+                    onClick={handleMarkFilteredInputted}
+                    className="h-8 px-3 text-xs border border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 rounded-md transition-colors flex items-center gap-1 font-medium"
                   >
-                    <option value="">Mark Filtered Lines As...</option>
-                    {SCRIPT_LINE_STATUSES.map((st) => (
-                      <option key={st} value={st} className="bg-background text-foreground font-semibold">
-                        Mark Filtered as {st}
-                      </option>
-                    ))}
-                  </select>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Mark Filtered as Inputted
+                  </button>
                   <button
                     onClick={handleAddLine}
                     className="h-8 px-3 text-xs bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors flex items-center gap-1"
@@ -1038,23 +1010,6 @@ export function ScriptSheetModal({
                               >
                                 Beluman
                               </button>
-                              <select
-                                onChange={(e) => {
-                                  if (e.target.value) {
-                                    handleBatchUpdateCharacterStatus(cs.character, e.target.value as ScriptLineStatus)
-                                    e.target.value = ""
-                                  }
-                                }}
-                                className="h-6 text-[10px] px-1 font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border rounded transition-all cursor-pointer outline-none"
-                                title="Set all lines for this character to any status"
-                              >
-                                <option value="">Set All...</option>
-                                {SCRIPT_LINE_STATUSES.map((st) => (
-                                  <option key={st} value={st}>
-                                    Set All {st}
-                                  </option>
-                                ))}
-                              </select>
                             </div>
                           </div>
                         </td>
