@@ -919,13 +919,24 @@ export function ScriptSheetModal({
                             </td>
                             {isCaptionTask && (
                               <td className="p-2 border-r text-[11px] text-red-600 font-semibold">
-                                <input
-                                  type="text"
-                                  placeholder="Note..."
-                                  value={line.voErrorNote || ""}
-                                  onChange={(e) => handleUpdateVoErrorNote(line.id, e.target.value)}
-                                  className="w-full bg-transparent text-red-600 font-medium placeholder:text-muted-foreground/30 outline-none border-b border-transparent focus:border-red-400 text-[11px]"
-                                />
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="text"
+                                    placeholder="Note..."
+                                    value={line.voErrorNote || ""}
+                                    onChange={(e) => handleUpdateVoErrorNote(line.id, e.target.value)}
+                                    className="w-full bg-transparent text-red-600 font-medium placeholder:text-muted-foreground/30 outline-none border-b border-transparent focus:border-red-400 text-[11px]"
+                                  />
+                                  {line.voErrorNote && (
+                                    <button
+                                      onClick={() => handleUpdateVoErrorNote(line.id, "")}
+                                      className="p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                                      title="Remove VO Error Note"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             )}
                             <td className="p-2 border-r text-center">
