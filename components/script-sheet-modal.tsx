@@ -131,13 +131,14 @@ export function ScriptSheetModal({
       const master = masterMap.get(keyLower)
 
       if (!summaryMap.has(key)) {
+        const hasPs = Boolean(master?.pitchSpeed && master.pitchSpeed !== "-")
         summaryMap.set(key, {
           character: key,
           actor: master?.finalArtist || "Unassigned",
           ps: master?.pitchSpeed || "-",
           linesCount: 0,
           episodes: new Set<string>(),
-          isChecked: data.checkedCharacters?.[key] ?? true,
+          isChecked: data.checkedCharacters?.[key] ?? hasPs,
         })
       }
 
@@ -148,13 +149,14 @@ export function ScriptSheetModal({
 
     data.masterArtists.forEach((ma) => {
       if (!summaryMap.has(ma.characterName)) {
+        const hasPs = Boolean(ma.pitchSpeed && ma.pitchSpeed !== "-")
         summaryMap.set(ma.characterName, {
           character: ma.characterName,
           actor: ma.finalArtist,
           ps: ma.pitchSpeed || "-",
           linesCount: 0,
           episodes: new Set<string>(),
-          isChecked: data.checkedCharacters?.[ma.characterName] ?? true,
+          isChecked: data.checkedCharacters?.[ma.characterName] ?? hasPs,
         })
       }
     })
@@ -371,11 +373,15 @@ export function ScriptSheetModal({
     updateData({ ...data, checkedCharacters: currentChecks })
   }
 
-  // Check / Uncheck all characters in summary
+  // Check / Uncheck all characters in summary (only checks characters with valid PS values)
   const handleCheckAll = (checked: boolean) => {
     const currentChecks = { ...(data.checkedCharacters || {}) }
     characterSummaries.forEach((cs) => {
-      currentChecks[cs.character] = checked
+      if (checked) {
+        currentChecks[cs.character] = cs.ps !== "-" && Boolean(cs.ps)
+      } else {
+        currentChecks[cs.character] = false
+      }
     })
     updateData({ ...data, checkedCharacters: currentChecks })
   }
