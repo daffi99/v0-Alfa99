@@ -849,10 +849,10 @@ export function ScriptSheetModal({
                       <th className="p-2 w-16 text-center">Start</th>
                       <th className="p-2 w-16 text-center">End</th>
                       <th className="p-2 w-16 text-center">Batch</th>
-                      <th className="p-2 w-24">Character</th>
+                      <th className="p-2 w-16">Character</th>
                       <th className="p-2">Script file (Lines)</th>
                       {isCaptionTask && (
-                        <th className="p-2 w-36 text-red-600 font-semibold">VO Error Note</th>
+                        <th className="p-2 w-28 text-red-600 font-semibold text-[10px]">VO Error Note</th>
                       )}
                       <th className="p-2 w-24 text-center">Status</th>
                       <th className="p-2 w-10 text-center">Action</th>
@@ -911,21 +911,21 @@ export function ScriptSheetModal({
                             <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
                               {line.batchTime || "-"}
                             </td>
-                            <td className="p-2 border-r font-semibold text-[11px] whitespace-nowrap">
+                            <td className="p-2 border-r font-semibold text-[10px] whitespace-nowrap truncate max-w-[80px]" title={line.character}>
                               {line.character}
                             </td>
                             <td className="p-2 border-r whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed font-medium">
                               {displayLineText}
                             </td>
                             {isCaptionTask && (
-                              <td className="p-2 border-r text-[11px] text-red-600 font-semibold">
+                              <td className="p-2 border-r text-[10px] text-red-600 font-semibold">
                                 <div className="flex items-center gap-1">
                                   <input
                                     type="text"
                                     placeholder="Note..."
                                     value={line.voErrorNote || ""}
                                     onChange={(e) => handleUpdateVoErrorNote(line.id, e.target.value)}
-                                    className="w-full bg-transparent text-red-600 font-medium placeholder:text-muted-foreground/30 outline-none border-b border-transparent focus:border-red-400 text-[11px]"
+                                    className="w-full bg-transparent text-red-600 font-medium placeholder:text-muted-foreground/30 outline-none border-b border-transparent focus:border-red-400 text-[10px] py-0"
                                   />
                                   {line.voErrorNote && (
                                     <button
