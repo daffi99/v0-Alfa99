@@ -599,53 +599,80 @@ export function ScriptSheetModal({
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {filteredLines.map((line) => (
-                      <tr
-                        key={line.id}
-                        className={`hover:bg-muted/40 transition-colors ${
-                          characterColors[line.character] || ""
-                        }`}
-                      >
-                        <td className="p-2.5 font-bold text-center border-r font-mono">
-                          {line.eps}
-                        </td>
-                        <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
-                          {line.startTime || "-"}
-                        </td>
-                        <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
-                          {line.endTime || "-"}
-                        </td>
-                        <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
-                          {line.batchTime || "-"}
-                        </td>
-                        <td className="p-2.5 border-r font-semibold">
-                          {line.character}
-                        </td>
-                        <td className="p-2.5 border-r whitespace-pre-wrap leading-relaxed">
-                          {line.lineText}
-                        </td>
-                        <td className="p-2.5 border-r text-center">
-                          <button
-                            onClick={() => handleToggleLineStatus(line.id)}
-                            className={`h-6 text-[10px] px-2.5 rounded-full font-bold transition-all ${
-                              line.status === "Inputted"
-                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                                : "bg-red-100 text-red-800 hover:bg-red-200"
+                    {filteredLines.map((line, idx) => {
+                      const currentEps = line.eps ? line.eps.trim().padStart(3, "0") : "Unknown"
+                      const prevEps =
+                        idx > 0 && filteredLines[idx - 1].eps
+                          ? filteredLines[idx - 1].eps.trim().padStart(3, "0")
+                          : null
+                      const showDivider = idx === 0 || currentEps !== prevEps
+                      const countInEp = filteredLines.filter(
+                        (l) => (l.eps ? l.eps.trim().padStart(3, "0") : "Unknown") === currentEps
+                      ).length
+
+                      return (
+                        <React.Fragment key={line.id}>
+                          {showDivider && (
+                            <tr className="bg-indigo-50/80 dark:bg-indigo-950/50 border-y-2 border-indigo-200 dark:border-indigo-800">
+                              <td colSpan={8} className="px-3 py-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="px-2.5 py-0.5 rounded bg-indigo-600 text-white font-mono font-bold text-xs shadow-sm">
+                                    EPISODE {currentEps}
+                                  </span>
+                                  <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">
+                                    {countInEp} {countInEp === 1 ? "line" : "lines"} in this episode
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          <tr
+                            className={`hover:bg-muted/40 transition-colors ${
+                              characterColors[line.character] || ""
                             }`}
                           >
-                            {line.status}
-                          </button>
-                        </td>
-                        <td className="p-2.5 text-center">
-                          <button
-                            onClick={() => handleDeleteLine(line.id)}
-                            className="p-1 rounded text-muted-foreground hover:text-red-600 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                            <td className="p-2.5 font-bold text-center border-r font-mono">
+                              {line.eps ? line.eps.trim().padStart(3, "0") : "-"}
+                            </td>
+                            <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
+                              {line.startTime || "-"}
+                            </td>
+                            <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
+                              {line.endTime || "-"}
+                            </td>
+                            <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
+                              {line.batchTime || "-"}
+                            </td>
+                            <td className="p-2.5 border-r font-semibold">
+                              {line.character}
+                            </td>
+                            <td className="p-2.5 border-r whitespace-pre-wrap leading-relaxed">
+                              {line.lineText}
+                            </td>
+                            <td className="p-2.5 border-r text-center">
+                              <button
+                                onClick={() => handleToggleLineStatus(line.id)}
+                                className={`h-6 text-[10px] px-2.5 rounded-full font-bold transition-all ${
+                                  line.status === "Inputted"
+                                    ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                    : "bg-red-100 text-red-800 hover:bg-red-200"
+                                }`}
+                              >
+                                {line.status}
+                              </button>
+                            </td>
+                            <td className="p-2.5 text-center">
+                              <button
+                                onClick={() => handleDeleteLine(line.id)}
+                                className="p-1 rounded text-muted-foreground hover:text-red-600 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        </React.Fragment>
+                      )
+                    })}
                     {filteredLines.length === 0 && (
                       <tr>
                         <td colSpan={8} className="p-8 text-center text-muted-foreground">
@@ -1002,7 +1029,6 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2.5 w-24 text-center">Eps</th>
                       <th className="p-2.5 w-28">Status</th>
                       <th className="p-2.5 w-36">Artist</th>
                       <th className="p-2.5">Auto-Generated VOA Report String</th>
@@ -1012,7 +1038,6 @@ export function ScriptSheetModal({
                   <tbody className="divide-y font-mono text-[11px]">
                     {missingReports.map((item, idx) => (
                       <tr key={idx} className="hover:bg-muted/30">
-                        <td className="p-2.5 text-center font-bold">{item.epsJoined}</td>
                         <td className="p-2.5">
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold border border-red-200">
                             Beluman
@@ -1031,7 +1056,7 @@ export function ScriptSheetModal({
                     ))}
                     {missingReports.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="p-12 text-center text-muted-foreground font-sans">
+                        <td colSpan={4} className="p-12 text-center text-muted-foreground font-sans">
                           <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                           <p className="font-semibold text-foreground">No Missing VOA Audio Files!</p>
                           <p className="text-xs mt-1">All script lines are marked as Inputted.</p>
