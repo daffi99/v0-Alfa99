@@ -371,6 +371,15 @@ export function ScriptSheetModal({
     updateData({ ...data, checkedCharacters: currentChecks })
   }
 
+  // Check / Uncheck all characters in summary
+  const handleCheckAll = (checked: boolean) => {
+    const currentChecks = { ...(data.checkedCharacters || {}) }
+    characterSummaries.forEach((cs) => {
+      currentChecks[cs.character] = checked
+    })
+    updateData({ ...data, checkedCharacters: currentChecks })
+  }
+
   const totalLines = data.lines.length
   const inputtedCount = data.lines.filter((l) => l.status === "Inputted").length
   const belumanCount = totalLines - inputtedCount
@@ -681,12 +690,26 @@ export function ScriptSheetModal({
                 <span className="text-muted-foreground font-medium">
                   Sorted by line count (Highest to Lowest) • {activeCharacterSummaries.length} Active Characters
                 </span>
-                <button
-                  onClick={() => setIsPsModalOpen(true)}
-                  className="h-8 px-3 text-xs border border-border rounded-md hover:bg-muted font-medium transition-colors flex items-center gap-1.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Update Pitch Data (PS)
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleCheckAll(true)}
+                    className="h-8 px-2.5 text-xs border border-border text-foreground hover:bg-muted font-medium rounded-md transition-colors"
+                  >
+                    Check All
+                  </button>
+                  <button
+                    onClick={() => handleCheckAll(false)}
+                    className="h-8 px-2.5 text-xs border border-border text-foreground hover:bg-muted font-medium rounded-md transition-colors"
+                  >
+                    Uncheck All
+                  </button>
+                  <button
+                    onClick={() => setIsPsModalOpen(true)}
+                    className="h-8 px-3 text-xs border border-border rounded-md hover:bg-muted font-medium transition-colors flex items-center gap-1.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Update Pitch Data (PS)
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-auto border rounded-lg space-y-4 p-1">
@@ -694,7 +717,24 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse border rounded-md">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2.5 w-14 text-center">Check</th>
+                      <th className="p-2.5 w-14 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <input
+                            type="checkbox"
+                            checked={
+                              activeCharacterSummaries.length > 0 &&
+                              activeCharacterSummaries.every((cs) => cs.isChecked)
+                            }
+                            onChange={(e) => handleCheckAll(e.target.checked)}
+                            className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                            title={
+                              activeCharacterSummaries.every((cs) => cs.isChecked)
+                                ? "Uncheck All"
+                                : "Check All"
+                            }
+                          />
+                        </div>
+                      </th>
                       <th className="p-2.5 w-24">PS</th>
                       <th className="p-2.5">Character</th>
                       <th className="p-2.5 w-28 text-center">Count</th>
