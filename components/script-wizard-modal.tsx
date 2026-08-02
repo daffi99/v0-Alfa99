@@ -49,10 +49,12 @@ export function sanitizeVoiceActorAndPs(colA: string, colB: string, colC?: strin
     ps = rawB
     artist = rawC
   }
-  // Case: colB is Artist (e.g. Andreas) and colC is PS (e.g. 0.97)
+  // Case: colB is Artist (e.g. Magda) and colC is PS (e.g. 0.97 or empty)
   else if (rawB) {
     artist = rawB
     ps = rawC
+  } else {
+    artist = "Unassigned"
   }
 
   // Strip trailing numbers/PS from artist name (e.g. "Andreas 0.97" -> "Andreas")
@@ -64,7 +66,7 @@ export function sanitizeVoiceActorAndPs(colA: string, colB: string, colC?: strin
     }
   }
 
-  return { charName, artist, ps }
+  return { charName, artist: artist || "Unassigned", ps }
 }
 
 export function ScriptWizardModal({
@@ -130,9 +132,9 @@ export function ScriptWizardModal({
         artist = cleaned.artist
         ps = cleaned.ps
       }
-      // Image 4 / Flexible Format (2+ cols): Character | PS/Artist | Artist/PS
-      else if (cols.length >= 2) {
-        const cleaned = sanitizeVoiceActorAndPs(cols[0], cols[1], cols[2])
+      // Image 4 / Flexible Format (1+ cols): Character | PS/Artist | Artist/PS
+      else if (cols.length >= 1) {
+        const cleaned = sanitizeVoiceActorAndPs(cols[0], cols[1] || "", cols[2])
         charName = cleaned.charName
         artist = cleaned.artist
         ps = cleaned.ps
@@ -140,13 +142,12 @@ export function ScriptWizardModal({
 
       if (
         charName &&
-        artist &&
         charName.toLowerCase() !== "character name" &&
-        artist.toLowerCase() !== "final artist"
+        charName.toLowerCase() !== "character"
       ) {
         results.push({
           characterName: charName,
-          finalArtist: artist,
+          finalArtist: artist || "Unassigned",
           pitchSpeed: ps || undefined,
         })
       }
