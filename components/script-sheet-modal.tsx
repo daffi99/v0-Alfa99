@@ -36,9 +36,7 @@ export const SCRIPT_LINE_STATUSES: ScriptLineStatus[] = [
   "Beluman",
   "Inputted",
   "Missing",
-  "Wrong",
   "Broken",
-  "Not Check Yet",
   "VO Error",
   "Need Pauses",
   "Wrong Cast",
@@ -53,9 +51,7 @@ export const STATUS_STYLE_MAP: Record<
   Beluman: { label: "Beluman", bg: "bg-red-100", text: "text-red-700", border: "border-red-200" },
   Inputted: { label: "Inputted", bg: "bg-emerald-100", text: "text-emerald-800", border: "border-emerald-200" },
   Missing: { label: "Missing", bg: "bg-red-700", text: "text-white", border: "border-red-800" },
-  Wrong: { label: "Wrong", bg: "bg-red-500", text: "text-white", border: "border-red-600" },
   Broken: { label: "Broken", bg: "bg-purple-700", text: "text-white", border: "border-purple-800" },
-  "Not Check Yet": { label: "Not Check Yet", bg: "bg-gray-200", text: "text-gray-800", border: "border-gray-300" },
   "VO Error": { label: "VO Error", bg: "bg-amber-200", text: "text-amber-900", border: "border-amber-300" },
   "Need Pauses": { label: "Need Pauses", bg: "bg-sky-200", text: "text-sky-900", border: "border-sky-300" },
   "Wrong Cast": { label: "Wrong Cast", bg: "bg-amber-900", text: "text-amber-100", border: "border-amber-950" },
@@ -72,9 +68,12 @@ export const STATUS_REPORT_SUFFIX_MAP: Record<ScriptLineStatus, string | null> =
   "Wrong Cast": "_Missing Sentence, Wrong cast assigned.",
   "Too Short": "_Too short, can't sync with actor lips.",
   "Too Long": "_Too long, can't sync with actor lips.",
-  Wrong: "_Wrong audio file",
-  "Not Check Yet": "_Not checked yet",
   Inputted: null, // Inputted lines do not create VOA report lines
+}
+
+export function formatReportTitle(title: string): string {
+  // Format title: add "_" between Name and Number, e.g. "Germany 090 (120)" -> "Germany_090 (120)"
+  return title.trim().replace(/([a-zA-Z]+)\s+(\d+)/g, "$1_$2")
 }
 
 const CHARACTER_COLOR_PALETTE = [
@@ -121,6 +120,18 @@ export function ScriptSheetModal({
   // Unused Characters Collapsible Panel State
   const [isUnusedExpanded, setIsUnusedExpanded] = useState(false)
 
+  // Wrong Cast Character Selection Popup State
+  const [wrongCastModal, setWrongCastModal] = useState<{
+    isOpen: boolean
+    currentCharacter: string
+    targetLineId?: string
+    targetCharName?: string
+    targetFiltered?: boolean
+  }>({
+    isOpen: false,
+    currentCharacter: "",
+  })
+
   if (!isOpen) return null
 
   // Generate character color mapping
@@ -160,11 +171,6 @@ export function ScriptSheetModal({
 
   // Character Summary Calculation (Tab 3)
   const characterSummaries = useMemo(() => {
-    const masterMap = new Map<string, MasterArtistMapping>()
-    data.masterArtists.forEach((ma) => {
-      masterMap.set(ma.characterName.toLowerCase(), ma)
-    })
-
     const summaryMap = new Map<
       string,
       {
@@ -174,80 +180,86 @@ export function ScriptSheetModal({
         linesCount: number
         inputtedLinesCount: number
         belumanLinesCount: number
-        episodes: Set<string>
-        isChecked: boolean
+        episodesSet: Set<string>
       }
     >()
 
+    // Initialize map with all master artists
+    data.masterArtists.forEach((ma) => {
+      summaryMap.set(ma.characterName.toLowerCase(), {
+        character: ma.characterName,
+        actor: ma.finalArtist,
+        ps: ma.pitchSpeed || "-",
+        linesCount: 0,
+        inputtedLinesCount: 0,
+        belumanLinesCount: 0,
+        episodesSet: new Set<string>(),
+      })
+    })
+
+    // Count line occurrences
     data.lines.forEach((line) => {
       if (!line.character) return
-      const key = line.character.trim()
-      const keyLower = key.toLowerCase()
-      const master = masterMap.get(keyLower)
-
-      if (!summaryMap.has(key)) {
-        const hasPs = Boolean(master?.pitchSpeed && master.pitchSpeed !== "-")
-        summaryMap.set(key, {
-          character: key,
-          actor: master?.finalArtist || "Unassigned",
-          ps: master?.pitchSpeed || "-",
+      const charKey = line.character.trim().toLowerCase()
+      if (!summaryMap.has(charKey)) {
+        summaryMap.set(charKey, {
+          character: line.character,
+          actor: "Unassigned",
+          ps: "-",
           linesCount: 0,
           inputtedLinesCount: 0,
           belumanLinesCount: 0,
-          episodes: new Set<string>(),
-          isChecked: data.checkedCharacters?.[key] ?? hasPs,
+          episodesSet: new Set<string>(),
         })
       }
-
-      const item = summaryMap.get(key)!
-      item.linesCount += 1
+      const entry = summaryMap.get(charKey)!
+      entry.linesCount += 1
       if (line.status === "Inputted") {
-        item.inputtedLinesCount += 1
+        entry.inputtedLinesCount += 1
       } else {
-        item.belumanLinesCount += 1
+        entry.belumanLinesCount += 1
       }
-      if (line.eps) item.episodes.add(line.eps)
-    })
-
-    data.masterArtists.forEach((ma) => {
-      if (!summaryMap.has(ma.characterName)) {
-        const hasPs = Boolean(ma.pitchSpeed && ma.pitchSpeed !== "-")
-        summaryMap.set(ma.characterName, {
-          character: ma.characterName,
-          actor: ma.finalArtist,
-          ps: ma.pitchSpeed || "-",
-          linesCount: 0,
-          inputtedLinesCount: 0,
-          belumanLinesCount: 0,
-          episodes: new Set<string>(),
-          isChecked: data.checkedCharacters?.[ma.characterName] ?? hasPs,
-        })
+      if (line.eps) {
+        entry.episodesSet.add(line.eps.trim())
       }
     })
 
-    return Array.from(summaryMap.values()).map((s) => ({
-      ...s,
-      episodesList: Array.from(s.episodes)
+    const result = Array.from(summaryMap.values()).map((entry) => {
+      const sortedEps = Array.from(entry.episodesSet)
         .sort((a, b) => Number(a) - Number(b))
         .map((e) => e.padStart(3, "0"))
-        .join(", "),
-    }))
-  }, [data.lines, data.masterArtists, data.checkedCharacters])
 
-  // Active (linesCount > 0 sorted highest to lowest) & Unused (linesCount === 0 collapsed)
-  const { activeCharacterSummaries, unusedCharacterSummaries } = useMemo(() => {
-    const active = characterSummaries
+      const checkedMap = data.checkedCharacters || {}
+      const isChecked = checkedMap[entry.character] ?? (entry.ps !== "-" && Boolean(entry.ps))
+
+      return {
+        character: entry.character,
+        actor: entry.actor,
+        ps: entry.ps,
+        linesCount: entry.linesCount,
+        inputtedLinesCount: entry.inputtedLinesCount,
+        belumanLinesCount: entry.belumanLinesCount,
+        episodesList: sortedEps.join(", "),
+        isChecked,
+      }
+    })
+
+    return result
+  }, [data.masterArtists, data.lines, data.checkedCharacters])
+
+  // Active characters (with >0 lines) sorted from highest line count to lowest
+  const activeCharacterSummaries = useMemo(() => {
+    return characterSummaries
       .filter((cs) => cs.linesCount > 0)
       .sort((a, b) => b.linesCount - a.linesCount)
-
-    const unused = characterSummaries
-      .filter((cs) => cs.linesCount === 0)
-      .sort((a, b) => a.character.localeCompare(b.character))
-
-    return { activeCharacterSummaries: active, unusedCharacterSummaries: unused }
   }, [characterSummaries])
 
-  // Episode Character Summary Calculation (Tab 5)
+  // Unused characters (with 0 lines)
+  const unusedCharacterSummaries = useMemo(() => {
+    return characterSummaries.filter((cs) => cs.linesCount === 0)
+  }, [characterSummaries])
+
+  // Episode Character Summary Calculation (Tab 4)
   const episodeCharacterSummaries = useMemo(() => {
     const epMap = new Map<string, Map<string, number>>()
 
@@ -259,22 +271,14 @@ export function ScriptSheetModal({
       if (!epMap.has(epsKey)) {
         epMap.set(epsKey, new Map<string, number>())
       }
-
       const charCounts = epMap.get(epsKey)!
       charCounts.set(charKey, (charCounts.get(charKey) || 0) + 1)
     })
 
-    const masterMap = new Map<string, string>()
-    data.masterArtists.forEach((ma) => {
-      masterMap.set(ma.characterName.toLowerCase(), ma.finalArtist)
-    })
-
-    const episodes = Array.from(epMap.entries()).map(([eps, charCounts]) => {
-      // Sort characters in this episode by line count in this episode descending
-      const charactersInEp = Array.from(charCounts.entries())
+    const episodes = Array.from(epMap.entries()).map(([eps, charMap]) => {
+      const charactersInEp = Array.from(charMap.entries())
         .map(([character, count]) => ({
           character,
-          actor: masterMap.get(character.toLowerCase()) || "Unassigned",
           count,
         }))
         .sort((a, b) => b.count - a.count)
@@ -292,18 +296,18 @@ export function ScriptSheetModal({
     })
 
     return episodes.sort((a, b) => Number(a.eps) - Number(b.eps))
-  }, [data.lines, data.masterArtists])
+  }, [data.lines])
 
-  // VOA Missing / Issue Audio Report Lines Calculation (Tab 4)
+  // VOA Missing / Issue Audio Report Lines Calculation (Tab 5)
   const missingReports = useMemo(() => {
     const masterMap = new Map<string, string>()
     data.masterArtists.forEach((ma) => {
       masterMap.set(ma.characterName.toLowerCase(), ma.finalArtist)
     })
 
-    const cleanTitle = taskTitle.trim()
+    const formattedTitle = formatReportTitle(taskTitle)
 
-    // Group issue lines by character & status: key = `${character.toLowerCase()}__${line.status}`
+    // Group issue lines by target character & status: key = `${targetChar.toLowerCase()}__${line.status}`
     const charStatusMap = new Map<
       string,
       {
@@ -317,12 +321,17 @@ export function ScriptSheetModal({
       const suffix = STATUS_REPORT_SUFFIX_MAP[line.status]
       if (!suffix || !line.character) return // Skip Inputted lines or null suffixes
 
-      const charKey = line.character.trim()
-      const groupKey = `${charKey.toLowerCase()}__${line.status}`
+      // For Wrong Cast, use correctCharacter if selected, otherwise original character
+      const targetChar =
+        line.status === "Wrong Cast" && line.correctCharacter
+          ? line.correctCharacter.trim()
+          : line.character.trim()
+
+      const groupKey = `${targetChar.toLowerCase()}__${line.status}`
 
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
-          character: charKey,
+          character: targetChar,
           status: line.status,
           epsSet: new Set<string>(),
         })
@@ -353,7 +362,7 @@ export function ScriptSheetModal({
       const epsJoined = sortedEps.join(", ")
       const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
 
-      const reportString = `${cleanTitle}_${epsJoined}_${character}/${actor}${suffix}`
+      const reportString = `${formattedTitle}_${epsJoined}_${character}/${actor}${suffix}`
       const epSummary = `EP${epsJoined} ${character}/${actor}`
 
       reports.push({
@@ -399,6 +408,17 @@ export function ScriptSheetModal({
 
   // Update single line status
   const handleUpdateLineStatus = (lineId: string, newStatus: ScriptLineStatus) => {
+    if (newStatus === "Wrong Cast") {
+      const targetLine = data.lines.find((l) => l.id === lineId)
+      const curChar = targetLine ? targetLine.character : ""
+      setWrongCastModal({
+        isOpen: true,
+        currentCharacter: curChar,
+        targetLineId: lineId,
+      })
+      return
+    }
+
     const updated = data.lines.map((l) => {
       if (l.id === lineId) {
         return {
@@ -413,6 +433,16 @@ export function ScriptSheetModal({
 
   // Mark all filtered lines as target status
   const handleMarkFilteredStatus = (targetStatus: ScriptLineStatus) => {
+    if (targetStatus === "Wrong Cast") {
+      const curChar = filteredLines.length > 0 ? filteredLines[0].character : ""
+      setWrongCastModal({
+        isOpen: true,
+        currentCharacter: curChar,
+        targetFiltered: true,
+      })
+      return
+    }
+
     const filteredIds = new Set(filteredLines.map((l) => l.id))
     const updated = data.lines.map((l) => {
       if (filteredIds.has(l.id)) {
@@ -456,21 +486,26 @@ export function ScriptSheetModal({
     updateData({ ...data, checkedCharacters: currentChecks })
   }
 
-  // Check / Uncheck all characters in summary (only checks characters with valid PS values)
+  // Check / Uncheck all characters in summary
   const handleCheckAll = (checked: boolean) => {
     const currentChecks = { ...(data.checkedCharacters || {}) }
     characterSummaries.forEach((cs) => {
-      if (checked) {
-        currentChecks[cs.character] = cs.ps !== "-" && Boolean(cs.ps)
-      } else {
-        currentChecks[cs.character] = false
-      }
+      currentChecks[cs.character] = checked
     })
     updateData({ ...data, checkedCharacters: currentChecks })
   }
 
   // Batch update line status for a specific character across all script lines
   const handleBatchUpdateCharacterStatus = (charName: string, newStatus: ScriptLineStatus) => {
+    if (newStatus === "Wrong Cast") {
+      setWrongCastModal({
+        isOpen: true,
+        currentCharacter: charName,
+        targetCharName: charName,
+      })
+      return
+    }
+
     const targetName = charName.trim().toLowerCase()
     const updatedLines = data.lines.map((line) => {
       if (line.character && line.character.trim().toLowerCase() === targetName) {
@@ -479,6 +514,51 @@ export function ScriptSheetModal({
       return line
     })
     updateData({ ...data, lines: updatedLines })
+  }
+
+  // Handle wrong cast character selection from popup modal
+  const handleSelectWrongCastCharacter = (selectedCorrectCharacter: string) => {
+    let updatedLines = [...data.lines]
+
+    if (wrongCastModal.targetLineId) {
+      updatedLines = updatedLines.map((l) => {
+        if (l.id === wrongCastModal.targetLineId) {
+          return {
+            ...l,
+            status: "Wrong Cast" as ScriptLineStatus,
+            correctCharacter: selectedCorrectCharacter,
+          }
+        }
+        return l
+      })
+    } else if (wrongCastModal.targetCharName) {
+      const targetName = wrongCastModal.targetCharName.trim().toLowerCase()
+      updatedLines = updatedLines.map((l) => {
+        if (l.character && l.character.trim().toLowerCase() === targetName) {
+          return {
+            ...l,
+            status: "Wrong Cast" as ScriptLineStatus,
+            correctCharacter: selectedCorrectCharacter,
+          }
+        }
+        return l
+      })
+    } else if (wrongCastModal.targetFiltered) {
+      const filteredIds = new Set(filteredLines.map((l) => l.id))
+      updatedLines = updatedLines.map((l) => {
+        if (filteredIds.has(l.id)) {
+          return {
+            ...l,
+            status: "Wrong Cast" as ScriptLineStatus,
+            correctCharacter: selectedCorrectCharacter,
+          }
+        }
+        return l
+      })
+    }
+
+    updateData({ ...data, lines: updatedLines })
+    setWrongCastModal({ isOpen: false, currentCharacter: "" })
   }
 
   const totalLines = data.lines.length
@@ -1250,6 +1330,62 @@ export function ScriptSheetModal({
                   className="px-4 py-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-md transition-colors"
                 >
                   Apply PS Values
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal for Wrong Cast Character Selection */}
+        {wrongCastModal.isOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-border rounded-xl shadow-2xl p-5 w-full max-w-3xl flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b pb-3">
+                <div>
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    <Users className="w-5 h-5 text-amber-600" />
+                    Select Correct Character for Wrong Cast
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Line for <b className="text-foreground font-semibold">{wrongCastModal.currentCharacter}</b> was assigned to the wrong cast. Pick the correct intended character:
+                  </p>
+                </div>
+                <button
+                  onClick={() => setWrongCastModal({ isOpen: false, currentCharacter: "" })}
+                  className="p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* 4 Rows X N Columns Grid */}
+              <div className="p-3 bg-muted/30 border rounded-lg overflow-x-auto max-w-full">
+                <div className="grid grid-rows-4 grid-flow-col gap-2 min-w-max">
+                  {data.masterArtists
+                    .filter((ma) => ma.characterName.trim().toLowerCase() !== wrongCastModal.currentCharacter.trim().toLowerCase())
+                    .map((ma, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSelectWrongCastCharacter(ma.characterName)}
+                        className="px-3.5 py-2.5 rounded-lg border border-border bg-card hover:bg-amber-500/10 hover:border-amber-500 transition-all text-left flex flex-col items-start min-w-[130px] shadow-2xs group active:scale-95 cursor-pointer"
+                      >
+                        <span className="text-xs font-bold text-foreground group-hover:text-amber-700">
+                          {ma.characterName}
+                        </span>
+                        <span className="text-[10px] font-medium text-emerald-700 font-mono">
+                          {ma.finalArtist || "No VOA"}
+                        </span>
+                      </button>
+                    ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end border-t pt-3">
+                <button
+                  onClick={() => setWrongCastModal({ isOpen: false, currentCharacter: "" })}
+                  className="px-4 py-2 text-xs font-medium border rounded-md hover:bg-muted transition-colors"
+                >
+                  Cancel
                 </button>
               </div>
             </div>

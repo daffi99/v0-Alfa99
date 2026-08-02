@@ -7,9 +7,7 @@ export type ScriptLineStatus =
   | "Beluman"
   | "Inputted"
   | "Missing"
-  | "Wrong"
   | "Broken"
-  | "Not Check Yet"
   | "VO Error"
   | "Need Pauses"
   | "Wrong Cast"
@@ -23,6 +21,7 @@ export interface ScriptLine {
   endTime?: string
   batchTime?: string
   character: string
+  correctCharacter?: string
   lineText: string
   status: ScriptLineStatus
 }
