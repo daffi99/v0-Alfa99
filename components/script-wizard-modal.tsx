@@ -3,6 +3,19 @@
 import React, { useState } from "react"
 import { ArrowRight, ArrowLeft, CheckCircle2, Sparkles, FileText, UserCheck, X } from "lucide-react"
 
+export type ScriptLineStatus =
+  | "Beluman"
+  | "Inputted"
+  | "Missing"
+  | "Wrong"
+  | "Broken"
+  | "Not Check Yet"
+  | "VO Error"
+  | "Need Pauses"
+  | "Wrong Cast"
+  | "Too Short"
+  | "Too Long"
+
 export interface ScriptLine {
   id: string
   eps: string
@@ -11,7 +24,7 @@ export interface ScriptLine {
   batchTime?: string
   character: string
   lineText: string
-  status: "Inputted" | "Beluman"
+  status: ScriptLineStatus
 }
 
 export interface MasterArtistMapping {

@@ -21,7 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react"
-import type { ScriptData, ScriptLine, MasterArtistMapping } from "./script-wizard-modal"
+import type { ScriptData, ScriptLine, MasterArtistMapping, ScriptLineStatus } from "./script-wizard-modal"
 
 interface ScriptSheetModalProps {
   isOpen: boolean
@@ -30,6 +30,51 @@ interface ScriptSheetModalProps {
   scriptData: ScriptData
   onSave: (updatedData: ScriptData) => void
   onReRunWizard: () => void
+}
+
+export const SCRIPT_LINE_STATUSES: ScriptLineStatus[] = [
+  "Beluman",
+  "Inputted",
+  "Missing",
+  "Wrong",
+  "Broken",
+  "Not Check Yet",
+  "VO Error",
+  "Need Pauses",
+  "Wrong Cast",
+  "Too Short",
+  "Too Long",
+]
+
+export const STATUS_STYLE_MAP: Record<
+  ScriptLineStatus,
+  { label: string; bg: string; text: string; border: string }
+> = {
+  Beluman: { label: "Beluman", bg: "bg-red-100", text: "text-red-700", border: "border-red-200" },
+  Inputted: { label: "Inputted", bg: "bg-emerald-100", text: "text-emerald-800", border: "border-emerald-200" },
+  Missing: { label: "Missing", bg: "bg-red-700", text: "text-white", border: "border-red-800" },
+  Wrong: { label: "Wrong", bg: "bg-red-500", text: "text-white", border: "border-red-600" },
+  Broken: { label: "Broken", bg: "bg-purple-700", text: "text-white", border: "border-purple-800" },
+  "Not Check Yet": { label: "Not Check Yet", bg: "bg-gray-200", text: "text-gray-800", border: "border-gray-300" },
+  "VO Error": { label: "VO Error", bg: "bg-amber-200", text: "text-amber-900", border: "border-amber-300" },
+  "Need Pauses": { label: "Need Pauses", bg: "bg-sky-200", text: "text-sky-900", border: "border-sky-300" },
+  "Wrong Cast": { label: "Wrong Cast", bg: "bg-amber-900", text: "text-amber-100", border: "border-amber-950" },
+  "Too Short": { label: "Too Short", bg: "bg-teal-800", text: "text-white", border: "border-teal-900" },
+  "Too Long": { label: "Too Long", bg: "bg-indigo-900", text: "text-white", border: "border-indigo-950" },
+}
+
+export const STATUS_REPORT_SUFFIX_MAP: Record<ScriptLineStatus, string | null> = {
+  Beluman: "_Missing audio file",
+  Missing: "_Missing Sentence.",
+  Broken: "_Still Contain original Audio",
+  "VO Error": "_Need to retake, mispronunciation.",
+  "Need Pauses": "_Need a pause, can't sync with actor lips.",
+  "Wrong Cast": "_Missing Sentence, Wrong cast assigned.",
+  "Too Short": "_Too short, can't sync with actor lips.",
+  "Too Long": "_Too long, can't sync with actor lips.",
+  Wrong: "_Wrong audio file",
+  "Not Check Yet": "_Not checked yet",
+  Inputted: null, // Inputted lines do not create VOA report lines
 }
 
 const CHARACTER_COLOR_PALETTE = [
@@ -241,7 +286,7 @@ export function ScriptSheetModal({
     return episodes.sort((a, b) => Number(a.eps) - Number(b.eps))
   }, [data.lines, data.masterArtists])
 
-  // Missing Audio Report Lines Calculation (Tab 4) - Join episode numbers for Beluman characters
+  // VOA Missing / Issue Audio Report Lines Calculation (Tab 4)
   const missingReports = useMemo(() => {
     const masterMap = new Map<string, string>()
     data.masterArtists.forEach((ma) => {
@@ -249,22 +294,39 @@ export function ScriptSheetModal({
     })
 
     const cleanTitle = taskTitle.trim()
-    const belumanLines = data.lines.filter((l) => l.status === "Beluman")
 
-    // Group Beluman lines by character to collect distinct episodes
-    const characterBelumanMap = new Map<string, Set<string>>()
-    belumanLines.forEach((line) => {
-      if (!line.character) return
-      const charKey = line.character.trim()
-      if (!characterBelumanMap.has(charKey)) {
-        characterBelumanMap.set(charKey, new Set<string>())
+    // Group issue lines by character & status: key = `${character.toLowerCase()}__${line.status}`
+    const charStatusMap = new Map<
+      string,
+      {
+        character: string
+        status: ScriptLineStatus
+        epsSet: Set<string>
       }
+    >()
+
+    data.lines.forEach((line) => {
+      const suffix = STATUS_REPORT_SUFFIX_MAP[line.status]
+      if (!suffix || !line.character) return // Skip Inputted lines or null suffixes
+
+      const charKey = line.character.trim()
+      const groupKey = `${charKey.toLowerCase()}__${line.status}`
+
+      if (!charStatusMap.has(groupKey)) {
+        charStatusMap.set(groupKey, {
+          character: charKey,
+          status: line.status,
+          epsSet: new Set<string>(),
+        })
+      }
+
       if (line.eps) {
-        characterBelumanMap.get(charKey)!.add(line.eps.trim())
+        charStatusMap.get(groupKey)!.epsSet.add(line.eps.trim())
       }
     })
 
     const reports: Array<{
+      status: ScriptLineStatus
       epsJoined: string
       character: string
       actor: string
@@ -273,8 +335,9 @@ export function ScriptSheetModal({
       minEps: number
     }> = []
 
-    characterBelumanMap.forEach((epsSet, character) => {
+    charStatusMap.forEach(({ character, status, epsSet }) => {
       const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
+      const suffix = STATUS_REPORT_SUFFIX_MAP[status] || ""
       const sortedEps = Array.from(epsSet)
         .sort((a, b) => Number(a) - Number(b))
         .map((e) => e.padStart(3, "0"))
@@ -282,10 +345,11 @@ export function ScriptSheetModal({
       const epsJoined = sortedEps.join(", ")
       const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
 
-      const reportString = `${cleanTitle}_${epsJoined}_${character}/${actor}_Missing audio file`
+      const reportString = `${cleanTitle}_${epsJoined}_${character}/${actor}${suffix}`
       const epSummary = `EP${epsJoined} ${character}/${actor}`
 
       reports.push({
+        status,
         epsJoined,
         character,
         actor,
@@ -325,13 +389,13 @@ export function ScriptSheetModal({
     setPsPasteText("")
   }
 
-  // Toggle single line status
-  const handleToggleLineStatus = (lineId: string) => {
+  // Update single line status
+  const handleUpdateLineStatus = (lineId: string, newStatus: ScriptLineStatus) => {
     const updated = data.lines.map((l) => {
       if (l.id === lineId) {
         return {
           ...l,
-          status: (l.status === "Inputted" ? "Beluman" : "Inputted") as "Inputted" | "Beluman",
+          status: newStatus,
         }
       }
       return l
@@ -339,12 +403,12 @@ export function ScriptSheetModal({
     updateData({ ...data, lines: updated })
   }
 
-  // Mark all filtered as Inputted
-  const handleMarkFilteredInputted = () => {
+  // Mark all filtered lines as target status
+  const handleMarkFilteredStatus = (targetStatus: ScriptLineStatus) => {
     const filteredIds = new Set(filteredLines.map((l) => l.id))
     const updated = data.lines.map((l) => {
       if (filteredIds.has(l.id)) {
-        return { ...l, status: "Inputted" as const }
+        return { ...l, status: targetStatus }
       }
       return l
     })
@@ -398,7 +462,7 @@ export function ScriptSheetModal({
   }
 
   // Batch update line status for a specific character across all script lines
-  const handleBatchUpdateCharacterStatus = (charName: string, newStatus: "Inputted" | "Beluman") => {
+  const handleBatchUpdateCharacterStatus = (charName: string, newStatus: ScriptLineStatus) => {
     const targetName = charName.trim().toLowerCase()
     const updatedLines = data.lines.map((line) => {
       if (line.character && line.character.trim().toLowerCase() === targetName) {
@@ -411,7 +475,8 @@ export function ScriptSheetModal({
 
   const totalLines = data.lines.length
   const inputtedCount = data.lines.filter((l) => l.status === "Inputted").length
-  const belumanCount = totalLines - inputtedCount
+  const belumanCount = data.lines.filter((l) => l.status === "Beluman").length
+  const issueCount = totalLines - inputtedCount
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -555,26 +620,40 @@ export function ScriptSheetModal({
                       )
                     )}
                   </select>
-
                   <select
                     value={selectedStatusFilter}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStatusFilter(e.target.value)}
-                    className="h-8 text-xs px-2 bg-background border border-input rounded-md focus:outline-none"
+                    className="h-8 text-xs px-2 bg-background border border-input rounded-md focus:outline-none font-medium"
                   >
-                    <option value="all">All Status</option>
-                    <option value="Inputted">Inputted</option>
-                    <option value="Beluman">Beluman</option>
+                    <option value="all">All Statuses ({totalLines})</option>
+                    {SCRIPT_LINE_STATUSES.map((st) => {
+                      const count = data.lines.filter((l) => l.status === st).length
+                      return (
+                        <option key={st} value={st}>
+                          {st} ({count})
+                        </option>
+                      )
+                    })}
                   </select>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleMarkFilteredInputted}
-                    className="h-8 px-3 text-xs border border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 rounded-md transition-colors flex items-center gap-1 font-medium"
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleMarkFilteredStatus(e.target.value as ScriptLineStatus)
+                        e.target.value = ""
+                      }
+                    }}
+                    className="h-8 text-xs px-2.5 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold rounded-md transition-colors cursor-pointer outline-none"
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Mark Filtered as Inputted
-                  </button>
+                    <option value="">Mark Filtered Lines As...</option>
+                    {SCRIPT_LINE_STATUSES.map((st) => (
+                      <option key={st} value={st} className="bg-background text-foreground font-semibold">
+                        Mark Filtered as {st}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     onClick={handleAddLine}
                     className="h-8 px-3 text-xs bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors flex items-center gap-1"
@@ -594,7 +673,7 @@ export function ScriptSheetModal({
                       <th className="p-2 w-16 text-center">Batch</th>
                       <th className="p-2 w-24">Character</th>
                       <th className="p-2">Script file (Lines)</th>
-                      <th className="p-2 w-20 text-center">Status</th>
+                      <th className="p-2 w-24 text-center">Status</th>
                       <th className="p-2 w-10 text-center">Action</th>
                     </tr>
                   </thead>
@@ -658,16 +737,21 @@ export function ScriptSheetModal({
                               {displayLineText}
                             </td>
                             <td className="p-2 border-r text-center">
-                              <button
-                                onClick={() => handleToggleLineStatus(line.id)}
-                                className={`h-5 text-[10px] px-2 rounded-full font-bold transition-all whitespace-nowrap ${
-                                  line.status === "Inputted"
-                                    ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                                    : "bg-red-100 text-red-800 hover:bg-red-200"
+                              <select
+                                value={line.status}
+                                onChange={(e) => handleUpdateLineStatus(line.id, e.target.value as ScriptLineStatus)}
+                                className={`h-5 text-[10px] px-1.5 rounded-full font-bold transition-all border outline-none cursor-pointer ${
+                                  STATUS_STYLE_MAP[line.status]?.bg || "bg-gray-100"
+                                } ${STATUS_STYLE_MAP[line.status]?.text || "text-gray-800"} ${
+                                  STATUS_STYLE_MAP[line.status]?.border || "border-gray-200"
                                 }`}
                               >
-                                {line.status}
-                              </button>
+                                {SCRIPT_LINE_STATUSES.map((st) => (
+                                  <option key={st} value={st} className="bg-background text-foreground font-semibold">
+                                    {st}
+                                  </option>
+                                ))}
+                              </select>
                             </td>
                             <td className="p-2 text-center">
                               <button
@@ -684,7 +768,7 @@ export function ScriptSheetModal({
                     {filteredLines.length === 0 && (
                       <tr>
                         <td colSpan={8} className="p-8 text-center text-muted-foreground">
-                          No script lines match your filters.
+                          No script lines found.
                         </td>
                       </tr>
                     )}
@@ -866,6 +950,23 @@ export function ScriptSheetModal({
                               >
                                 Beluman
                               </button>
+                              <select
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    handleBatchUpdateCharacterStatus(cs.character, e.target.value as ScriptLineStatus)
+                                    e.target.value = ""
+                                  }
+                                }}
+                                className="h-6 text-[10px] px-1 font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border rounded transition-all cursor-pointer outline-none"
+                                title="Set all lines for this character to any status"
+                              >
+                                <option value="">Set All...</option>
+                                {SCRIPT_LINE_STATUSES.map((st) => (
+                                  <option key={st} value={st}>
+                                    Set All {st}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                           </div>
                         </td>
@@ -911,7 +1012,7 @@ export function ScriptSheetModal({
                               <th className="p-2.5 w-28 text-center">Count</th>
                               <th className="p-2.5">Actor</th>
                               <th className="p-2.5">Appear in</th>
-                              <th className="p-2.5 w-64">Status Action</th>
+                              <th className="p-2.5 w-64 text-right pr-3">Status Action</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y opacity-75">
@@ -932,7 +1033,7 @@ export function ScriptSheetModal({
                                 <td className="p-2.5 text-center font-mono text-muted-foreground">0</td>
                                 <td className="p-2.5 text-muted-foreground">{cs.actor}</td>
                                 <td className="p-2.5 font-mono text-muted-foreground">-</td>
-                                <td className="p-2.5 font-mono text-muted-foreground">-</td>
+                                <td className="p-2.5 font-mono text-muted-foreground text-right pr-3">-</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1049,8 +1150,14 @@ export function ScriptSheetModal({
                     {missingReports.map((item, idx) => (
                       <tr key={idx} className="hover:bg-muted/30">
                         <td className="p-2.5">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold border border-red-200">
-                            Beluman
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                              STATUS_STYLE_MAP[item.status]?.bg || "bg-gray-100"
+                            } ${STATUS_STYLE_MAP[item.status]?.text || "text-gray-800"} ${
+                              STATUS_STYLE_MAP[item.status]?.border || "border-gray-200"
+                            }`}
+                          >
+                            {item.status}
                           </span>
                         </td>
                         <td className="p-2.5 font-semibold text-foreground">
