@@ -105,6 +105,14 @@ export function ScriptSheetModal({
 
   // Copy indicator state
   const [copiedReport, setCopiedReport] = useState(false)
+  const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null)
+
+  // Copy single VOA Report line
+  const handleCopySingleReportLine = (text: string, idx: number) => {
+    navigator.clipboard.writeText(text)
+    setCopiedRowIndex(idx)
+    setTimeout(() => setCopiedRowIndex(null), 2000)
+  }
 
   // Single-Column PS Paste Modal State
   const [isPsModalOpen, setIsPsModalOpen] = useState(false)
@@ -1163,8 +1171,21 @@ export function ScriptSheetModal({
                         <td className="p-2.5 font-semibold text-foreground">
                           {item.character}
                         </td>
-                        <td className="p-2.5 font-medium text-slate-800 select-all bg-muted/20">
-                          {item.reportString}
+                        <td className="p-2.5 font-medium text-slate-800 bg-muted/20">
+                          <div className="flex items-center justify-between gap-2 group">
+                            <span className="select-all font-mono">{item.reportString}</span>
+                            <button
+                              onClick={() => handleCopySingleReportLine(item.reportString, idx)}
+                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded transition-colors flex-shrink-0"
+                              title="Copy this report line"
+                            >
+                              {copiedRowIndex === idx ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600 font-bold" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100" />
+                              )}
+                            </button>
+                          </div>
                         </td>
                         <td className="p-2.5 font-bold text-emerald-800">
                           {item.epSummary}
