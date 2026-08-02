@@ -494,23 +494,22 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                 e.stopPropagation()
                 e.preventDefault()
               }}
-              className={`px-2 py-0.5 rounded-md flex-shrink-0 cursor-pointer transition-all flex items-center gap-1.5 text-[10px] font-bold border shadow-2xs ${
+              className={`p-1 rounded-md flex-shrink-0 cursor-pointer transition-all flex items-center justify-center border shadow-2xs ${
                 localScriptData?.lines && localScriptData.lines.length > 0
-                  ? "bg-emerald-100/80 text-emerald-900 hover:bg-emerald-200/90 border-emerald-400/80"
-                  : "bg-muted/80 text-muted-foreground hover:bg-muted border-border"
+                  ? "bg-emerald-100/90 text-emerald-700 hover:bg-emerald-200 border-emerald-400/80"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80 border-border"
               }`}
               title={
                 localScriptData?.lines && localScriptData.lines.length > 0
-                  ? `Script Sheet (${localScriptData.lines.filter((l) => l.status === "Inputted").length}/${localScriptData.lines.length})`
+                  ? `Script Sheet (${localScriptData.lines.filter((l) => l.status === "Inputted").length}/${localScriptData.lines.length} Inputted)`
                   : "Script Setup"
               }
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700 font-bold flex-shrink-0" />
-              <span>
-                {localScriptData?.lines && localScriptData.lines.length > 0
-                  ? `${localScriptData.lines.filter((l) => l.status === "Inputted").length}/${localScriptData.lines.length}`
-                  : "Script"}
-              </span>
+              <FileSpreadsheet
+                className={`w-3.5 h-3.5 ${
+                  localScriptData?.lines && localScriptData.lines.length > 0 ? "text-emerald-700 font-bold" : "text-muted-foreground/70"
+                }`}
+              />
             </button>
 
             {onMoveTask && (

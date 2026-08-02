@@ -61,7 +61,12 @@ export function KanbanColumn({
   }, [column.id])
 
   const isSearchEmpty = searchQuery && column.tasks.length === 0
-  const unfinishedCount = column.tasks.filter((t) => t.status !== "Finished").length
+  const unfinishedCount = column.tasks.filter((t) => {
+    if (t.status === "Finished") return false
+    const isTodayTask = t.title && t.title.trim().toLowerCase() === "today task"
+    if (isTodayTask) return false
+    return true
+  }).length
 
   return (
     <div
