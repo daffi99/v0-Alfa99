@@ -773,7 +773,7 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse border rounded-md">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2.5 w-14 text-center">
+                      <th className="p-2.5 w-10 text-center">
                         <div className="flex items-center justify-center gap-1">
                           <input
                             type="checkbox"
@@ -791,12 +791,12 @@ export function ScriptSheetModal({
                           />
                         </div>
                       </th>
-                      <th className="p-2.5 w-24">PS</th>
-                      <th className="p-2.5">Character</th>
-                      <th className="p-2.5 w-28 text-center">Count</th>
-                      <th className="p-2.5">Actor</th>
+                      <th className="p-2.5 w-20">PS</th>
+                      <th className="p-2.5 w-32">Character</th>
+                      <th className="p-2.5 w-20 text-center">Count</th>
+                      <th className="p-2.5 w-28">Actor</th>
                       <th className="p-2.5">Appear in</th>
-                      <th className="p-2.5 w-64">Status Action</th>
+                      <th className="p-2.5 w-64 text-right pr-3">Status Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -838,25 +838,27 @@ export function ScriptSheetModal({
                         <td className="p-2.5 font-mono text-[11px] text-muted-foreground">
                           {cs.episodesList || "None"}
                         </td>
-                        <td className="p-2.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap mr-1">
-                              <b className="text-emerald-700">{cs.inputtedLinesCount}</b> In / <b className="text-red-700">{cs.belumanLinesCount}</b> Bel
+                        <td className="p-2.5 text-right pr-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-[10px] font-mono text-muted-foreground bg-muted/60 px-2 py-0.5 rounded border border-border/60">
+                              <b className="text-emerald-700">{cs.inputtedLinesCount}</b>/<b className="text-muted-foreground">{cs.linesCount}</b> In
                             </span>
-                            <button
-                              onClick={() => handleBatchUpdateCharacterStatus(cs.character, "Inputted")}
-                              className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded transition-colors whitespace-nowrap"
-                              title={`Mark all ${cs.linesCount} lines for ${cs.character} as Inputted`}
-                            >
-                              All Inputted
-                            </button>
-                            <button
-                              onClick={() => handleBatchUpdateCharacterStatus(cs.character, "Beluman")}
-                              className="px-2 py-0.5 text-[10px] font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded transition-colors whitespace-nowrap"
-                              title={`Mark all ${cs.linesCount} lines for ${cs.character} as Beluman`}
-                            >
-                              All Beluman
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleBatchUpdateCharacterStatus(cs.character, "Inputted")}
+                                className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded transition-all active:scale-95 whitespace-nowrap"
+                                title={`Mark all ${cs.linesCount} lines for ${cs.character} as Inputted`}
+                              >
+                                Inputted
+                              </button>
+                              <button
+                                onClick={() => handleBatchUpdateCharacterStatus(cs.character, "Beluman")}
+                                className="px-2 py-0.5 text-[10px] font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded transition-all active:scale-95 whitespace-nowrap"
+                                title={`Mark all ${cs.linesCount} lines for ${cs.character} as Beluman`}
+                              >
+                                Beluman
+                              </button>
+                            </div>
                           </div>
                         </td>
                       </tr>
