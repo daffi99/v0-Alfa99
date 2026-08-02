@@ -23,6 +23,7 @@ export interface ScriptLine {
   character: string
   correctCharacter?: string
   lineText: string
+  voErrorNote?: string
   status: ScriptLineStatus
 }
 
@@ -250,9 +251,18 @@ export function ScriptWizardModal({
       let batchTime = ""
       let character = ""
       let lineText = ""
+      let voErrorNote = ""
 
-      // Image 5 6-Column Format: Eps | Start Time | End Time | Batch tim | Character | Script file
-      if (cols.length >= 6) {
+      // 7-Column Format: Eps | Start Time | End Time | Batch tim | Character | Script file | VO Error Note
+      if (cols.length >= 7) {
+        eps = cols[0]
+        startTime = cols[1]
+        endTime = cols[2]
+        batchTime = cols[3]
+        character = cols[4]
+        lineText = cols[5]
+        voErrorNote = cols[6]
+      } else if (cols.length === 6) {
         eps = cols[0]
         startTime = cols[1]
         endTime = cols[2]
@@ -282,6 +292,10 @@ export function ScriptWizardModal({
           .replace(/\s+/g, " ")
           .trim()
 
+        const cleanVoNote = voErrorNote ? voErrorNote.trim() : undefined
+        // Automatically set status to "VO Error" if voErrorNote is present!
+        const lineStatus: ScriptLineStatus = cleanVoNote ? "VO Error" : "Beluman"
+
         results.push({
           id: `line-${index}-${Date.now()}`,
           eps,
@@ -290,7 +304,8 @@ export function ScriptWizardModal({
           batchTime: batchTime || undefined,
           character,
           lineText: cleanLineText,
-          status: "Beluman",
+          voErrorNote: cleanVoNote,
+          status: lineStatus,
         })
       }
     })

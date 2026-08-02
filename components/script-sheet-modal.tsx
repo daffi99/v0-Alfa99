@@ -440,6 +440,28 @@ export function ScriptSheetModal({
     setPsPasteText("")
   }
 
+  // Update VO error note & auto switch status
+  const handleUpdateVoErrorNote = (lineId: string, note: string) => {
+    const updated = data.lines.map((l) => {
+      if (l.id === lineId) {
+        const cleanNote = note || undefined
+        let newStatus = l.status
+        if (cleanNote && cleanNote.trim() !== "") {
+          newStatus = "VO Error" as ScriptLineStatus
+        } else if (l.status === "VO Error" && (!cleanNote || cleanNote.trim() === "")) {
+          newStatus = "Beluman" as ScriptLineStatus
+        }
+        return {
+          ...l,
+          voErrorNote: cleanNote,
+          status: newStatus,
+        }
+      }
+      return l
+    })
+    updateData({ ...data, lines: updated })
+  }
+
   // Update single line status
   const handleUpdateLineStatus = (lineId: string, newStatus: ScriptLineStatus) => {
     if (newStatus === "Wrong Cast") {
@@ -770,6 +792,7 @@ export function ScriptSheetModal({
                       <th className="p-2 w-16 text-center">Batch</th>
                       <th className="p-2 w-24">Character</th>
                       <th className="p-2">Script file (Lines)</th>
+                      <th className="p-2 w-36 text-red-600 font-semibold">VO Error Note</th>
                       <th className="p-2 w-24 text-center">Status</th>
                       <th className="p-2 w-10 text-center">Action</th>
                     </tr>
@@ -798,7 +821,7 @@ export function ScriptSheetModal({
                         <React.Fragment key={line.id}>
                           {showDivider && (
                             <tr className="bg-indigo-50/80 dark:bg-indigo-950/50 border-y-2 border-indigo-200 dark:border-indigo-800">
-                              <td colSpan={8} className="px-3 py-1.5">
+                              <td colSpan={9} className="px-3 py-1.5">
                                 <div className="flex items-center gap-2">
                                   <span className="px-2 py-0.5 rounded bg-indigo-600 text-white font-mono font-bold text-xs shadow-xs">
                                     EPISODE {currentEps}
@@ -832,6 +855,15 @@ export function ScriptSheetModal({
                             </td>
                             <td className="p-2 border-r whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed font-medium">
                               {displayLineText}
+                            </td>
+                            <td className="p-2 border-r text-[11px] text-red-600 font-semibold">
+                              <input
+                                type="text"
+                                placeholder="Note..."
+                                value={line.voErrorNote || ""}
+                                onChange={(e) => handleUpdateVoErrorNote(line.id, e.target.value)}
+                                className="w-full bg-transparent text-red-600 font-medium placeholder:text-muted-foreground/30 outline-none border-b border-transparent focus:border-red-400 text-[11px]"
+                              />
                             </td>
                             <td className="p-2 border-r text-center">
                               <select
