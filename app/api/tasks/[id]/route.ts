@@ -42,6 +42,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       delete updateData.billingMonth
     }
 
+    // Map scriptData (camelCase from frontend) to script_data column
+    if (body.scriptData !== undefined) {
+      updateData.script_data = typeof body.scriptData === 'string' ? body.scriptData : JSON.stringify(body.scriptData)
+      delete updateData.scriptData
+    }
+
     // If user is authenticated, use user_id filter (RLS will also enforce this)
     // If not authenticated, RLS will block the update anyway
     let query = supabase.from("tasks").update(updateData).eq("id", id)

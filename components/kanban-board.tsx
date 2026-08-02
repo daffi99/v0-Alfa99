@@ -7,6 +7,7 @@ import { EditTaskModal } from "./edit-task-modal"
 import { CreateTaskModal } from "./create-task-modal"
 import { TaskCard } from "./task-card"
 import { ChevronDown, ChevronUp } from "lucide-react"
+import type { ScriptData } from "./script-wizard-modal"
 
 export interface Task {
   id: string
@@ -17,6 +18,8 @@ export interface Task {
   status: "Not started" | "In progress" | "Wait VO" | "Finished" | null
   stage?: string
   notes?: string
+  scriptData?: ScriptData
+  script_data?: any
   created_at?: string
   duration?: string
   billingMonth?: string
@@ -888,6 +891,43 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
     }
   }
 
+  const handleUpdateScriptData = async (columnId: string, taskId: string, scriptData: ScriptData) => {
+    try {
+      let actualTaskId = taskId
+      if (!isValidUUID(taskId)) {
+        const col = board.find((c) => c.id === columnId)
+        const t = col?.tasks.find((task) => task.id === taskId)
+        if (t) {
+          actualTaskId = await ensureTaskExists(t, columnId)
+        }
+      }
+
+      setBoard((prev) =>
+        prev.map((col) => {
+          if (col.id === columnId) {
+            return {
+              ...col,
+              tasks: col.tasks.map((task) =>
+                task.id === taskId || task.id === actualTaskId
+                  ? { ...task, id: actualTaskId, scriptData }
+                  : task
+              ),
+            }
+          }
+          return col
+        })
+      )
+
+      await fetch(`/api/tasks/${actualTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scriptData }),
+      })
+    } catch (error) {
+      console.error("[v0] Failed to update script data:", error)
+    }
+  }
+
   if (isLoading) {
     return <div className="p-8 text-center">Loading tasks...</div>
   }
@@ -964,6 +1004,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                 onUpdateNote={handleUpdateNote}
                 onUpdateStatus={handleUpdateStatus}
                 onMoveTask={moveTaskDirectly}
+                onUpdateScriptData={handleUpdateScriptData}
                 searchQuery={searchQuery}
               />
             )}
@@ -1053,6 +1094,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                           onUpdateNote={handleUpdateNote}
                           onUpdateStatus={handleUpdateStatus}
                           onMoveTask={moveTaskDirectly}
+                          onUpdateScriptData={handleUpdateScriptData}
                         />
                       </div>
                     ))}
@@ -1132,6 +1174,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                           onUpdateNote={handleUpdateNote}
                           onUpdateStatus={handleUpdateStatus}
                           onMoveTask={moveTaskDirectly}
+                          onUpdateScriptData={handleUpdateScriptData}
                         />
                       </div>
                     ))}
@@ -1160,6 +1203,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                 onUpdateNote={handleUpdateNote}
                 onUpdateStatus={handleUpdateStatus}
                 onMoveTask={moveTaskDirectly}
+                onUpdateScriptData={handleUpdateScriptData}
                 searchQuery={searchQuery}
               />
             ))}
@@ -1271,6 +1315,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                               onUpdateNote={handleUpdateNote}
                               onUpdateStatus={handleUpdateStatus}
                               onMoveTask={moveTaskDirectly}
+                              onUpdateScriptData={handleUpdateScriptData}
                             />
                           </div>
                         ))}
@@ -1341,6 +1386,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                               onUpdateNote={handleUpdateNote}
                               onUpdateStatus={handleUpdateStatus}
                               onMoveTask={moveTaskDirectly}
+                              onUpdateScriptData={handleUpdateScriptData}
                             />
                           </div>
                         ))}
@@ -1411,6 +1457,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                               onUpdateNote={handleUpdateNote}
                               onUpdateStatus={handleUpdateStatus}
                               onMoveTask={moveTaskDirectly}
+                              onUpdateScriptData={handleUpdateScriptData}
                             />
                           </div>
                         ))}

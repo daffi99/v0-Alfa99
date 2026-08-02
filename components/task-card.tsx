@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import type { Task } from "./kanban-board"
-import { CheckCircle2, Circle, Pencil, Loader2, ChevronDown, ChevronUp, ChevronRight, Trash2, ArrowRightLeft } from "lucide-react"
+import { CheckCircle2, Circle, Pencil, Loader2, ChevronDown, ChevronUp, ChevronRight, Trash2, ArrowRightLeft, FileSpreadsheet } from "lucide-react"
 import { renderBlockNoteContent } from "./blocknote-note"
+import { ScriptWizardModal, type ScriptData } from "./script-wizard-modal"
+import { ScriptSheetModal } from "./script-sheet-modal"
 
 // Dynamic imports with SSR disabled to avoid "window is not defined" error
 const BlockNoteNote = dynamic(
@@ -25,9 +27,10 @@ interface TaskCardProps {
   onUpdateNote: (columnId: string, taskId: string, notes: string) => void
   onUpdateStatus: (columnId: string, taskId: string, status: "Not started" | "In progress" | "Wait VO" | "Finished" | null) => void
   onMoveTask?: (task: Task, fromColumnId: string, toColumnId: string) => void
+  onUpdateScriptData?: (columnId: string, taskId: string, scriptData: ScriptData) => void
 }
 
-export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onEditTask, onUpdateNote, onUpdateStatus, onMoveTask }: TaskCardProps) {
+export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onEditTask, onUpdateNote, onUpdateStatus, onMoveTask, onUpdateScriptData }: TaskCardProps) {
   const completedEpisodes = task.episodes.filter((ep) => ep.completed).length
   const percentComplete = Math.round((completedEpisodes / task.episodes.length) * 100) || 0
   const [localNotes, setLocalNotes] = useState(task.notes || "")
@@ -35,6 +38,42 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
   const [isEditingNote, setIsEditingNote] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [localProgress, setLocalProgress] = useState(task.progress || {})
+  const [isWizardOpen, setIsWizardOpen] = useState(false)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [localScriptData, setLocalScriptData] = useState<ScriptData | undefined>(() => {
+    if (task.scriptData) return task.scriptData
+    if (task.script_data) {
+      return typeof task.script_data === "string" ? JSON.parse(task.script_data) : task.script_data
+    }
+    return undefined
+  })
+
+  useEffect(() => {
+    if (task.scriptData || task.script_data) {
+      setLocalScriptData(
+        task.scriptData || (typeof task.script_data === "string" ? JSON.parse(task.script_data) : task.script_data)
+      )
+    }
+  }, [task.scriptData, task.script_data])
+
+  const handleOpenScript = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (
+      localScriptData &&
+      (localScriptData.isConfigured || (localScriptData.lines && localScriptData.lines.length > 0))
+    ) {
+      setIsSheetOpen(true)
+    } else {
+      setIsWizardOpen(true)
+    }
+  }
+
+  const handleSaveScriptData = (newData: ScriptData) => {
+    setLocalScriptData(newData)
+    if (onUpdateScriptData) {
+      onUpdateScriptData(columnId, task.id, newData)
+    }
+  }
   const noteTextareaRef = useRef<HTMLTextAreaElement>(null)
   const hasNotes = (() => {
     // Prefer localNotes as it's updated immediately on save
@@ -794,6 +833,58 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
             </>
           )}
         </div>
+      )}
+
+      {/* Bottom right Script button & Modals */}
+      <div className="mt-3 flex items-center justify-between pt-2 border-t border-border/40 text-[10px]">
+        <span className="text-muted-foreground font-mono">
+          {task.duration || "00:10:00"}
+        </span>
+        <button
+          onClick={handleOpenScript}
+          onMouseDown={(e) => e.stopPropagation()}
+          className={`flex items-center gap-1 px-2 py-0.5 rounded-full font-medium transition-all ${
+            localScriptData?.lines && localScriptData.lines.length > 0
+              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+              : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+          }`}
+        >
+          <FileSpreadsheet className="w-3 h-3 text-emerald-600" />
+          <span>
+            {localScriptData?.lines && localScriptData.lines.length > 0
+              ? `Script (${localScriptData.lines.filter((l) => l.status === "Inputted").length}/${localScriptData.lines.length})`
+              : "Script Setup"}
+          </span>
+        </button>
+      </div>
+
+      {/* Script Modals */}
+      {isWizardOpen && (
+        <ScriptWizardModal
+          isOpen={isWizardOpen}
+          onClose={() => setIsWizardOpen(false)}
+          taskTitle={task.title}
+          initialData={localScriptData}
+          onComplete={(data) => {
+            handleSaveScriptData(data)
+            setIsWizardOpen(false)
+            setIsSheetOpen(true)
+          }}
+        />
+      )}
+
+      {isSheetOpen && localScriptData && (
+        <ScriptSheetModal
+          isOpen={isSheetOpen}
+          onClose={() => setIsSheetOpen(false)}
+          taskTitle={task.title}
+          scriptData={localScriptData}
+          onSave={handleSaveScriptData}
+          onReRunWizard={() => {
+            setIsSheetOpen(false)
+            setIsWizardOpen(true)
+          }}
+        />
       )}
     </div>
   )

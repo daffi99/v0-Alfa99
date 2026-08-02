@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       completed_episodes: JSON.stringify(body.completedEpisodes || []),
       notes: body.notes || null,
       billing_month: body.billingMonth ?? "December 2025",
+      script_data: body.scriptData ? (typeof body.scriptData === 'string' ? body.scriptData : JSON.stringify(body.scriptData)) : (body.script_data ? (typeof body.script_data === 'string' ? body.script_data : JSON.stringify(body.script_data)) : null),
     }
 
     // If user is authenticated, add user_id
