@@ -153,6 +153,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
           episodeRanges: task.episodeRanges,
           completedEpisodes: task.episodes.filter((ep) => ep.completed).map((ep) => ep.number),
           billingMonth: task.billingMonth || "December 2025",
+          scriptData: task.scriptData,
         }),
       })
 
@@ -203,6 +204,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
           subtasks: [],
           attachments: [],
           progress: task.progress ? (typeof task.progress === 'string' ? JSON.parse(task.progress) : task.progress) : {},
+          scriptData: task.script_data ? (typeof task.script_data === 'string' ? JSON.parse(task.script_data) : task.script_data) : undefined,
         }))
 
         // Group tasks by stage
@@ -784,6 +786,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
         subtasks: [],
         attachments: [],
         progress: savedTask.progress ? (typeof savedTask.progress === 'string' ? JSON.parse(savedTask.progress) : savedTask.progress) : {},
+        scriptData: savedTask.script_data ? (typeof savedTask.script_data === 'string' ? JSON.parse(savedTask.script_data) : savedTask.script_data) : undefined,
       }
 
       // Map stage to column ID
