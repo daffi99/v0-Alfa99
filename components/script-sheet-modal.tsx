@@ -462,17 +462,6 @@ export function ScriptSheetModal({
           </button>
 
           <button
-            onClick={() => setActiveTab("episodes")}
-            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-              activeTab === "episodes"
-                ? "border-primary text-primary font-semibold"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5 text-indigo-500" /> Episode Character ({episodeCharacterSummaries.length})
-          </button>
-
-          <button
             onClick={() => setActiveTab("report")}
             className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
               activeTab === "report"
@@ -486,6 +475,17 @@ export function ScriptSheetModal({
                 {missingReports.length}
               </span>
             )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("episodes")}
+            className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center gap-1.5 transition-colors whitespace-nowrap ${
+              activeTab === "episodes"
+                ? "border-primary text-primary font-semibold"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-indigo-500" /> Episode Character ({episodeCharacterSummaries.length})
           </button>
 
           <button
@@ -757,12 +757,14 @@ export function ScriptSheetModal({
                         }`}
                       >
                         <td className="p-2.5 text-center">
-                          <input
-                            type="checkbox"
-                            checked={cs.isChecked}
-                            onChange={() => handleToggleCharCheck(cs.character)}
-                            className="rounded text-primary focus:ring-primary h-3.5 w-3.5"
-                          />
+                          {cs.ps !== "-" && Boolean(cs.ps) ? (
+                            <input
+                              type="checkbox"
+                              checked={cs.isChecked}
+                              onChange={() => handleToggleCharCheck(cs.character)}
+                              className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                            />
+                          ) : null}
                         </td>
                         <td className="p-2.5 font-mono">
                           {cs.ps !== "-" ? (
@@ -833,12 +835,14 @@ export function ScriptSheetModal({
                             {unusedCharacterSummaries.map((cs, idx) => (
                               <tr key={idx} className="hover:bg-muted/20">
                                 <td className="p-2.5 text-center">
-                                  <input
-                                    type="checkbox"
-                                    checked={cs.isChecked}
-                                    onChange={() => handleToggleCharCheck(cs.character)}
-                                    className="rounded text-primary focus:ring-primary h-3.5 w-3.5"
-                                  />
+                                  {cs.ps !== "-" && Boolean(cs.ps) ? (
+                                    <input
+                                      type="checkbox"
+                                      checked={cs.isChecked}
+                                      onChange={() => handleToggleCharCheck(cs.character)}
+                                      className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                    />
+                                  ) : null}
                                 </td>
                                 <td className="p-2.5 font-mono">{cs.ps}</td>
                                 <td className="p-2.5 font-medium text-muted-foreground">{cs.character}</td>
