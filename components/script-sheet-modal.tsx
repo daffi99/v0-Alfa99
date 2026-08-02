@@ -27,6 +27,7 @@ interface ScriptSheetModalProps {
   isOpen: boolean
   onClose: () => void
   taskTitle: string
+  taskCategory?: "Caption" | "No caption" | null
   scriptData: ScriptData
   onSave: (updatedData: ScriptData) => void
   onReRunWizard: () => void
@@ -90,12 +91,19 @@ export function ScriptSheetModal({
   isOpen,
   onClose,
   taskTitle,
+  taskCategory,
   scriptData,
   onSave,
   onReRunWizard,
 }: ScriptSheetModalProps) {
   const [activeTab, setActiveTab] = useState<"lines" | "master" | "summary" | "episodes" | "report">("lines")
   const [data, setData] = useState<ScriptData>(scriptData)
+
+  // Condition: VO Error Note column and paste modal are active for Caption type cards
+  const isCaptionTask =
+    taskCategory === "Caption" ||
+    (!taskCategory && (taskTitle ? taskTitle.toLowerCase().includes("caption") : true)) ||
+    taskCategory === undefined
 
   // Tab 1 Filters
   const [searchQuery, setSearchQuery] = useState("")
@@ -116,6 +124,10 @@ export function ScriptSheetModal({
   // Single-Column PS Paste Modal State
   const [isPsModalOpen, setIsPsModalOpen] = useState(false)
   const [psPasteText, setPsPasteText] = useState("")
+
+  // Single-Column VO Error Paste Modal State
+  const [isVoErrorModalOpen, setIsVoErrorModalOpen] = useState(false)
+  const [voErrorPasteText, setVoErrorPasteText] = useState("")
 
   // Unused Characters Collapsible Panel State
   const [isUnusedExpanded, setIsUnusedExpanded] = useState(false)
@@ -438,6 +450,44 @@ export function ScriptSheetModal({
     updateData({ ...data, masterArtists: updatedMasters })
     setIsPsModalOpen(false)
     setPsPasteText("")
+  }
+
+  // Single Column VO Error Data Update - preserving line index mapping
+  const handleApplySingleColumnVoError = () => {
+    if (!voErrorPasteText) return
+
+    const voLines = voErrorPasteText
+      .replace(/\r\n/g, "\n")
+      .split("\n")
+      .map((v) => v.trim())
+
+    if (voLines.length === 0) return
+
+    const updatedLines = data.lines.map((line, idx) => {
+      if (idx < voLines.length) {
+        const val = voLines[idx]
+        const cleanNote =
+          val && val !== "-" && val.toLowerCase() !== "null" && val.toLowerCase() !== "undefined"
+            ? val
+            : undefined
+
+        let newStatus = line.status
+        if (cleanNote) {
+          newStatus = "VO Error" as ScriptLineStatus
+        }
+
+        return {
+          ...line,
+          voErrorNote: cleanNote,
+          status: newStatus,
+        }
+      }
+      return line
+    })
+
+    updateData({ ...data, lines: updatedLines })
+    setIsVoErrorModalOpen(false)
+    setVoErrorPasteText("")
   }
 
   // Update VO error note & auto switch status
@@ -766,6 +816,15 @@ export function ScriptSheetModal({
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {isCaptionTask && (
+                    <button
+                      onClick={() => setIsVoErrorModalOpen(true)}
+                      className="h-8 px-3 text-xs border border-red-200 text-red-700 bg-red-50/60 hover:bg-red-100 rounded-md transition-colors flex items-center gap-1.5 font-semibold"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-red-600" />
+                      Paste VO Error Column
+                    </button>
+                  )}
                   <button
                     onClick={handleMarkFilteredInputted}
                     className="h-8 px-3 text-xs border border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 rounded-md transition-colors flex items-center gap-1 font-medium"
@@ -792,7 +851,9 @@ export function ScriptSheetModal({
                       <th className="p-2 w-16 text-center">Batch</th>
                       <th className="p-2 w-24">Character</th>
                       <th className="p-2">Script file (Lines)</th>
-                      <th className="p-2 w-36 text-red-600 font-semibold">VO Error Note</th>
+                      {isCaptionTask && (
+                        <th className="p-2 w-36 text-red-600 font-semibold">VO Error Note</th>
+                      )}
                       <th className="p-2 w-24 text-center">Status</th>
                       <th className="p-2 w-10 text-center">Action</th>
                     </tr>
@@ -821,7 +882,7 @@ export function ScriptSheetModal({
                         <React.Fragment key={line.id}>
                           {showDivider && (
                             <tr className="bg-indigo-50/80 dark:bg-indigo-950/50 border-y-2 border-indigo-200 dark:border-indigo-800">
-                              <td colSpan={9} className="px-3 py-1.5">
+                              <td colSpan={isCaptionTask ? 9 : 8} className="px-3 py-1.5">
                                 <div className="flex items-center gap-2">
                                   <span className="px-2 py-0.5 rounded bg-indigo-600 text-white font-mono font-bold text-xs shadow-xs">
                                     EPISODE {currentEps}
@@ -856,15 +917,17 @@ export function ScriptSheetModal({
                             <td className="p-2 border-r whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed font-medium">
                               {displayLineText}
                             </td>
-                            <td className="p-2 border-r text-[11px] text-red-600 font-semibold">
-                              <input
-                                type="text"
-                                placeholder="Note..."
-                                value={line.voErrorNote || ""}
-                                onChange={(e) => handleUpdateVoErrorNote(line.id, e.target.value)}
-                                className="w-full bg-transparent text-red-600 font-medium placeholder:text-muted-foreground/30 outline-none border-b border-transparent focus:border-red-400 text-[11px]"
-                              />
-                            </td>
+                            {isCaptionTask && (
+                              <td className="p-2 border-r text-[11px] text-red-600 font-semibold">
+                                <input
+                                  type="text"
+                                  placeholder="Note..."
+                                  value={line.voErrorNote || ""}
+                                  onChange={(e) => handleUpdateVoErrorNote(line.id, e.target.value)}
+                                  className="w-full bg-transparent text-red-600 font-medium placeholder:text-muted-foreground/30 outline-none border-b border-transparent focus:border-red-400 text-[11px]"
+                                />
+                              </td>
+                            )}
                             <td className="p-2 border-r text-center">
                               <select
                                 value={line.status}
@@ -1354,6 +1417,54 @@ export function ScriptSheetModal({
                   className="px-4 py-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-md transition-colors"
                 >
                   Apply PS Values
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal for Single Column VO Error Notes Paste */}
+        {isVoErrorModalOpen && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-border rounded-xl shadow-2xl max-w-md w-full p-5 space-y-3">
+              <div className="flex items-center justify-between border-b pb-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-red-600" />
+                  <h3 className="text-sm font-bold text-foreground">
+                    Paste VO Error Notes Column
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsVoErrorModalOpen(false)}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Copy a single column of VO Error notes from Google Sheets (e.g. wrong pronunciation / ewig) and paste below to update lines in order. Non-empty notes will automatically set line status to VO Error.
+              </p>
+
+              <textarea
+                placeholder={`wrong pronunciation / ewig\nwrong pronunciation / fleisch`}
+                value={voErrorPasteText}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setVoErrorPasteText(e.target.value)}
+                className="w-full font-mono text-xs h-36 p-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-red-500/50"
+              />
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                <button
+                  onClick={() => setIsVoErrorModalOpen(false)}
+                  className="px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApplySingleColumnVoError}
+                  className="px-4 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors"
+                >
+                  Apply VO Error Notes
                 </button>
               </div>
             </div>

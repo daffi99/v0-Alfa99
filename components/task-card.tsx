@@ -895,6 +895,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
           isOpen={isSheetOpen}
           onClose={() => setIsSheetOpen(false)}
           taskTitle={task.title}
+          taskCategory={task.category}
           scriptData={localScriptData}
           onSave={handleSaveScriptData}
           onReRunWizard={() => {
