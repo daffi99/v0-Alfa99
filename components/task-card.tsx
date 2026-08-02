@@ -494,10 +494,10 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                 e.stopPropagation()
                 e.preventDefault()
               }}
-              className={`px-1.5 py-0.5 rounded flex-shrink-0 cursor-pointer transition-all flex items-center gap-1 text-[10px] font-semibold ${
+              className={`px-2 py-0.5 rounded-md flex-shrink-0 cursor-pointer transition-all flex items-center gap-1.5 text-[10px] font-bold border shadow-2xs ${
                 localScriptData?.lines && localScriptData.lines.length > 0
-                  ? "bg-emerald-100/90 text-emerald-800 hover:bg-emerald-200 border border-emerald-300/60"
-                  : "opacity-0 group-hover:opacity-100 hover:bg-muted text-muted-foreground border border-transparent"
+                  ? "bg-emerald-100/80 text-emerald-900 hover:bg-emerald-200/90 border-emerald-400/80"
+                  : "bg-muted/80 text-muted-foreground hover:bg-muted border-border"
               }`}
               title={
                 localScriptData?.lines && localScriptData.lines.length > 0
@@ -505,14 +505,12 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                   : "Script Setup"
               }
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-              {localScriptData?.lines && localScriptData.lines.length > 0 ? (
-                <span>
-                  {localScriptData.lines.filter((l) => l.status === "Inputted").length}/{localScriptData.lines.length}
-                </span>
-              ) : (
-                <span>Script</span>
-              )}
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700 font-bold flex-shrink-0" />
+              <span>
+                {localScriptData?.lines && localScriptData.lines.length > 0
+                  ? `${localScriptData.lines.filter((l) => l.status === "Inputted").length}/${localScriptData.lines.length}`
+                  : "Script"}
+              </span>
             </button>
 
             {onMoveTask && (
