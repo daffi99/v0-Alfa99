@@ -487,6 +487,34 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <button
+              onClick={handleOpenScript}
+              onMouseDown={(e) => e.stopPropagation()}
+              onDragStart={(e) => {
+                e.stopPropagation()
+                e.preventDefault()
+              }}
+              className={`px-1.5 py-0.5 rounded flex-shrink-0 cursor-pointer transition-all flex items-center gap-1 text-[10px] font-semibold ${
+                localScriptData?.lines && localScriptData.lines.length > 0
+                  ? "bg-emerald-100/90 text-emerald-800 hover:bg-emerald-200 border border-emerald-300/60"
+                  : "opacity-0 group-hover:opacity-100 hover:bg-muted text-muted-foreground border border-transparent"
+              }`}
+              title={
+                localScriptData?.lines && localScriptData.lines.length > 0
+                  ? `Script Sheet (${localScriptData.lines.filter((l) => l.status === "Inputted").length}/${localScriptData.lines.length})`
+                  : "Script Setup"
+              }
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              {localScriptData?.lines && localScriptData.lines.length > 0 ? (
+                <span>
+                  {localScriptData.lines.filter((l) => l.status === "Inputted").length}/{localScriptData.lines.length}
+                </span>
+              ) : (
+                <span>Script</span>
+              )}
+            </button>
+
             {onMoveTask && (
               <div>
                 <button
@@ -852,28 +880,14 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
         </div>
       )}
 
-      {/* Bottom right Script button & Modals */}
-      <div className="mt-3 flex items-center justify-between pt-2 border-t border-border/40 text-[10px]">
-        <span className="text-muted-foreground font-mono">
-          {task.duration || "00:10:00"}
-        </span>
-        <button
-          onClick={handleOpenScript}
-          onMouseDown={(e) => e.stopPropagation()}
-          className={`flex items-center gap-1 px-2 py-0.5 rounded-full font-medium transition-all ${
-            localScriptData?.lines && localScriptData.lines.length > 0
-              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-              : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-          }`}
-        >
-          <FileSpreadsheet className="w-3 h-3 text-emerald-600" />
-          <span>
-            {localScriptData?.lines && localScriptData.lines.length > 0
-              ? `Script (${localScriptData.lines.filter((l) => l.status === "Inputted").length}/${localScriptData.lines.length})`
-              : "Script Setup"}
+      {/* Card Footer Duration */}
+      {task.duration && (
+        <div className="mt-3 flex items-center justify-between pt-2 border-t border-border/40 text-[10px]">
+          <span className="text-muted-foreground font-mono">
+            {task.duration}
           </span>
-        </button>
-      </div>
+        </div>
+      )}
 
       {/* Script Modals */}
       {isWizardOpen && (
