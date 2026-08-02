@@ -264,6 +264,12 @@ export function ScriptWizardModal({
       }
 
       if (eps && character && lineText) {
+        const cleanLineText = lineText
+          .replace(/\\N/gi, " ")
+          .replace(/[\r\n]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+
         results.push({
           id: `line-${index}-${Date.now()}`,
           eps,
@@ -271,7 +277,7 @@ export function ScriptWizardModal({
           endTime: endTime || undefined,
           batchTime: batchTime || undefined,
           character,
-          lineText,
+          lineText: cleanLineText,
           status: "Beluman",
         })
       }

@@ -588,14 +588,14 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2.5 w-16 text-center">Eps</th>
-                      <th className="p-2.5 w-24">Start Time</th>
-                      <th className="p-2.5 w-24">End Time</th>
-                      <th className="p-2.5 w-24">Batch tim</th>
-                      <th className="p-2.5 w-36">Character</th>
-                      <th className="p-2.5">Script file (Lines)</th>
-                      <th className="p-2.5 w-28 text-center">Status</th>
-                      <th className="p-2.5 w-12 text-center">Action</th>
+                      <th className="p-2 w-10 text-center">Eps</th>
+                      <th className="p-2 w-16 text-center">Start</th>
+                      <th className="p-2 w-16 text-center">End</th>
+                      <th className="p-2 w-16 text-center">Batch</th>
+                      <th className="p-2 w-24">Character</th>
+                      <th className="p-2">Script file (Lines)</th>
+                      <th className="p-2 w-20 text-center">Status</th>
+                      <th className="p-2 w-10 text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -610,13 +610,21 @@ export function ScriptSheetModal({
                         (l) => (l.eps ? l.eps.trim().padStart(3, "0") : "Unknown") === currentEps
                       ).length
 
+                      const displayLineText = line.lineText
+                        ? line.lineText
+                            .replace(/\\N/gi, " ")
+                            .replace(/[\r\n]+/g, " ")
+                            .replace(/\s+/g, " ")
+                            .trim()
+                        : ""
+
                       return (
                         <React.Fragment key={line.id}>
                           {showDivider && (
                             <tr className="bg-indigo-50/80 dark:bg-indigo-950/50 border-y-2 border-indigo-200 dark:border-indigo-800">
-                              <td colSpan={8} className="px-3 py-2">
+                              <td colSpan={8} className="px-3 py-1.5">
                                 <div className="flex items-center gap-2">
-                                  <span className="px-2.5 py-0.5 rounded bg-indigo-600 text-white font-mono font-bold text-xs shadow-sm">
+                                  <span className="px-2 py-0.5 rounded bg-indigo-600 text-white font-mono font-bold text-xs shadow-xs">
                                     EPISODE {currentEps}
                                   </span>
                                   <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">
@@ -631,28 +639,28 @@ export function ScriptSheetModal({
                               characterColors[line.character] || ""
                             }`}
                           >
-                            <td className="p-2.5 font-bold text-center border-r font-mono">
+                            <td className="p-2 text-center border-r font-mono text-[11px] font-bold">
                               {line.eps ? line.eps.trim().padStart(3, "0") : "-"}
                             </td>
-                            <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
+                            <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
                               {line.startTime || "-"}
                             </td>
-                            <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
+                            <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
                               {line.endTime || "-"}
                             </td>
-                            <td className="p-2.5 border-r font-mono text-[11px] text-muted-foreground">
+                            <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
                               {line.batchTime || "-"}
                             </td>
-                            <td className="p-2.5 border-r font-semibold">
+                            <td className="p-2 border-r font-semibold text-[11px] whitespace-nowrap">
                               {line.character}
                             </td>
-                            <td className="p-2.5 border-r whitespace-pre-wrap leading-relaxed">
-                              {line.lineText}
+                            <td className="p-2 border-r whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed font-medium">
+                              {displayLineText}
                             </td>
-                            <td className="p-2.5 border-r text-center">
+                            <td className="p-2 border-r text-center">
                               <button
                                 onClick={() => handleToggleLineStatus(line.id)}
-                                className={`h-6 text-[10px] px-2.5 rounded-full font-bold transition-all ${
+                                className={`h-5 text-[10px] px-2 rounded-full font-bold transition-all whitespace-nowrap ${
                                   line.status === "Inputted"
                                     ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
                                     : "bg-red-100 text-red-800 hover:bg-red-200"
@@ -661,7 +669,7 @@ export function ScriptSheetModal({
                                 {line.status}
                               </button>
                             </td>
-                            <td className="p-2.5 text-center">
+                            <td className="p-2 text-center">
                               <button
                                 onClick={() => handleDeleteLine(line.id)}
                                 className="p-1 rounded text-muted-foreground hover:text-red-600 transition-colors"
