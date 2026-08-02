@@ -35,6 +35,41 @@ interface ScriptWizardModalProps {
   onComplete: (data: ScriptData) => void
 }
 
+// Preprocessor: Merge multiline quoted cells exported from Google Sheets
+export function normalizeMultilinesInQuotes(rawText: string): string[] {
+  const lines = rawText.replace(/\r\n/g, "\n").split("\n")
+  const merged: string[] = []
+  let currentLine = ""
+  let insideQuotes = false
+
+  for (const line of lines) {
+    const quoteCount = (line.match(/"/g) || []).length
+
+    if (!insideQuotes) {
+      currentLine = line
+      if (quoteCount % 2 === 1) {
+        insideQuotes = true
+      } else {
+        merged.push(currentLine)
+        currentLine = ""
+      }
+    } else {
+      currentLine += " " + line
+      if (quoteCount % 2 === 1) {
+        insideQuotes = false
+        merged.push(currentLine)
+        currentLine = ""
+      }
+    }
+  }
+
+  if (currentLine) {
+    merged.push(currentLine)
+  }
+
+  return merged
+}
+
 // Helper to sanitize Voice Actor Name and extract PS value handling empty TSV columns (e.g. Sal\t\t\tRekha)
 export function sanitizeVoiceActorAndPsTokens(cols: string[]) {
   const nonEmpty = cols.map((c) => c.replace(/^["']|["']$/g, "").trim()).filter(Boolean)
@@ -108,14 +143,14 @@ export function ScriptWizardModal({
     setMasterText(rawText)
     if (!rawText.trim()) return
 
-    const rows = rawText.trim().split("\n")
+    const rows = normalizeMultilinesInQuotes(rawText)
     const results: MasterArtistMapping[] = []
 
     rows.forEach((rowStr) => {
       const cols = rowStr.split("\t").map((c) => c.trim())
       if (cols.length === 0) return
 
-      const firstColLower = cols[0].toLowerCase()
+      const firstColLower = cols[0].toLowerCase().replace(/^["']|["']$/g, "").trim()
       if (
         firstColLower.includes("character") ||
         firstColLower.includes("artist font") ||
@@ -139,7 +174,11 @@ export function ScriptWizardModal({
         const ps = cols[1] || ""
 
         const cleaned = sanitizeVoiceActorAndPsTokens([charName, actor, ps])
-        if (cleaned && cleaned.charName) {
+        if (
+          cleaned &&
+          cleaned.charName &&
+          isNaN(Number(cleaned.charName.replace(/"/g, "")))
+        ) {
           results.push({
             characterName: cleaned.charName,
             finalArtist: cleaned.artist,
@@ -153,7 +192,9 @@ export function ScriptWizardModal({
           cleaned &&
           cleaned.charName &&
           cleaned.charName.toLowerCase() !== "character name" &&
-          cleaned.charName.toLowerCase() !== "character"
+          cleaned.charName.toLowerCase() !== "character" &&
+          // Ignore purely numeric or quote-fragment character names like "0.97"
+          isNaN(Number(cleaned.charName.replace(/"/g, "")))
         ) {
           results.push({
             characterName: cleaned.charName,
@@ -174,7 +215,7 @@ export function ScriptWizardModal({
     setScriptText(rawText)
     if (!rawText.trim()) return
 
-    const rows = rawText.trim().split("\n")
+    const rows = normalizeMultilinesInQuotes(rawText)
     const results: ScriptLine[] = []
 
     rows.forEach((rowStr, index) => {
@@ -304,13 +345,13 @@ export function ScriptWizardModal({
                     Copy Master Artist Table
                   </p>
                   <p className="text-muted-foreground mt-0.5">
-                    Select rows in Google Sheets (e.g. <b>Sal&#92;t&#92;t&#92;tRekha</b>, <b>Elton 0.97 &quot;Andreas 0.97&quot;</b>) and press <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Cmd+C</kbd> / <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Ctrl+C</kbd>, then paste below.
+                    Select rows in Google Sheets (e.g. <b>Elton 0.97 &quot;Andreas&#92;n0.97&quot;</b>) and press <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Cmd+C</kbd> / <kbd className="px-1 py-0.5 bg-muted border rounded text-[10px]">Ctrl+C</kbd>, then paste below.
                   </p>
                 </div>
               </div>
 
               <textarea
-                placeholder={`Paste here...\n\nExamples:\nSal\t\t\tRekha\nElton\t0.97\t"Andreas 0.97"\nLeah\t1.04\t"Viola 1.04"`}
+                placeholder={`Paste here...\n\nExamples:\nElton\t0.97\t"Andreas\n0.97"\nSchatz\t0.97\t"Gabriel\n0.97"\nSal\t\t\tRekha`}
                 value={masterText}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => parseMasterArtists(e.target.value)}
                 className="w-full font-mono text-xs min-h-[140px] p-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
