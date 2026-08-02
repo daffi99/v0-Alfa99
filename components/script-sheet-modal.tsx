@@ -165,7 +165,7 @@ export function ScriptSheetModal({
       ...s,
       episodesList: Array.from(s.episodes)
         .sort((a, b) => Number(a) - Number(b))
-        .map((e) => (e.length === 1 ? `0${e}` : e))
+        .map((e) => e.padStart(3, "0"))
         .join(", "),
     }))
   }, [data.lines, data.masterArtists, data.checkedCharacters])
@@ -215,7 +215,7 @@ export function ScriptSheetModal({
         }))
         .sort((a, b) => b.count - a.count)
 
-      const formattedEps = eps.length === 1 ? `0${eps}` : eps
+      const formattedEps = eps.padStart(3, "0")
       const characterNamesList = charactersInEp.map((c) => c.character).join(", ")
 
       return {
@@ -266,7 +266,7 @@ export function ScriptSheetModal({
       const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
       const sortedEps = Array.from(epsSet)
         .sort((a, b) => Number(a) - Number(b))
-        .map((e) => (e.length === 1 ? `0${e}` : e))
+        .map((e) => e.padStart(3, "0"))
 
       const epsJoined = sortedEps.join(", ")
       const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
