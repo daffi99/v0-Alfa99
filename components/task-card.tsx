@@ -45,16 +45,28 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
     if (task.script_data) {
       return typeof task.script_data === "string" ? JSON.parse(task.script_data) : task.script_data
     }
+    if (typeof window !== "undefined" && task.id) {
+      const cached = localStorage.getItem(`alfa_script_${task.id}`)
+      if (cached) {
+        try {
+          return JSON.parse(cached)
+        } catch {}
+      }
+    }
     return undefined
   })
 
   useEffect(() => {
     if (task.scriptData || task.script_data) {
-      setLocalScriptData(
-        task.scriptData || (typeof task.script_data === "string" ? JSON.parse(task.script_data) : task.script_data)
-      )
+      const s = task.scriptData || (typeof task.script_data === "string" ? JSON.parse(task.script_data) : task.script_data)
+      setLocalScriptData(s)
+      if (typeof window !== "undefined" && task.id && s) {
+        try {
+          localStorage.setItem(`alfa_script_${task.id}`, JSON.stringify(s))
+        } catch {}
+      }
     }
-  }, [task.scriptData, task.script_data])
+  }, [task.scriptData, task.script_data, task.id])
 
   const handleOpenScript = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -70,6 +82,11 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
 
   const handleSaveScriptData = (newData: ScriptData) => {
     setLocalScriptData(newData)
+    if (typeof window !== "undefined" && task.id) {
+      try {
+        localStorage.setItem(`alfa_script_${task.id}`, JSON.stringify(newData))
+      } catch {}
+    }
     if (onUpdateScriptData) {
       onUpdateScriptData(columnId, task.id, newData)
     }
