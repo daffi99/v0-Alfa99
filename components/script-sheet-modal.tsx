@@ -171,36 +171,18 @@ export function ScriptSheetModal({
   const [isResetVoaModalOpen, setIsResetVoaModalOpen] = useState(false)
 
   const handleConfirmResetVoaReport = () => {
-    // Convert all issue lines to Inputted, saving previousStatus
+    // Convert all lines to Inputted
     const updatedLines = data.lines.map((line) => {
-      if (line.status !== "Inputted") {
-        return {
-          ...line,
-          status: "Inputted" as ScriptLineStatus,
-          previousStatus: line.status,
-        }
+      return {
+        ...line,
+        status: "Inputted" as ScriptLineStatus,
+        previousStatus: undefined,
       }
-      return line
     })
 
-    // Mark all voReportChecks as true so report history remains visible as Resolved (crossed out)
+    // Clear all voReportChecks for a fresh, completely clean state
     const currentChecks: Record<string, any> = localProgress && typeof localProgress === "object" ? { ...localProgress } : {}
-    const voChecks: Record<string, boolean> = { ...(currentChecks.voReportChecks || {}) }
-
-    updatedLines.forEach((line) => {
-      if (!line.character) return
-      const targetChar = (
-        line.status === "Wrong Cast" && line.correctCharacter
-          ? line.correctCharacter
-          : line.character
-      ).trim().toLowerCase()
-
-      const origStatus = line.previousStatus || "Beluman"
-      const groupKey = `${targetChar}__${origStatus}`
-      voChecks[groupKey] = true
-    })
-
-    const updatedProgress = { ...currentChecks, voReportChecks: voChecks }
+    const updatedProgress = { ...currentChecks, voReportChecks: {} }
     setLocalProgress(updatedProgress)
 
     if (onUpdateProgress) {
@@ -437,72 +419,38 @@ export function ScriptSheetModal({
 
     const formattedTitle = formatReportTitle(taskTitle)
 
-    const checkedVoReportKeys =
-      ((localProgress && typeof localProgress === "object" ? localProgress.voReportChecks : {}) as Record<
-        string,
-        boolean
-      >) || {}
-
-    // Group lines by target character & status (or track checked keys)
+    // Group lines by target character & status (skip Inputted lines)
     const charStatusMap = new Map<
       string,
       {
         character: string
         status: ScriptLineStatus
         epsSet: Set<string>
-        isResolved: boolean
       }
     >()
 
     data.lines.forEach((line) => {
-      if (!line.character) return
+      const suffix = STATUS_REPORT_SUFFIX_MAP[line.status]
+      if (!suffix || !line.character || line.status === "Inputted") return
 
       const targetChar =
         line.status === "Wrong Cast" && line.correctCharacter
           ? line.correctCharacter.trim()
           : line.character.trim()
 
-      const isInputted = line.status === "Inputted"
-      const suffix = STATUS_REPORT_SUFFIX_MAP[line.status]
-
-      const possibleKeys = Array.from(Object.keys(checkedVoReportKeys)).filter((k) =>
-        k.startsWith(`${targetChar.toLowerCase()}__`)
-      )
-
-      if (isInputted && possibleKeys.length === 0) return
-
-      const effectiveStatus = !isInputted ? line.status : (possibleKeys[0]?.split("__")[1] as ScriptLineStatus) || "Beluman"
-      const groupKey = `${targetChar.toLowerCase()}__${effectiveStatus}`
-      const isResolved = isInputted || !!checkedVoReportKeys[groupKey]
+      const groupKey = `${targetChar.toLowerCase()}__${line.status}`
 
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
           character: targetChar,
-          status: effectiveStatus,
+          status: line.status,
           epsSet: new Set<string>(),
-          isResolved,
         })
       }
 
       if (line.eps) {
         charStatusMap.get(groupKey)!.epsSet.add(line.eps.trim())
       }
-    })
-
-    Object.entries(checkedVoReportKeys).forEach(([groupKey, isChecked]) => {
-      if (!isChecked || charStatusMap.has(groupKey)) return
-      const [charNameLower, statusStr] = groupKey.split("__")
-      const matchedMaster = data.masterArtists.find(
-        (ma) => ma.characterName.trim().toLowerCase() === charNameLower
-      )
-      const characterName = matchedMaster ? matchedMaster.characterName : charNameLower
-
-      charStatusMap.set(groupKey, {
-        character: characterName,
-        status: statusStr as ScriptLineStatus,
-        epsSet: new Set<string>(),
-        isResolved: true,
-      })
     })
 
     const reports: Array<{
@@ -517,7 +465,7 @@ export function ScriptSheetModal({
       isResolved: boolean
     }> = []
 
-    charStatusMap.forEach(({ character, status, epsSet, isResolved }, groupKey) => {
+    charStatusMap.forEach(({ character, status, epsSet }, groupKey) => {
       const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
       const suffix = STATUS_REPORT_SUFFIX_MAP[status] || ""
       const sortedEps = Array.from(epsSet)
@@ -539,15 +487,12 @@ export function ScriptSheetModal({
         reportString,
         epSummary,
         minEps,
-        isResolved,
+        isResolved: false,
       })
     })
 
-    return reports.sort((a, b) => {
-      if (a.isResolved !== b.isResolved) return a.isResolved ? 1 : -1
-      return a.minEps - b.minEps
-    })
-  }, [data.lines, data.masterArtists, taskTitle, localProgress.voReportChecks])
+    return reports.sort((a, b) => a.minEps - b.minEps)
+  }, [data.lines, data.masterArtists, taskTitle])
 
   // Sorted character options for Wrong Cast selection:
   // Characters with lines > 0 sorted highest to lowest line count, followed by 0-line characters.
@@ -1678,15 +1623,22 @@ export function ScriptSheetModal({
                     {missingReports.map((item, idx) => (
                       <tr key={idx} className={`hover:bg-muted/30 transition-colors ${item.isResolved ? "bg-emerald-50/20" : ""}`}>
                         <td className="p-2.5">
-                          <span
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
-                              STATUS_STYLE_MAP[item.status]?.bg || "bg-gray-100"
-                            } ${STATUS_STYLE_MAP[item.status]?.text || "text-gray-800"} ${
-                              STATUS_STYLE_MAP[item.status]?.border || "border-gray-200"
-                            } ${item.isResolved ? "line-through opacity-60" : ""}`}
-                          >
-                            {item.status}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                                STATUS_STYLE_MAP[item.status]?.bg || "bg-gray-100"
+                              } ${STATUS_STYLE_MAP[item.status]?.text || "text-gray-800"} ${
+                                STATUS_STYLE_MAP[item.status]?.border || "border-gray-200"
+                              } ${item.isResolved ? "line-through opacity-60" : ""}`}
+                            >
+                              {item.status}
+                            </span>
+                            {item.isResolved && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                <Check className="w-3 h-3 text-emerald-600" /> Resolved
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className={`p-2.5 font-semibold ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
                           {item.character}
