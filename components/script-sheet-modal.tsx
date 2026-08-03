@@ -380,38 +380,70 @@ export function ScriptSheetModal({
 
     const formattedTitle = formatReportTitle(taskTitle)
 
-    // Group lines by target character & status (skip Inputted lines)
+    const checkedVoReportKeys =
+      ((localProgress && typeof localProgress === "object" ? localProgress.voReportChecks : {}) as Record<
+        string,
+        boolean
+      >) || {}
+
+    // Group lines by target character & status (or track checked keys)
     const charStatusMap = new Map<
       string,
       {
         character: string
         status: ScriptLineStatus
         epsSet: Set<string>
+        isResolved: boolean
       }
     >()
 
     data.lines.forEach((line) => {
-      const suffix = STATUS_REPORT_SUFFIX_MAP[line.status]
-      if (!suffix || !line.character || line.status === "Inputted") return
+      if (!line.character) return
 
       const targetChar =
         line.status === "Wrong Cast" && line.correctCharacter
           ? line.correctCharacter.trim()
           : line.character.trim()
 
-      const groupKey = `${targetChar.toLowerCase()}__${line.status}`
+      const isInputted = line.status === "Inputted"
+      const possibleKeys = Array.from(Object.keys(checkedVoReportKeys)).filter((k) =>
+        k.startsWith(`${targetChar.toLowerCase()}__`)
+      )
+
+      if (isInputted && possibleKeys.length === 0) return
+
+      const effectiveStatus = !isInputted ? line.status : (possibleKeys[0]?.split("__")[1] as ScriptLineStatus) || "Beluman"
+      const groupKey = `${targetChar.toLowerCase()}__${effectiveStatus}`
+      const isResolved = isInputted || !!checkedVoReportKeys[groupKey]
 
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
           character: targetChar,
-          status: line.status,
+          status: effectiveStatus,
           epsSet: new Set<string>(),
+          isResolved,
         })
       }
 
       if (line.eps) {
         charStatusMap.get(groupKey)!.epsSet.add(line.eps.trim())
       }
+    })
+
+    Object.entries(checkedVoReportKeys).forEach(([groupKey, isChecked]) => {
+      if (!isChecked || charStatusMap.has(groupKey)) return
+      const [charNameLower, statusStr] = groupKey.split("__")
+      const matchedMaster = data.masterArtists.find(
+        (ma) => ma.characterName.trim().toLowerCase() === charNameLower
+      )
+      const characterName = matchedMaster ? matchedMaster.characterName : charNameLower
+
+      charStatusMap.set(groupKey, {
+        character: characterName,
+        status: statusStr as ScriptLineStatus,
+        epsSet: new Set<string>(),
+        isResolved: true,
+      })
     })
 
     const reports: Array<{
@@ -426,7 +458,7 @@ export function ScriptSheetModal({
       isResolved: boolean
     }> = []
 
-    charStatusMap.forEach(({ character, status, epsSet }, groupKey) => {
+    charStatusMap.forEach(({ character, status, epsSet, isResolved }, groupKey) => {
       const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
       const suffix = STATUS_REPORT_SUFFIX_MAP[status] || ""
       const sortedEps = Array.from(epsSet)
@@ -448,12 +480,15 @@ export function ScriptSheetModal({
         reportString,
         epSummary,
         minEps,
-        isResolved: false,
+        isResolved,
       })
     })
 
-    return reports.sort((a, b) => a.minEps - b.minEps)
-  }, [data.lines, data.masterArtists, taskTitle])
+    return reports.sort((a, b) => {
+      if (a.isResolved !== b.isResolved) return a.isResolved ? 1 : -1
+      return a.minEps - b.minEps
+    })
+  }, [data.lines, data.masterArtists, taskTitle, localProgress.voReportChecks])
 
   // Sorted character options for Wrong Cast selection:
   // Characters with lines > 0 sorted highest to lowest line count, followed by 0-line characters.
