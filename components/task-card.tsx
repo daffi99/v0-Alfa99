@@ -684,6 +684,12 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
 
               if (!isCaptionTask) {
                 updated[key as keyof typeof localProgress] = targetVal as any
+                if (key === "completed" && targetVal) {
+                  updated.checkVO = true
+                  updated.pitchShift = true
+                  updated.mixing = true
+                  updated.mixingSRT = true
+                }
               } else {
                 switch (key) {
                   case "prep":
@@ -707,6 +713,19 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                     break
                   case "completed":
                     updated.completed = targetVal
+                    if (targetVal) {
+                      updated.vocalSplit = true
+                      updated.voEnhance = true
+                      updated.subtitleJoin = true
+                      updated.checkVO = true
+                      updated.pitchShift = true
+                      updated.volumeAdjustment = true
+                      updated.subseq = true
+                      updated.mixingVO = true
+                      updated.inputReplacementText = true
+                      updated.inputSyncSRT = true
+                      updated.reCheckSRT = true
+                    }
                     break
                 }
               }

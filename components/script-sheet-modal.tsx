@@ -738,40 +738,40 @@ export function ScriptSheetModal({
 
         {/* Workflow Progress Checklist Panel (Caption Cards) */}
         {isCaptionTask && (
-          <div className="bg-muted/20 border-b p-3 px-4 transition-all">
+          <div className="bg-muted/20 border-b py-1.5 px-3 transition-all">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CheckSquare className="w-4 h-4 text-emerald-600" />
-                <span className="text-xs font-bold text-foreground tracking-wide">
+                <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-[11px] font-bold text-foreground tracking-wide">
                   Workflow Progress Steps
                 </span>
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-300/60">
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-300/60">
                   {captionSubStepsCompletedCount} / 11 Done
                 </span>
               </div>
               <button
                 onClick={() => setIsProgressExpanded(!isProgressExpanded)}
-                className="text-[11px] text-muted-foreground hover:text-foreground font-semibold flex items-center gap-1 bg-background px-2.5 py-1 rounded border shadow-2xs transition-colors"
+                className="text-[10px] text-muted-foreground hover:text-foreground font-semibold flex items-center gap-1 bg-background px-2 py-0.5 rounded border shadow-2xs transition-colors"
               >
                 {isProgressExpanded ? (
                   <>
-                    Hide Steps <ChevronUp className="w-3.5 h-3.5" />
+                    Hide Steps <ChevronUp className="w-3 h-3" />
                   </>
                 ) : (
                   <>
-                    Show All Steps <ChevronDown className="w-3.5 h-3.5" />
+                    Show Steps <ChevronDown className="w-3 h-3" />
                   </>
                 )}
               </button>
             </div>
 
             {isProgressExpanded && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-card p-3 rounded-lg border text-xs mt-2 shadow-2xs">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-card p-2 rounded-md border text-[10px] mt-1.5 shadow-2xs">
                 {/* Group 1: Prep */}
-                <div className="space-y-1.5 border-r pr-2 last:border-r-0 border-border/50">
-                  <div className="font-bold text-foreground border-b pb-1 flex items-center justify-between">
+                <div className="space-y-1 border-r pr-2 last:border-r-0 border-border/40">
+                  <div className="font-bold text-foreground border-b pb-0.5 mb-1 flex items-center justify-between text-[10px]">
                     <span>Prep</span>
-                    <span className="text-[10px] font-mono text-muted-foreground font-semibold">
+                    <span className="text-[9px] font-mono text-muted-foreground font-semibold">
                       {prepCompletedCount}/3
                     </span>
                   </div>
@@ -784,13 +784,13 @@ export function ScriptSheetModal({
                     return (
                       <label
                         key={item.key}
-                        className="flex items-center gap-2 cursor-pointer text-[11px] text-muted-foreground hover:text-foreground select-none py-0.5"
+                        className="flex items-center gap-1.5 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2"
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleSubStep(item.key)}
-                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-600"
+                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
                         />
                         <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
                           {item.label}
@@ -801,10 +801,10 @@ export function ScriptSheetModal({
                 </div>
 
                 {/* Group 2: Check VO */}
-                <div className="space-y-1.5 border-r pr-2 last:border-r-0 border-border/50">
-                  <div className="font-bold text-foreground border-b pb-1 flex items-center justify-between">
+                <div className="space-y-1 border-r pr-2 last:border-r-0 border-border/40">
+                  <div className="font-bold text-foreground border-b pb-0.5 mb-1 flex items-center justify-between text-[10px]">
                     <span>Check VO</span>
-                    <span className="text-[10px] font-mono text-muted-foreground font-semibold">
+                    <span className="text-[9px] font-mono text-muted-foreground font-semibold">
                       {checkVoCompletedCount}/1
                     </span>
                   </div>
@@ -815,13 +815,13 @@ export function ScriptSheetModal({
                     return (
                       <label
                         key={item.key}
-                        className="flex items-center gap-2 cursor-pointer text-[11px] text-muted-foreground hover:text-foreground select-none py-0.5"
+                        className="flex items-center gap-1.5 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2"
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleSubStep(item.key)}
-                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-600"
+                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
                         />
                         <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
                           {item.label}
@@ -832,10 +832,10 @@ export function ScriptSheetModal({
                 </div>
 
                 {/* Group 3: Editing */}
-                <div className="space-y-1.5 border-r pr-2 last:border-r-0 border-border/50">
-                  <div className="font-bold text-foreground border-b pb-1 flex items-center justify-between">
+                <div className="space-y-1 border-r pr-2 last:border-r-0 border-border/40">
+                  <div className="font-bold text-foreground border-b pb-0.5 mb-1 flex items-center justify-between text-[10px]">
                     <span>Editing</span>
-                    <span className="text-[10px] font-mono text-muted-foreground font-semibold">
+                    <span className="text-[9px] font-mono text-muted-foreground font-semibold">
                       {editingCompletedCount}/4
                     </span>
                   </div>
@@ -849,13 +849,13 @@ export function ScriptSheetModal({
                     return (
                       <label
                         key={item.key}
-                        className="flex items-center gap-2 cursor-pointer text-[11px] text-muted-foreground hover:text-foreground select-none py-0.5"
+                        className="flex items-center gap-1.5 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2"
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleSubStep(item.key)}
-                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-600"
+                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
                         />
                         <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
                           {item.label}
@@ -866,10 +866,10 @@ export function ScriptSheetModal({
                 </div>
 
                 {/* Group 4: Caption Edit */}
-                <div className="space-y-1.5">
-                  <div className="font-bold text-foreground border-b pb-1 flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="font-bold text-foreground border-b pb-0.5 mb-1 flex items-center justify-between text-[10px]">
                     <span>Caption Edit</span>
-                    <span className="text-[10px] font-mono text-muted-foreground font-semibold">
+                    <span className="text-[9px] font-mono text-muted-foreground font-semibold">
                       {captionEditCompletedCount}/3
                     </span>
                   </div>
@@ -882,13 +882,13 @@ export function ScriptSheetModal({
                     return (
                       <label
                         key={item.key}
-                        className="flex items-center gap-2 cursor-pointer text-[11px] text-muted-foreground hover:text-foreground select-none py-0.5"
+                        className="flex items-center gap-1.5 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2"
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleSubStep(item.key)}
-                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-600"
+                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
                         />
                         <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
                           {item.label}
