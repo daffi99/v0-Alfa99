@@ -521,26 +521,6 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
 
   const handleToggleEpisode = async (columnId: string, taskId: string, episodeId: string) => {
     const actualColumnId = mapColumnId(columnId)
-    // Set loading state immediately for UI feedback
-    const newBoard = board.map((col) => {
-      if (col.id === actualColumnId) {
-        return {
-          ...col,
-          tasks: col.tasks.map((task) => {
-            if (task.id === taskId) {
-              return {
-                ...task,
-                loading: true,
-              }
-            }
-            return task
-          }),
-        }
-      }
-      return col
-    })
-    setBoard(newBoard)
-
     // Find the episode and task
     const task = board.find((col) => col.id === actualColumnId)?.tasks.find((t) => t.id === taskId)
 
@@ -551,6 +531,19 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
       ...task,
       episodes: task.episodes.map((ep) => (ep.id === episodeId ? { ...ep, completed: !ep.completed } : ep)),
     }
+
+    // Optimistically update board
+    setBoard(
+      board.map((col) => {
+        if (col.id === actualColumnId) {
+          return {
+            ...col,
+            tasks: col.tasks.map((t) => (t.id === taskId ? updatedTask : t)),
+          }
+        }
+        return col
+      }),
+    )
 
     // Send to backend - ensure task exists first if it has a non-UUID ID
     try {
@@ -575,15 +568,13 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
         throw new Error(errorData.error || `Failed to update: ${response.statusText}`)
       }
 
-      const savedTask = await response.json()
-
       // Update UI with final state - update task ID if it was created
       const finalBoard = board.map((col) => {
         if (col.id === actualColumnId) {
           return {
             ...col,
             tasks: col.tasks.map((t) =>
-              t.id === taskId ? { ...updatedTask, id: dbTaskId, loading: false } : t,
+              t.id === taskId ? { ...updatedTask, id: dbTaskId } : t,
             ),
           }
         }
@@ -593,17 +584,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
     } catch (error) {
       console.error("[v0] Failed to update episode:", error)
       // Revert on error
-      setBoard(
-        newBoard.map((col) => {
-          if (col.id === actualColumnId) {
-            return {
-              ...col,
-              tasks: col.tasks.map((t) => (t.id === taskId ? { ...t, loading: false } : t)),
-            }
-          }
-          return col
-        }),
-      )
+      setBoard(board)
       alert("Failed to save episode progress. Please try again.")
     }
   }
