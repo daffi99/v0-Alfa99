@@ -22,6 +22,7 @@ interface TaskCardProps {
   task: Task
   columnId: string
   onToggleEpisode: (columnId: string, taskId: string, episodeId: string) => void
+  onToggleAllEpisodes?: (columnId: string, taskId: string, completed: boolean) => void
   onToggleSubtask: (columnId: string, taskId: string, subtaskId: string) => void
   onEditTask: (task: Task, columnId: string) => void
   onUpdateNote: (columnId: string, taskId: string, notes: string) => void
@@ -30,7 +31,7 @@ interface TaskCardProps {
   onUpdateScriptData?: (columnId: string, taskId: string, scriptData: ScriptData) => void
 }
 
-export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onEditTask, onUpdateNote, onUpdateStatus, onMoveTask, onUpdateScriptData }: TaskCardProps) {
+export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes, onToggleSubtask, onEditTask, onUpdateNote, onUpdateStatus, onMoveTask, onUpdateScriptData }: TaskCardProps) {
   const completedEpisodes = task.episodes.filter((ep) => ep.completed).length
   const percentComplete = Math.round((completedEpisodes / task.episodes.length) * 100) || 0
   const [localNotes, setLocalNotes] = useState(task.notes || "")

@@ -618,6 +618,88 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
     }
   }
 
+  const handleToggleAllEpisodes = async (columnId: string, taskId: string, completed: boolean) => {
+    const actualColumnId = mapColumnId(columnId)
+    const task = board.find((col) => col.id === actualColumnId)?.tasks.find((t) => t.id === taskId)
+    if (!task) return
+
+    const newEpisodes = task.episodes.map((ep) => ({ ...ep, completed }))
+    const isCaptionTask = task.category === "Caption" || (!task.category && task.title.toLowerCase().includes("caption"))
+
+    let updatedProgress = { ...(task.progress || {}) }
+    if (completed) {
+      updatedProgress.completed = true
+      updatedProgress.vocalSplit = true
+      updatedProgress.voEnhance = true
+      updatedProgress.subtitleJoin = true
+      updatedProgress.checkVO = true
+      updatedProgress.pitchShift = true
+      updatedProgress.volumeAdjustment = true
+      updatedProgress.subseq = true
+      updatedProgress.mixingVO = true
+      if (isCaptionTask) {
+        updatedProgress.inputReplacementText = true
+        updatedProgress.inputSyncSRT = true
+        updatedProgress.reCheckSRT = true
+      }
+    } else {
+      updatedProgress.completed = false
+    }
+
+    const updatedTask = {
+      ...task,
+      episodes: newEpisodes,
+      progress: updatedProgress,
+    }
+
+    // Optimistically update board
+    setBoard(
+      board.map((col) => {
+        if (col.id === actualColumnId) {
+          return {
+            ...col,
+            tasks: col.tasks.map((t) => (t.id === taskId ? updatedTask : t)),
+          }
+        }
+        return col
+      }),
+    )
+
+    try {
+      const completedEpisodes = completed ? newEpisodes.map((ep) => ep.number) : []
+      const currentColumn = board.find((col) => col.id === actualColumnId)
+      const currentTask = currentColumn?.tasks.find((t) => t.id === taskId)
+      const currentStage = currentTask?.stage || "Backlog"
+
+      const dbTaskId = await ensureTaskExists(updatedTask, currentStage)
+
+      const response = await fetch(`/api/tasks/${dbTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completedEpisodes, progress: updatedProgress }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to update: ${response.statusText}`)
+      }
+
+      const finalBoard = board.map((col) => {
+        if (col.id === actualColumnId) {
+          return {
+            ...col,
+            tasks: col.tasks.map((t) => (t.id === taskId ? { ...updatedTask, id: dbTaskId } : t)),
+          }
+        }
+        return col
+      })
+      setBoard(finalBoard)
+    } catch (error) {
+      console.error("[v0] Failed to update all episodes:", error)
+      setBoard(board)
+    }
+  }
+
   const handleToggleSubtask = (columnId: string, taskId: string, subtaskId: string) => {
     const newBoard = board.map((col) => {
       if (col.id === columnId) {
@@ -1222,6 +1304,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
                 onDrop={(e, columnId) => handleDrop(e, columnId)}
                 onDragEnd={handleDragEnd}
                 onToggleEpisode={handleToggleEpisode}
+                onToggleAllEpisodes={handleToggleAllEpisodes}
                 onToggleSubtask={handleToggleSubtask}
                 onEditTask={handleEditTask}
                 onUpdateNote={handleUpdateNote}

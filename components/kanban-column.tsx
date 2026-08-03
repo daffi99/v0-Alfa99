@@ -17,6 +17,7 @@ interface KanbanColumnProps {
   onDrop: (e: React.DragEvent, columnId: string) => void
   onDragEnd?: () => void
   onToggleEpisode: (columnId: string, taskId: string, episodeId: string) => void
+  onToggleAllEpisodes?: (columnId: string, taskId: string, completed: boolean) => void
   onToggleSubtask: (columnId: string, taskId: string, subtaskId: string) => void
   onEditTask: (task: Task, columnId: string) => void
   onUpdateNote: (columnId: string, taskId: string, notes: string) => void
@@ -33,6 +34,7 @@ export function KanbanColumn({
   onDrop,
   onDragEnd,
   onToggleEpisode,
+  onToggleAllEpisodes,
   onToggleSubtask,
   onEditTask,
   onUpdateNote,
@@ -150,6 +152,7 @@ export function KanbanColumn({
                 task={task}
                 columnId={column.id}
                 onToggleEpisode={onToggleEpisode}
+                onToggleAllEpisodes={onToggleAllEpisodes}
                 onToggleSubtask={onToggleSubtask}
                 onEditTask={onEditTask}
                 onUpdateNote={onUpdateNote}
