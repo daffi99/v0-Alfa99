@@ -171,18 +171,36 @@ export function ScriptSheetModal({
   const [isResetVoaModalOpen, setIsResetVoaModalOpen] = useState(false)
 
   const handleConfirmResetVoaReport = () => {
-    // Convert all lines to Inputted
+    // Convert all issue lines to Inputted, saving previousStatus
     const updatedLines = data.lines.map((line) => {
-      return {
-        ...line,
-        status: "Inputted" as ScriptLineStatus,
-        previousStatus: undefined,
+      if (line.status !== "Inputted") {
+        return {
+          ...line,
+          status: "Inputted" as ScriptLineStatus,
+          previousStatus: line.status,
+        }
       }
+      return line
     })
 
-    // Clear all voReportChecks so the report list is completely cleared/refreshed
+    // Mark all voReportChecks as true so report history remains visible as Resolved (crossed out)
     const currentChecks: Record<string, any> = localProgress && typeof localProgress === "object" ? { ...localProgress } : {}
-    const updatedProgress = { ...currentChecks, voReportChecks: {} }
+    const voChecks: Record<string, boolean> = { ...(currentChecks.voReportChecks || {}) }
+
+    updatedLines.forEach((line) => {
+      if (!line.character) return
+      const targetChar = (
+        line.status === "Wrong Cast" && line.correctCharacter
+          ? line.correctCharacter
+          : line.character
+      ).trim().toLowerCase()
+
+      const origStatus = line.previousStatus || "Beluman"
+      const groupKey = `${targetChar}__${origStatus}`
+      voChecks[groupKey] = true
+    })
+
+    const updatedProgress = { ...currentChecks, voReportChecks: voChecks }
     setLocalProgress(updatedProgress)
 
     if (onUpdateProgress) {
