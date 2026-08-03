@@ -39,6 +39,8 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
   const [isExpanded, setIsExpanded] = useState(false)
   const [localProgress, setLocalProgress] = useState(task.progress || {})
   const [updatingStepKey, setUpdatingStepKey] = useState<string | null>(null)
+  const [updatingEpisodeId, setUpdatingEpisodeId] = useState<string | null>(null)
+  const [updatingSubtaskId, setUpdatingSubtaskId] = useState<string | null>(null)
   const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [localScriptData, setLocalScriptData] = useState<ScriptData | undefined>(() => {
@@ -817,23 +819,40 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       {!shouldCollapse && !isTodayTask && task.episodes.length > 0 && (
         <div className="mb-3">
           <div className="grid grid-cols-5 gap-1">
-            {task.episodes.map((episode) => (
-              <div
-                key={episode.id}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleEpisode(columnId, task.id, episode.id)
-                }}
-                className="flex items-center justify-center cursor-pointer"
-              >
-                {episode.completed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mr-1" />
-                ) : (
-                  <Circle className="w-4 h-4 text-border hover:text-muted-foreground mr-1" />
-                )}
-                <span className="text-[10px] font-medium text-foreground min-w-fit">{episode.number}</span>
-              </div>
-            ))}
+            {task.episodes.map((episode) => {
+              const isEpUpdating = updatingEpisodeId === episode.id
+              return (
+                <div
+                  key={episode.id}
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    if (isEpUpdating) return
+                    setUpdatingEpisodeId(episode.id)
+                    try {
+                      await onToggleEpisode(columnId, task.id, episode.id)
+                    } catch (err) {
+                      console.error("Failed to toggle episode:", err)
+                    } finally {
+                      setUpdatingEpisodeId(null)
+                    }
+                  }}
+                  className={`flex items-center justify-center cursor-pointer rounded px-1 py-0.5 transition-colors ${
+                    isEpUpdating ? "bg-amber-50" : "hover:bg-muted/40"
+                  }`}
+                >
+                  {isEpUpdating ? (
+                    <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin mr-1 flex-shrink-0" />
+                  ) : episode.completed ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 mr-1 flex-shrink-0" />
+                  ) : (
+                    <Circle className="w-4 h-4 text-border hover:text-muted-foreground mr-1 flex-shrink-0" />
+                  )}
+                  <span className={`text-[10px] min-w-fit ${isEpUpdating ? "font-bold text-amber-800" : "font-medium text-foreground"}`}>
+                    {episode.number}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -843,27 +862,48 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
         <div className="mb-3">
           <p className="text-xs font-medium text-muted-foreground mb-2">Sub tasks</p>
           <div className="space-y-1">
-            {task.subtasks.map((subtask) => (
-              <div
-                key={subtask.id}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleSubtask(columnId, task.id, subtask.id)
-                }}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                {subtask.completed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                ) : (
-                  <Circle className="w-4 h-4 text-border flex-shrink-0 hover:text-muted-foreground" />
-                )}
-                <span
-                  className={`text-xs ${subtask.completed ? "line-through text-muted-foreground" : "text-foreground"}`}
+            {task.subtasks.map((subtask) => {
+              const isSubUpdating = updatingSubtaskId === subtask.id
+              return (
+                <div
+                  key={subtask.id}
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    if (isSubUpdating) return
+                    setUpdatingSubtaskId(subtask.id)
+                    try {
+                      await onToggleSubtask(columnId, task.id, subtask.id)
+                    } catch (err) {
+                      console.error("Failed to toggle subtask:", err)
+                    } finally {
+                      setUpdatingSubtaskId(null)
+                    }
+                  }}
+                  className={`flex items-center gap-2 cursor-pointer p-1 rounded transition-colors ${
+                    isSubUpdating ? "bg-amber-50" : "hover:bg-muted/40"
+                  }`}
                 >
-                  {subtask.title}
-                </span>
-              </div>
-            ))}
+                  {isSubUpdating ? (
+                    <Loader2 className="w-4 h-4 text-amber-600 animate-spin flex-shrink-0" />
+                  ) : subtask.completed ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  ) : (
+                    <Circle className="w-4 h-4 text-border flex-shrink-0 hover:text-muted-foreground" />
+                  )}
+                  <span
+                    className={`text-xs ${
+                      isSubUpdating
+                        ? "text-amber-800 font-semibold"
+                        : subtask.completed
+                        ? "line-through text-muted-foreground"
+                        : "text-foreground"
+                    }`}
+                  >
+                    {subtask.title}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
