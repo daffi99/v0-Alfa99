@@ -180,10 +180,10 @@ export function ScriptSheetModal({
     }
 
     const updatedLines = data.lines.map((line) => {
-      if (line.status === "Inputted" && line.previousStatus) {
+      if (line.status === "Inputted") {
         return {
           ...line,
-          status: line.previousStatus,
+          status: (line.previousStatus || "Beluman") as ScriptLineStatus,
           previousStatus: undefined,
         }
       }
