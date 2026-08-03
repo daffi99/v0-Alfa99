@@ -400,26 +400,25 @@ export function ScriptSheetModal({
     data.lines.forEach((line) => {
       if (!line.character) return
 
+      const lineChar = (line.character || "").trim()
+      const correctChar = (line.correctCharacter || "").trim()
       const targetChar =
-        line.status === "Wrong Cast" && line.correctCharacter
-          ? line.correctCharacter.trim()
-          : line.character.trim()
+        line.status === "Wrong Cast" && correctChar !== ""
+          ? correctChar
+          : lineChar
 
-      const isInputted = line.status === "Inputted"
-      const possibleKeys = Array.from(Object.keys(checkedVoReportKeys)).filter((k) =>
-        k.startsWith(`${targetChar.toLowerCase()}__`)
-      )
+      if (!targetChar) return
 
-      if (isInputted && possibleKeys.length === 0) return
+      const lineIssueStatus = line.previousStatus || line.status
+      if (!lineIssueStatus || lineIssueStatus === "Inputted") return
 
-      const effectiveStatus = !isInputted ? line.status : (possibleKeys[0]?.split("__")[1] as ScriptLineStatus) || "Beluman"
-      const groupKey = `${targetChar.toLowerCase()}__${effectiveStatus}`
-      const isResolved = isInputted || !!checkedVoReportKeys[groupKey]
+      const groupKey = `${targetChar.toLowerCase()}__${lineIssueStatus}`
+      const isResolved = line.status === "Inputted" || !!checkedVoReportKeys[groupKey]
 
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
           character: targetChar,
-          status: effectiveStatus,
+          status: lineIssueStatus as ScriptLineStatus,
           epsSet: new Set<string>(),
           isResolved,
         })
@@ -428,22 +427,6 @@ export function ScriptSheetModal({
       if (line.eps) {
         charStatusMap.get(groupKey)!.epsSet.add(line.eps.trim())
       }
-    })
-
-    Object.entries(checkedVoReportKeys).forEach(([groupKey, isChecked]) => {
-      if (!isChecked || charStatusMap.has(groupKey)) return
-      const [charNameLower, statusStr] = groupKey.split("__")
-      const matchedMaster = data.masterArtists.find(
-        (ma) => ma.characterName.trim().toLowerCase() === charNameLower
-      )
-      const characterName = matchedMaster ? matchedMaster.characterName : charNameLower
-
-      charStatusMap.set(groupKey, {
-        character: characterName,
-        status: statusStr as ScriptLineStatus,
-        epsSet: new Set<string>(),
-        isResolved: true,
-      })
     })
 
     const reports: Array<{
