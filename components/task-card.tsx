@@ -102,19 +102,27 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
     >()
 
     localScriptData.lines.forEach((line) => {
-      if (!line.character || line.status === "Inputted") return
+      if (!line.character) return
 
       const targetChar =
         line.status === "Wrong Cast" && line.correctCharacter
           ? line.correctCharacter.trim()
           : line.character.trim()
 
-      const groupKey = `${targetChar.toLowerCase()}__${line.status}`
+      const isInputted = line.status === "Inputted"
+      const possibleKeys = Array.from(Object.keys(checkedVoReportKeys)).filter((k) =>
+        k.startsWith(`${targetChar.toLowerCase()}__`)
+      )
+
+      if (isInputted && possibleKeys.length === 0) return
+
+      const effectiveStatus = !isInputted ? line.status : (possibleKeys[0]?.split("__")[1] as ScriptLineStatus) || "Beluman"
+      const groupKey = `${targetChar.toLowerCase()}__${effectiveStatus}`
 
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
           character: targetChar,
-          status: line.status as ScriptLineStatus,
+          status: effectiveStatus as ScriptLineStatus,
           epsSet: new Set<string>(),
         })
       }
@@ -122,6 +130,21 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       if (line.eps) {
         charStatusMap.get(groupKey)!.epsSet.add(line.eps.trim())
       }
+    })
+
+    Object.entries(checkedVoReportKeys).forEach(([groupKey, isChecked]) => {
+      if (!isChecked || charStatusMap.has(groupKey)) return
+      const [charNameLower, statusStr] = groupKey.split("__")
+      const matchedMaster = localScriptData.masterArtists?.find(
+        (ma) => ma.characterName.trim().toLowerCase() === charNameLower
+      )
+      const characterName = matchedMaster ? matchedMaster.characterName : charNameLower
+
+      charStatusMap.set(groupKey, {
+        character: characterName,
+        status: statusStr as ScriptLineStatus,
+        epsSet: new Set<string>(),
+      })
     })
 
     const reports: Array<{
@@ -1047,7 +1070,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                     </div>
                     <span
                       className={`font-mono text-foreground font-semibold leading-tight text-[9px] min-w-0 flex-1 ${
-                        isChecked ? "line-through text-muted-foreground/60" : ""
+                        isChecked ? "text-muted-foreground" : ""
                       }`}
                     >
                       {item.epSummary}
