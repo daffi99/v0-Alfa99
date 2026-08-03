@@ -149,16 +149,49 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
   const handleToggleVoReportCheck = async (itemId: string) => {
     const currentChecks = (localProgress.voReportChecks as Record<string, boolean>) || {}
     const isChecked = !!currentChecks[itemId]
-    const updatedChecks = { ...currentChecks, [itemId]: !isChecked }
+    const willBeChecked = !isChecked
+    const updatedChecks = { ...currentChecks, [itemId]: willBeChecked }
     const newProgress = { ...localProgress, voReportChecks: updatedChecks }
 
     setLocalProgress(newProgress)
+
+    let updatedScriptData = localScriptData
+    if (localScriptData && localScriptData.lines) {
+      const [charNameLower, originalStatus] = itemId.split("__")
+      const updatedLines = localScriptData.lines.map((line) => {
+        const targetChar = (
+          line.status === "Wrong Cast" && line.correctCharacter
+            ? line.correctCharacter
+            : line.character
+        )?.trim().toLowerCase()
+
+        if (
+          targetChar === charNameLower &&
+          (line.status === originalStatus || (isChecked && line.status === "Inputted"))
+        ) {
+          return {
+            ...line,
+            status: willBeChecked ? ("Inputted" as ScriptLineStatus) : (originalStatus as ScriptLineStatus),
+          }
+        }
+        return line
+      })
+      updatedScriptData = { ...localScriptData, lines: updatedLines }
+      setLocalScriptData(updatedScriptData)
+
+      if (onUpdateScriptData) {
+        onUpdateScriptData(columnId, task.id, updatedScriptData)
+      }
+    }
 
     try {
       await fetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ progress: newProgress }),
+        body: JSON.stringify({
+          progress: newProgress,
+          scriptData: updatedScriptData,
+        }),
       })
     } catch (err) {
       console.error("Failed to toggle VO report item check:", err)

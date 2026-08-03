@@ -352,33 +352,50 @@ export function ScriptSheetModal({
 
     const formattedTitle = formatReportTitle(taskTitle)
 
-    // Group issue lines by target character & status: key = `${targetChar.toLowerCase()}__${line.status}`
+    const checkedVoReportKeys =
+      ((localProgress && typeof localProgress === "object" ? localProgress.voReportChecks : {}) as Record<
+        string,
+        boolean
+      >) || {}
+
+    // Group lines by target character & status (or track checked keys)
     const charStatusMap = new Map<
       string,
       {
         character: string
         status: ScriptLineStatus
         epsSet: Set<string>
+        isResolved: boolean
       }
     >()
 
     data.lines.forEach((line) => {
-      const suffix = STATUS_REPORT_SUFFIX_MAP[line.status]
-      if (!suffix || !line.character) return // Skip Inputted lines or null suffixes
+      if (!line.character) return
 
-      // For Wrong Cast, use correctCharacter if selected, otherwise original character
       const targetChar =
         line.status === "Wrong Cast" && line.correctCharacter
           ? line.correctCharacter.trim()
           : line.character.trim()
 
-      const groupKey = `${targetChar.toLowerCase()}__${line.status}`
+      const isInputted = line.status === "Inputted"
+      const suffix = STATUS_REPORT_SUFFIX_MAP[line.status]
+
+      const possibleKeys = Array.from(Object.keys(checkedVoReportKeys)).filter((k) =>
+        k.startsWith(`${targetChar.toLowerCase()}__`)
+      )
+
+      if (isInputted && possibleKeys.length === 0) return
+
+      const effectiveStatus = !isInputted ? line.status : (possibleKeys[0]?.split("__")[1] as ScriptLineStatus) || "Beluman"
+      const groupKey = `${targetChar.toLowerCase()}__${effectiveStatus}`
+      const isResolved = isInputted || !!checkedVoReportKeys[groupKey]
 
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
           character: targetChar,
-          status: line.status,
+          status: effectiveStatus,
           epsSet: new Set<string>(),
+          isResolved,
         })
       }
 
@@ -387,7 +404,24 @@ export function ScriptSheetModal({
       }
     })
 
+    Object.entries(checkedVoReportKeys).forEach(([groupKey, isChecked]) => {
+      if (!isChecked || charStatusMap.has(groupKey)) return
+      const [charNameLower, statusStr] = groupKey.split("__")
+      const matchedMaster = data.masterArtists.find(
+        (ma) => ma.characterName.trim().toLowerCase() === charNameLower
+      )
+      const characterName = matchedMaster ? matchedMaster.characterName : charNameLower
+
+      charStatusMap.set(groupKey, {
+        character: characterName,
+        status: statusStr as ScriptLineStatus,
+        epsSet: new Set<string>(),
+        isResolved: true,
+      })
+    })
+
     const reports: Array<{
+      groupKey: string
       status: ScriptLineStatus
       epsJoined: string
       character: string
@@ -395,22 +429,24 @@ export function ScriptSheetModal({
       reportString: string
       epSummary: string
       minEps: number
+      isResolved: boolean
     }> = []
 
-    charStatusMap.forEach(({ character, status, epsSet }) => {
+    charStatusMap.forEach(({ character, status, epsSet, isResolved }, groupKey) => {
       const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
       const suffix = STATUS_REPORT_SUFFIX_MAP[status] || ""
       const sortedEps = Array.from(epsSet)
         .sort((a, b) => Number(a) - Number(b))
         .map((e) => e.padStart(3, "0"))
 
-      const epsJoined = sortedEps.join(", ")
+      const epsJoined = sortedEps.length > 0 ? sortedEps.join(", ") : "000"
       const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
 
       const reportString = `${formattedTitle}_${epsJoined}_${character}/${actor}${suffix}`
       const epSummary = `EP${epsJoined} ${character}/${actor}`
 
       reports.push({
+        groupKey,
         status,
         epsJoined,
         character,
@@ -418,11 +454,15 @@ export function ScriptSheetModal({
         reportString,
         epSummary,
         minEps,
+        isResolved,
       })
     })
 
-    return reports.sort((a, b) => a.minEps - b.minEps)
-  }, [data.lines, data.masterArtists, taskTitle])
+    return reports.sort((a, b) => {
+      if (a.isResolved !== b.isResolved) return a.isResolved ? 1 : -1
+      return a.minEps - b.minEps
+    })
+  }, [data.lines, data.masterArtists, taskTitle, localProgress.voReportChecks])
 
   // Sorted character options for Wrong Cast selection:
   // Characters with lines > 0 sorted highest to lowest line count, followed by 0-line characters.
@@ -1542,24 +1582,33 @@ export function ScriptSheetModal({
                   </thead>
                   <tbody className="divide-y font-mono text-[11px]">
                     {missingReports.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-muted/30">
+                      <tr key={idx} className={`hover:bg-muted/30 transition-colors ${item.isResolved ? "bg-emerald-50/20" : ""}`}>
                         <td className="p-2.5">
-                          <span
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
-                              STATUS_STYLE_MAP[item.status]?.bg || "bg-gray-100"
-                            } ${STATUS_STYLE_MAP[item.status]?.text || "text-gray-800"} ${
-                              STATUS_STYLE_MAP[item.status]?.border || "border-gray-200"
-                            }`}
-                          >
-                            {item.status}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                                STATUS_STYLE_MAP[item.status]?.bg || "bg-gray-100"
+                              } ${STATUS_STYLE_MAP[item.status]?.text || "text-gray-800"} ${
+                                STATUS_STYLE_MAP[item.status]?.border || "border-gray-200"
+                              } ${item.isResolved ? "line-through opacity-60" : ""}`}
+                            >
+                              {item.status}
+                            </span>
+                            {item.isResolved && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                                <Check className="w-3 h-3 text-emerald-600" /> Resolved
+                              </span>
+                            )}
+                          </div>
                         </td>
-                        <td className="p-2.5 font-semibold text-foreground">
+                        <td className={`p-2.5 font-semibold ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
                           {item.character}
                         </td>
                         <td className="p-2.5 font-medium text-slate-800 bg-muted/20">
                           <div className="flex items-center justify-between gap-2 group">
-                            <span className="select-all font-mono">{item.reportString}</span>
+                            <span className={`select-all font-mono ${item.isResolved ? "line-through text-muted-foreground/60" : ""}`}>
+                              {item.reportString}
+                            </span>
                             <button
                               onClick={() => handleCopySingleReportLine(item.reportString, idx)}
                               className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded transition-colors flex-shrink-0"
@@ -1573,7 +1622,7 @@ export function ScriptSheetModal({
                             </button>
                           </div>
                         </td>
-                        <td className="p-2.5 font-bold text-emerald-800">
+                        <td className={`p-2.5 font-bold ${item.isResolved ? "line-through text-emerald-800/50" : "text-emerald-800"}`}>
                           {item.epSummary}
                         </td>
                       </tr>
