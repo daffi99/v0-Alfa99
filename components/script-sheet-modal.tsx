@@ -693,8 +693,8 @@ export function ScriptSheetModal({
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-5xl w-[95vw] h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="p-4 border-b flex items-center justify-between bg-card">
-          <div>
+        <div className="p-3 px-4 border-b flex items-center justify-between bg-card">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5 text-primary" />
               <h2 className="text-lg font-bold text-foreground">
@@ -704,7 +704,8 @@ export function ScriptSheetModal({
                 {taskTitle}
               </span>
             </div>
-            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-3">
+            <span className="text-muted-foreground/30 hidden sm:inline">•</span>
+            <div className="text-xs text-muted-foreground flex items-center gap-3">
               <span>
                 Total Lines: <b>{totalLines}</b>
               </span>
@@ -722,7 +723,7 @@ export function ScriptSheetModal({
           <div className="flex items-center gap-2">
             <button
               onClick={onReRunWizard}
-              className="px-3 py-1.5 text-xs border border-border rounded-md hover:bg-muted transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 text-xs border border-border rounded-md hover:bg-muted transition-colors flex items-center gap-1.5 whitespace-nowrap"
             >
               <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />
               Re-run Setup Wizard
@@ -766,7 +767,7 @@ export function ScriptSheetModal({
             </div>
 
             {isProgressExpanded && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 bg-card p-2 rounded-md border text-[10px] mt-1.5 shadow-2xs">
+              <div className="grid grid-cols-1 sm:grid-cols-[1.3fr_auto_1.8fr_1.8fr] gap-2.5 bg-card p-2 rounded-md border text-[10px] mt-1.5 shadow-2xs">
                 {/* Group 1: Prep (1 line) */}
                 <div className="border-r pr-2 last:border-r-0 border-border/40">
                   <div className="font-bold text-foreground border-b pb-0.5 mb-1 flex items-center justify-between text-[10px]">
@@ -802,8 +803,8 @@ export function ScriptSheetModal({
                   </div>
                 </div>
 
-                {/* Group 2: Check VO (1 line) */}
-                <div className="border-r pr-2 last:border-r-0 border-border/40">
+                {/* Group 2: Check VO (1 line - compact width) */}
+                <div className="border-r pr-2.5 last:border-r-0 border-border/40 min-w-[90px]">
                   <div className="font-bold text-foreground border-b pb-0.5 mb-1 flex items-center justify-between text-[10px]">
                     <span>Check VO</span>
                     <span className="text-[9px] font-mono text-muted-foreground font-semibold">
@@ -881,7 +882,7 @@ export function ScriptSheetModal({
                   </div>
                   <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                     {[
-                      { label: "Input Replacement text", key: "inputReplacementText" },
+                      { label: "Replacement text", key: "inputReplacementText" },
                       { label: "Input Sync SRT", key: "inputSyncSRT" },
                       { label: "Re check SRT", key: "reCheckSRT" },
                     ].map((item) => {
