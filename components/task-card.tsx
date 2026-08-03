@@ -98,6 +98,8 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
         character: string
         status: ScriptLineStatus
         epsSet: Set<string>
+        totalLines: number
+        inputtedLines: number
       }
     >()
 
@@ -123,11 +125,19 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
           character: targetChar,
           status: lineIssueStatus as ScriptLineStatus,
           epsSet: new Set<string>(),
+          totalLines: 0,
+          inputtedLines: 0,
         })
       }
 
+      const entry = charStatusMap.get(groupKey)!
+      entry.totalLines += 1
+      if (line.status === "Inputted") {
+        entry.inputtedLines += 1
+      }
+
       if (line.eps) {
-        charStatusMap.get(groupKey)!.epsSet.add(line.eps.trim())
+        entry.epsSet.add(line.eps.trim())
       }
     })
 
@@ -136,9 +146,10 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       status: ScriptLineStatus
       epSummary: string
       minEps: number
+      isResolved: boolean
     }> = []
 
-    charStatusMap.forEach(({ character, status, epsSet }, groupKey) => {
+    charStatusMap.forEach(({ character, status, epsSet, totalLines, inputtedLines }, groupKey) => {
       const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
       const sortedEps = Array.from(epsSet)
         .sort((a, b) => Number(a) - Number(b))
@@ -148,20 +159,18 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
       const epSummary = `EP${epsJoined} ${character}/${actor}`
 
+      const isResolved = !!checkedVoReportKeys[groupKey] || (totalLines > 0 && inputtedLines === totalLines)
+
       reports.push({
         id: groupKey,
         status,
         epSummary,
         minEps,
+        isResolved,
       })
     })
 
-    return reports.sort((a, b) => {
-      const isAResolved = !!checkedVoReportKeys[a.id]
-      const isBResolved = !!checkedVoReportKeys[b.id]
-      if (isAResolved !== isBResolved) return isAResolved ? 1 : -1
-      return a.minEps - b.minEps
-    })
+    return reports.sort((a, b) => a.minEps - b.minEps)
   }, [localScriptData, localProgress.voReportChecks])
 
   const handleToggleVoReportCheck = async (itemId: string) => {
@@ -1034,7 +1043,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
           {isVoReportExpanded && (
             <div className="space-y-1 max-h-44 overflow-y-auto pr-1 mt-1.5">
               {voReportSummaryItems.map((item) => {
-                const isChecked = !!(localProgress.voReportChecks as Record<string, boolean>)?.[item.id]
+                const isChecked = item.isResolved || !!(localProgress.voReportChecks as Record<string, boolean>)?.[item.id]
                 const statusStyle = STATUS_STYLE_MAP[item.status] || {
                   label: item.status,
                   bg: "bg-gray-100",
@@ -1048,9 +1057,9 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                     onClick={(e) => e.stopPropagation()}
                     className="flex items-center gap-2 text-[9px] cursor-pointer hover:bg-background/80 p-1 rounded transition-colors"
                   >
-                    <div className="w-[78px] flex-shrink-0 flex justify-end">
+                    <div className="w-[72px] flex-shrink-0 flex justify-end">
                       <span
-                        className={`text-[8.5px] px-1.5 py-0.2 rounded font-bold border whitespace-nowrap text-center ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+                        className={`text-[8.5px] px-1.5 py-0.2 rounded font-bold border whitespace-nowrap text-right ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
                       >
                         {statusStyle.label}
                       </span>

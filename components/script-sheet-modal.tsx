@@ -233,6 +233,47 @@ export function ScriptSheetModal({
   const updateData = (newData: ScriptData) => {
     setData(newData)
     onSave(newData)
+
+    if (onUpdateProgress && newData.lines) {
+      const currentChecks: Record<string, any> = localProgress && typeof localProgress === "object" ? { ...localProgress } : {}
+      const voChecks: Record<string, boolean> = { ...(currentChecks.voReportChecks || {}) }
+
+      const groupTotalMap = new Map<string, number>()
+      const groupInputtedMap = new Map<string, number>()
+
+      newData.lines.forEach((line) => {
+        if (!line.character) return
+        const lineChar = (line.character || "").trim()
+        const correctChar = (line.correctCharacter || "").trim()
+        const targetChar =
+          line.status === "Wrong Cast" && correctChar !== ""
+            ? correctChar
+            : lineChar
+
+        if (!targetChar) return
+        const origStatus = line.previousStatus || line.status
+        if (!origStatus || origStatus === "Inputted") return
+
+        const groupKey = `${targetChar.toLowerCase()}__${origStatus}`
+        groupTotalMap.set(groupKey, (groupTotalMap.get(groupKey) || 0) + 1)
+        if (line.status === "Inputted") {
+          groupInputtedMap.set(groupKey, (groupInputtedMap.get(groupKey) || 0) + 1)
+        }
+      })
+
+      groupTotalMap.forEach((total, groupKey) => {
+        const inputted = groupInputtedMap.get(groupKey) || 0
+        if (inputted === total && total > 0) {
+          voChecks[groupKey] = true
+        } else if (inputted < total) {
+          voChecks[groupKey] = false
+        }
+      })
+
+      const updatedProgress = { ...currentChecks, voReportChecks: voChecks }
+      setLocalProgress(updatedProgress)
+      onUpdateProgress(updatedProgress)
+    }
   }
 
   // Filtered script lines for Tab 1
