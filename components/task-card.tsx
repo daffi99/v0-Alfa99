@@ -61,6 +61,32 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
     return undefined
   })
 
+  const isCaptionTask =
+    task.category === "Caption" || (!task.category && task.title ? task.title.toLowerCase().includes("caption") : true)
+
+  const isStepCompleted = (key: string) => {
+    switch (key) {
+      case "prep":
+        return !!(localProgress.vocalSplit && localProgress.voEnhance && localProgress.subtitleJoin)
+      case "checkVO":
+        return !!localProgress.checkVO
+      case "editing":
+        return !!(localProgress.pitchShift && localProgress.volumeAdjustment && localProgress.subseq && localProgress.mixingVO)
+      case "captionEdit":
+        return !!(localProgress.inputReplacementText && localProgress.inputSyncSRT && localProgress.reCheckSRT)
+      case "completed":
+        return (
+          !!localProgress.completed ||
+          (!!(localProgress.vocalSplit && localProgress.voEnhance && localProgress.subtitleJoin) &&
+            !!localProgress.checkVO &&
+            !!(localProgress.pitchShift && localProgress.volumeAdjustment && localProgress.subseq && localProgress.mixingVO) &&
+            (!isCaptionTask || !!(localProgress.inputReplacementText && localProgress.inputSyncSRT && localProgress.reCheckSRT)))
+        )
+      default:
+        return false
+    }
+  }
+
   useEffect(() => {
     if (task.scriptData || task.script_data) {
       const s = task.scriptData || (typeof task.script_data === "string" ? JSON.parse(task.script_data) : task.script_data)
@@ -820,29 +846,6 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                   { label: "Completed", key: "completed" },
                 ]
 
-            const isStepCompleted = (key: string) => {
-              switch (key) {
-                case "prep":
-                  return !!(localProgress.vocalSplit && localProgress.voEnhance && localProgress.subtitleJoin)
-                case "checkVO":
-                  return !!localProgress.checkVO
-                case "editing":
-                  return !!(localProgress.pitchShift && localProgress.volumeAdjustment && localProgress.subseq && localProgress.mixingVO)
-                case "captionEdit":
-                  return !!(localProgress.inputReplacementText && localProgress.inputSyncSRT && localProgress.reCheckSRT)
-                case "completed":
-                  return (
-                    !!localProgress.completed ||
-                    (!!(localProgress.vocalSplit && localProgress.voEnhance && localProgress.subtitleJoin) &&
-                      !!localProgress.checkVO &&
-                      !!(localProgress.pitchShift && localProgress.volumeAdjustment && localProgress.subseq && localProgress.mixingVO) &&
-                      (!isCaptionTask || !!(localProgress.inputReplacementText && localProgress.inputSyncSRT && localProgress.reCheckSRT)))
-                  )
-                default:
-                  return false
-              }
-            }
-
             const getToggledProgress = (key: string) => {
               const currentDone = isStepCompleted(key)
               const targetVal = !currentDone
@@ -906,32 +909,23 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                     setUpdatingStepKey(item.key)
 
                     const willBeCompletedNow = item.key === "completed" && !isCompleted
-                    const willBeUncompletedNow = item.key === "completed" && isCompleted
+
+                    if (item.key === "completed" && onToggleAllEpisodes) {
+                      try {
+                        await onToggleAllEpisodes(columnId, task.id, willBeCompletedNow)
+                      } catch (err) {
+                        console.error("Failed to toggle all episodes:", err)
+                      } finally {
+                        setUpdatingStepKey(null)
+                      }
+                      return
+                    }
 
                     const newProgress = getToggledProgress(item.key)
                     setLocalProgress(newProgress)
 
-                    const willBeCompleted = item.key === "completed" && !isCompleted
-
-                    // Sync episode states when Completed step is toggled
-                    if (item.key === "completed") {
-                      if (willBeCompletedNow) {
-                        task.episodes.forEach((ep) => {
-                          if (!ep.completed) onToggleEpisode(columnId, task.id, ep.id)
-                        })
-                      } else if (willBeUncompletedNow) {
-                        task.episodes.forEach((ep) => {
-                          if (ep.completed) onToggleEpisode(columnId, task.id, ep.id)
-                        })
-                      }
-                    }
-
                     try {
                       const updateData: any = { progress: newProgress }
-                      if (willBeCompleted) {
-                        updateData.status = "Finished"
-                        onUpdateStatus(columnId, task.id, "Finished")
-                      }
 
                       const response = await fetch(`/api/tasks/${task.id}`, {
                         method: "PATCH",
@@ -949,16 +943,9 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                             : updatedTask.progress
                           : {}
                       )
-
-                      if (willBeCompleted && updatedTask.status === "Finished") {
-                        setIsExpanded(false)
-                      }
                     } catch (error) {
                       console.error("Failed to update progress:", error)
                       setLocalProgress(task.progress || {})
-                      if (willBeCompleted) {
-                        onUpdateStatus(columnId, task.id, task.status)
-                      }
                     } finally {
                       setUpdatingStepKey(null)
                     }
@@ -995,6 +982,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
           <div className="grid grid-cols-5 gap-1">
             {task.episodes.map((episode) => {
               const isEpUpdating = updatingEpisodeId === episode.id
+              const isEpChecked = episode.completed || isStepCompleted("completed")
               return (
                 <div
                   key={episode.id}
@@ -1016,12 +1004,12 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                 >
                   {isEpUpdating ? (
                     <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin mr-1 flex-shrink-0" />
-                  ) : episode.completed ? (
+                  ) : isEpChecked ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 mr-1 flex-shrink-0" />
                   ) : (
                     <Circle className="w-4 h-4 text-border hover:text-muted-foreground mr-1 flex-shrink-0" />
                   )}
-                  <span className={`text-[10px] min-w-fit ${isEpUpdating ? "font-bold text-amber-800" : "font-medium text-foreground"}`}>
+                  <span className={`text-[10px] min-w-fit ${isEpUpdating ? "font-bold text-amber-800" : isEpChecked ? "font-bold text-emerald-700" : "font-medium text-foreground"}`}>
                     {episode.number}
                   </span>
                 </div>
