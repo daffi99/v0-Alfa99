@@ -156,7 +156,12 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       })
     })
 
-    return reports.sort((a, b) => a.minEps - b.minEps)
+    return reports.sort((a, b) => {
+      const isAResolved = !!checkedVoReportKeys[a.id]
+      const isBResolved = !!checkedVoReportKeys[b.id]
+      if (isAResolved !== isBResolved) return isAResolved ? 1 : -1
+      return a.minEps - b.minEps
+    })
   }, [localScriptData, localProgress.voReportChecks])
 
   const handleToggleVoReportCheck = async (itemId: string) => {
@@ -1043,9 +1048,9 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                     onClick={(e) => e.stopPropagation()}
                     className="flex items-center gap-2 text-[9px] cursor-pointer hover:bg-background/80 p-1 rounded transition-colors"
                   >
-                    <div className="w-[72px] flex-shrink-0 flex justify-end">
+                    <div className="w-[78px] flex-shrink-0 flex justify-end">
                       <span
-                        className={`text-[8.5px] px-1.5 py-0.2 rounded font-bold border whitespace-nowrap text-right ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+                        className={`text-[8.5px] px-1.5 py-0.2 rounded font-bold border whitespace-nowrap text-center ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
                       >
                         {statusStyle.label}
                       </span>
