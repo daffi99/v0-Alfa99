@@ -77,6 +77,12 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       return []
     }
 
+    const checkedVoReportKeys =
+      ((localProgress && typeof localProgress === "object" ? localProgress.voReportChecks : {}) as Record<
+        string,
+        boolean
+      >) || {}
+
     const masterMap = new Map<string, string>()
     if (localScriptData.masterArtists) {
       localScriptData.masterArtists.forEach((ma) => {
@@ -96,19 +102,27 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
     >()
 
     localScriptData.lines.forEach((line) => {
-      if (!line.status || line.status === "Inputted" || !line.character) return
+      if (!line.character) return
 
       const targetChar =
         line.status === "Wrong Cast" && line.correctCharacter
           ? line.correctCharacter.trim()
           : line.character.trim()
 
-      const groupKey = `${targetChar.toLowerCase()}__${line.status}`
+      const isInputted = line.status === "Inputted"
+      const possibleKeys = Array.from(Object.keys(checkedVoReportKeys)).filter((k) =>
+        k.startsWith(`${targetChar.toLowerCase()}__`)
+      )
+
+      if (isInputted && possibleKeys.length === 0) return
+
+      const effectiveStatus = !isInputted ? line.status : (possibleKeys[0]?.split("__")[1] as ScriptLineStatus) || "Beluman"
+      const groupKey = `${targetChar.toLowerCase()}__${effectiveStatus}`
 
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
           character: targetChar,
-          status: line.status as ScriptLineStatus,
+          status: effectiveStatus as ScriptLineStatus,
           epsSet: new Set<string>(),
         })
       }
@@ -116,6 +130,22 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       if (line.eps) {
         charStatusMap.get(groupKey)!.epsSet.add(line.eps.trim())
       }
+    })
+
+    // Include all checked keys so items are NEVER wiped out from main card view
+    Object.entries(checkedVoReportKeys).forEach(([groupKey, isChecked]) => {
+      if (!isChecked || charStatusMap.has(groupKey)) return
+      const [charNameLower, statusStr] = groupKey.split("__")
+      const matchedMaster = localScriptData.masterArtists?.find(
+        (ma) => ma.characterName.trim().toLowerCase() === charNameLower
+      )
+      const characterName = matchedMaster ? matchedMaster.characterName : charNameLower
+
+      charStatusMap.set(groupKey, {
+        character: characterName,
+        status: statusStr as ScriptLineStatus,
+        epsSet: new Set<string>(),
+      })
     })
 
     const reports: Array<{
@@ -131,7 +161,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
         .sort((a, b) => Number(a) - Number(b))
         .map((e) => e.padStart(3, "0"))
 
-      const epsJoined = sortedEps.join(", ")
+      const epsJoined = sortedEps.length > 0 ? sortedEps.join(", ") : "000"
       const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
       const epSummary = `EP${epsJoined} ${character}/${actor}`
 
@@ -144,7 +174,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
     })
 
     return reports.sort((a, b) => a.minEps - b.minEps)
-  }, [localScriptData])
+  }, [localScriptData, localProgress.voReportChecks])
 
   const handleToggleVoReportCheck = async (itemId: string) => {
     const currentChecks = (localProgress.voReportChecks as Record<string, boolean>) || {}
