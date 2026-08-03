@@ -170,6 +170,9 @@ export function ScriptSheetModal({
   // Reset All VOA Report Confirmation Modal State
   const [isResetVoaModalOpen, setIsResetVoaModalOpen] = useState(false)
 
+  // Status Action Custom Dropdown Menu State
+  const [openActionDropdown, setOpenActionDropdown] = useState<string | null>(null)
+
   const handleConfirmResetVoaReport = () => {
     // Convert all lines to Inputted
     const updatedLines = data.lines.map((line) => {
@@ -1399,21 +1402,60 @@ export function ScriptSheetModal({
                             <span className="text-[10px] font-mono text-muted-foreground bg-muted/60 px-2 py-1 rounded border border-border/60">
                               <b className="text-emerald-700">{cs.inputtedLinesCount}</b>/<b className="text-muted-foreground">{cs.linesCount}</b> In
                             </span>
-                            <select
-                              value=""
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  handleBatchUpdateCharacterStatus(cs.character, e.target.value as ScriptLineStatus)
-                                }
-                              }}
-                              className="px-2.5 py-1 text-[11px] font-semibold bg-background hover:bg-muted/50 border border-border rounded-md shadow-xs focus:ring-1 focus:ring-primary cursor-pointer transition-colors text-foreground"
-                              title={`Set status for all ${cs.linesCount} lines of ${cs.character}`}
-                            >
-                              <option value="" disabled>-- Set Status --</option>
-                              <option value="Inputted" className="text-emerald-700 font-medium">Inputted</option>
-                              <option value="Beluman" className="text-red-600 font-medium">Beluman</option>
-                              <option value="Broken" className="text-amber-600 font-medium">Broken</option>
-                            </select>
+                            <div className="relative inline-block text-left">
+                              <button
+                                type="button"
+                                onClick={() => setOpenActionDropdown(openActionDropdown === cs.character ? null : cs.character)}
+                                className="h-7 px-2.5 text-[11px] font-semibold bg-background hover:bg-muted/80 text-foreground border border-border rounded-md shadow-2xs flex items-center gap-1.5 cursor-pointer transition-colors active:scale-95"
+                              >
+                                <span>Set Status</span>
+                                <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                              </button>
+
+                              {openActionDropdown === cs.character && (
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-20"
+                                    onClick={() => setOpenActionDropdown(null)}
+                                  />
+                                  <div className="absolute right-0 top-full mt-1 z-30 w-36 bg-popover border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleBatchUpdateCharacterStatus(cs.character, "Inputted")
+                                        setOpenActionDropdown(null)
+                                      }}
+                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-md transition-colors cursor-pointer"
+                                    >
+                                      <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                                      Inputted
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleBatchUpdateCharacterStatus(cs.character, "Beluman")
+                                        setOpenActionDropdown(null)
+                                      }}
+                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-colors cursor-pointer"
+                                    >
+                                      <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                                      Beluman
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleBatchUpdateCharacterStatus(cs.character, "Broken")
+                                        setOpenActionDropdown(null)
+                                      }}
+                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-md transition-colors cursor-pointer"
+                                    >
+                                      <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
+                                      Broken
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </td>
                       </tr>
