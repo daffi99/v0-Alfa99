@@ -38,6 +38,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
   const [isEditingNote, setIsEditingNote] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [localProgress, setLocalProgress] = useState(task.progress || {})
+  const [updatingStepKey, setUpdatingStepKey] = useState<string | null>(null)
   const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [localScriptData, setLocalScriptData] = useState<ScriptData | undefined>(() => {
@@ -735,12 +736,15 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
             return stepsList.map((item, index) => {
               const stepNumber = index + 1
               const isCompleted = isStepCompleted(item.key)
+              const isStepUpdating = updatingStepKey === item.key
 
               return (
                 <button
                   key={item.key}
+                  disabled={isStepUpdating}
                   onClick={async (e) => {
                     e.stopPropagation()
+                    setUpdatingStepKey(item.key)
                     const newProgress = getToggledProgress(item.key)
                     setLocalProgress(newProgress)
 
@@ -779,18 +783,24 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                       if (willBeCompleted) {
                         onUpdateStatus(columnId, task.id, task.status)
                       }
+                    } finally {
+                      setUpdatingStepKey(null)
                     }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1 text-[10px] hover:bg-muted/50 rounded px-1.5 py-1 transition-colors cursor-pointer"
+                  className={`flex items-center gap-1 text-[10px] rounded px-1.5 py-1 transition-colors cursor-pointer ${
+                    isStepUpdating ? "bg-amber-50 text-amber-800 font-semibold" : "hover:bg-muted/50"
+                  }`}
                 >
                   <span className="text-muted-foreground font-mono font-semibold">{stepNumber}</span>
-                  {isCompleted ? (
+                  {isStepUpdating ? (
+                    <Loader2 className="w-3.5 h-3.5 text-amber-600 animate-spin flex-shrink-0" />
+                  ) : isCompleted ? (
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
                   ) : (
                     <Circle className="w-3.5 h-3.5 text-border flex-shrink-0" />
                   )}
-                  <span className={isCompleted ? "text-foreground font-semibold" : "text-muted-foreground font-medium"}>
+                  <span className={isStepUpdating ? "text-amber-800 font-semibold" : isCompleted ? "text-foreground font-semibold" : "text-muted-foreground font-medium"}>
                     {item.label}
                   </span>
                 </button>
