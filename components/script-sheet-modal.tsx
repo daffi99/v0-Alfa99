@@ -21,6 +21,8 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  AlertTriangle,
+  RotateCcw,
 } from "lucide-react"
 import type { ScriptData, ScriptLine, MasterArtistMapping, ScriptLineStatus } from "./script-wizard-modal"
 
@@ -164,6 +166,33 @@ export function ScriptSheetModal({
 
   // Unused Characters Collapsible Panel State
   const [isUnusedExpanded, setIsUnusedExpanded] = useState(false)
+
+  // Reset All VOA Report Confirmation Modal State
+  const [isResetVoaModalOpen, setIsResetVoaModalOpen] = useState(false)
+
+  const handleConfirmResetVoaReport = () => {
+    const currentChecks: Record<string, any> = localProgress && typeof localProgress === "object" ? { ...localProgress } : {}
+    const updatedProgress = { ...currentChecks, voReportChecks: {} }
+    setLocalProgress(updatedProgress)
+
+    if (onUpdateProgress) {
+      onUpdateProgress(updatedProgress)
+    }
+
+    const updatedLines = data.lines.map((line) => {
+      if (line.status === "Inputted" && line.previousStatus) {
+        return {
+          ...line,
+          status: line.previousStatus,
+          previousStatus: undefined,
+        }
+      }
+      return line
+    })
+
+    updateData({ ...data, lines: updatedLines })
+    setIsResetVoaModalOpen(false)
+  }
 
   // Wrong Cast Character Selection Popup State
   const [wrongCastModal, setWrongCastModal] = useState<{
@@ -1592,21 +1621,30 @@ export function ScriptSheetModal({
                     Auto-generated <b>{missingReports.length}</b> missing VOA audio report entries for lines marked <b>Beluman</b>.
                   </span>
                 </div>
-                <button
-                  onClick={handleCopyReport}
-                  disabled={missingReports.length === 0}
-                  className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  {copiedReport ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" /> Copied to Clipboard!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" /> Copy All Report Lines
-                    </>
-                  )}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsResetVoaModalOpen(true)}
+                    className="h-8 px-3 text-xs bg-red-50 hover:bg-red-100 text-red-700 font-semibold border border-red-200 rounded-md transition-colors flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                    title="Reset all VOA report checks and restore line statuses"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Reset All VOA Report
+                  </button>
+                  <button
+                    onClick={handleCopyReport}
+                    disabled={missingReports.length === 0}
+                    className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  >
+                    {copiedReport ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" /> Copied to Clipboard!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" /> Copy All Report Lines
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-auto border rounded-lg bg-card">
@@ -1839,6 +1877,41 @@ export function ScriptSheetModal({
                   className="px-4 py-2 text-xs font-medium border rounded-md hover:bg-muted transition-colors"
                 >
                   Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Modal Confirmation for Resetting All VOA Reports */}
+        {isResetVoaModalOpen && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-border rounded-xl shadow-2xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-3 border-b pb-3">
+                <div className="p-2.5 rounded-full bg-red-100 text-red-600 flex-shrink-0">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Reset All VOA Reports</h3>
+                  <p className="text-xs text-muted-foreground">Restore line statuses & uncheck all report items</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-foreground leading-relaxed">
+                Are you sure you want to reset all VOA report checks? This will uncheck all report items on the main card and restore script lines back to their issue statuses.
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                <button
+                  onClick={() => setIsResetVoaModalOpen(false)}
+                  className="px-3.5 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmResetVoaReport}
+                  className="px-3.5 py-1.5 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Confirm Reset All
                 </button>
               </div>
             </div>
