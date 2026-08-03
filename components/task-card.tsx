@@ -633,48 +633,104 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       {/* Progress Checklist - horizontal (hidden when finished task is collapsed) */}
       {!shouldCollapse && !isTodayTask && (
         <div className="mb-3 flex items-center gap-2 flex-wrap">
-          {[
-            { label: "Check VO", key: "checkVO" },
-            { label: "Pitch Shift", key: "pitchShift" },
-            { label: "Mixing", key: "mixing" },
-            { label: "Mixing SRT", key: "mixingSRT" },
-            { label: "Completed", key: "completed" },
-          ]
-            .filter((item) => {
-              // Hide "Mixing SRT" (step 4) if category is "No caption"
-              if (item.key === "mixingSRT" && task.category === "No caption") {
-                return false
+          {(() => {
+            const isCaptionTask = task.category === "Caption" || (!task.category && task.title.toLowerCase().includes("caption"))
+
+            const stepsList = isCaptionTask
+              ? [
+                  { label: "Preparation", key: "prep" },
+                  { label: "Check VO", key: "checkVO" },
+                  { label: "Editing", key: "editing" },
+                  { label: "Caption Edit", key: "captionEdit" },
+                  { label: "Completed", key: "completed" },
+                ]
+              : [
+                  { label: "Check VO", key: "checkVO" },
+                  { label: "Pitch Shift", key: "pitchShift" },
+                  { label: "Mixing", key: "mixing" },
+                  { label: "Completed", key: "completed" },
+                ]
+
+            const isStepCompleted = (key: string) => {
+              if (!isCaptionTask) {
+                return localProgress[key as keyof typeof localProgress] === true
               }
-              return true
-            })
-            .map((item, index) => {
-              // For "No caption" tasks, renumber steps sequentially (1, 2, 3, 4)
-              // For "Caption" tasks, use original step numbers (1, 2, 3, 4, 5)
-              const stepNumber = task.category === "No caption" ? index + 1 : [
-                { label: "Check VO", key: "checkVO" },
-                { label: "Pitch Shift", key: "pitchShift" },
-                { label: "Mixing", key: "mixing" },
-                { label: "Mixing SRT", key: "mixingSRT" },
-                { label: "Completed", key: "completed" },
-              ].findIndex(orig => orig.key === item.key) + 1
-              const isCompleted = localProgress[item.key as keyof typeof localProgress] === true
+              switch (key) {
+                case "prep":
+                  return !!(localProgress.vocalSplit && localProgress.voEnhance && localProgress.subtitleJoin)
+                case "checkVO":
+                  return !!localProgress.checkVO
+                case "editing":
+                  return !!(localProgress.pitchShift && localProgress.volumeAdjustment && localProgress.subseq && localProgress.mixingVO)
+                case "captionEdit":
+                  return !!(localProgress.inputReplacementText && localProgress.inputSyncSRT && localProgress.reCheckSRT)
+                case "completed":
+                  return (
+                    !!localProgress.completed ||
+                    (!!(localProgress.vocalSplit && localProgress.voEnhance && localProgress.subtitleJoin) &&
+                      !!localProgress.checkVO &&
+                      !!(localProgress.pitchShift && localProgress.volumeAdjustment && localProgress.subseq && localProgress.mixingVO) &&
+                      !!(localProgress.inputReplacementText && localProgress.inputSyncSRT && localProgress.reCheckSRT))
+                  )
+                default:
+                  return false
+              }
+            }
+
+            const getToggledProgress = (key: string) => {
+              const currentDone = isStepCompleted(key)
+              const targetVal = !currentDone
+              const updated = { ...localProgress }
+
+              if (!isCaptionTask) {
+                updated[key as keyof typeof localProgress] = targetVal as any
+              } else {
+                switch (key) {
+                  case "prep":
+                    updated.vocalSplit = targetVal
+                    updated.voEnhance = targetVal
+                    updated.subtitleJoin = targetVal
+                    break
+                  case "checkVO":
+                    updated.checkVO = targetVal
+                    break
+                  case "editing":
+                    updated.pitchShift = targetVal
+                    updated.volumeAdjustment = targetVal
+                    updated.subseq = targetVal
+                    updated.mixingVO = targetVal
+                    break
+                  case "captionEdit":
+                    updated.inputReplacementText = targetVal
+                    updated.inputSyncSRT = targetVal
+                    updated.reCheckSRT = targetVal
+                    break
+                  case "completed":
+                    updated.completed = targetVal
+                    break
+                }
+              }
+              return updated
+            }
+
+            return stepsList.map((item, index) => {
+              const stepNumber = index + 1
+              const isCompleted = isStepCompleted(item.key)
 
               return (
                 <button
                   key={item.key}
                   onClick={async (e) => {
                     e.stopPropagation()
-                    const newProgress = { ...localProgress, [item.key]: !isCompleted }
-                    setLocalProgress(newProgress) // Optimistic update
+                    const newProgress = getToggledProgress(item.key)
+                    setLocalProgress(newProgress)
 
-                    // If "Completed" step is checked, automatically set status to "Finished"
                     const willBeCompleted = item.key === "completed" && !isCompleted
 
                     try {
                       const updateData: any = { progress: newProgress }
                       if (willBeCompleted) {
                         updateData.status = "Finished"
-                        // Update status in parent component immediately
                         onUpdateStatus(columnId, task.id, "Finished")
                       }
 
@@ -687,36 +743,41 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                         throw new Error("Failed to update progress")
                       }
                       const updatedTask = await response.json()
-                      setLocalProgress(updatedTask.progress ? (typeof updatedTask.progress === 'string' ? JSON.parse(updatedTask.progress) : updatedTask.progress) : {})
+                      setLocalProgress(
+                        updatedTask.progress
+                          ? typeof updatedTask.progress === "string"
+                            ? JSON.parse(updatedTask.progress)
+                            : updatedTask.progress
+                          : {}
+                      )
 
-                      // If status was updated to Finished, collapse the card
                       if (willBeCompleted && updatedTask.status === "Finished") {
                         setIsExpanded(false)
                       }
                     } catch (error) {
                       console.error("Failed to update progress:", error)
-                      setLocalProgress(task.progress || {}) // Revert on error
-                      // Revert status if it was updated
+                      setLocalProgress(task.progress || {})
                       if (willBeCompleted) {
                         onUpdateStatus(columnId, task.id, task.status)
                       }
                     }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1 text-[10px] hover:bg-muted/50 rounded px-2 py-1 transition-colors"
+                  className="flex items-center gap-1 text-[10px] hover:bg-muted/50 rounded px-1.5 py-1 transition-colors cursor-pointer"
                 >
-                  <span className="text-muted-foreground">{stepNumber}</span>
+                  <span className="text-muted-foreground font-mono font-semibold">{stepNumber}</span>
                   {isCompleted ? (
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
                   ) : (
-                    <Circle className="w-3 h-3 text-border flex-shrink-0" />
+                    <Circle className="w-3.5 h-3.5 text-border flex-shrink-0" />
                   )}
-                  <span className={isCompleted ? "text-foreground font-medium" : "text-muted-foreground"}>
+                  <span className={isCompleted ? "text-foreground font-semibold" : "text-muted-foreground font-medium"}>
                     {item.label}
                   </span>
                 </button>
               )
-            })}
+            })
+          })()}
         </div>
       )}
 
@@ -899,6 +960,19 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
           onClose={() => setIsSheetOpen(false)}
           taskTitle={task.title}
           taskCategory={task.category}
+          taskProgress={localProgress}
+          onUpdateProgress={async (newProgress) => {
+            setLocalProgress(newProgress)
+            try {
+              await fetch(`/api/tasks/${task.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ progress: newProgress }),
+              })
+            } catch (e) {
+              console.error("Failed to update progress from script modal:", e)
+            }
+          }}
           scriptData={localScriptData}
           onSave={handleSaveScriptData}
           onReRunWizard={() => {

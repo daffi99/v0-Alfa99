@@ -46,6 +46,17 @@ export interface Task {
     mixing?: boolean
     mixingSRT?: boolean
     completed?: boolean
+
+    // Caption Sub-steps
+    vocalSplit?: boolean
+    voEnhance?: boolean
+    subtitleJoin?: boolean
+    volumeAdjustment?: boolean
+    subseq?: boolean
+    mixingVO?: boolean
+    inputReplacementText?: boolean
+    inputSyncSRT?: boolean
+    reCheckSRT?: boolean
   }
 }
 
