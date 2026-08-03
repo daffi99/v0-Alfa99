@@ -57,6 +57,9 @@ export interface Task {
     inputReplacementText?: boolean
     inputSyncSRT?: boolean
     reCheckSRT?: boolean
+
+    // VO Report Summary checks
+    voReportChecks?: Record<string, boolean>
   }
 }
 

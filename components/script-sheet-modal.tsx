@@ -29,8 +29,8 @@ interface ScriptSheetModalProps {
   onClose: () => void
   taskTitle: string
   taskCategory?: "Caption" | "No caption" | null
-  taskProgress?: Record<string, boolean>
-  onUpdateProgress?: (newProgress: Record<string, boolean>) => void
+  taskProgress?: any
+  onUpdateProgress?: (newProgress: any) => void
   scriptData: ScriptData
   onSave: (updatedData: ScriptData) => void
   onReRunWizard: () => void

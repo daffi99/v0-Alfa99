@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import dynamic from "next/dynamic"
 import type { Task } from "./kanban-board"
-import { CheckCircle2, Circle, Pencil, Loader2, ChevronDown, ChevronUp, ChevronRight, Trash2, ArrowRightLeft, FileSpreadsheet } from "lucide-react"
+import { CheckCircle2, Circle, Pencil, Loader2, ChevronDown, ChevronUp, ChevronRight, Trash2, ArrowRightLeft, FileSpreadsheet, FileText } from "lucide-react"
 import { renderBlockNoteContent } from "./blocknote-note"
-import { ScriptWizardModal, type ScriptData } from "./script-wizard-modal"
-import { ScriptSheetModal } from "./script-sheet-modal"
+import { ScriptWizardModal, type ScriptData, type ScriptLineStatus } from "./script-wizard-modal"
+import { ScriptSheetModal, STATUS_STYLE_MAP } from "./script-sheet-modal"
 
 // Dynamic imports with SSR disabled to avoid "window is not defined" error
 const BlockNoteNote = dynamic(
@@ -70,6 +70,100 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       }
     }
   }, [task.scriptData, task.script_data, task.id])
+
+  const voReportSummaryItems = useMemo(() => {
+    if (!localScriptData || !localScriptData.lines || localScriptData.lines.length === 0) {
+      return []
+    }
+
+    const masterMap = new Map<string, string>()
+    if (localScriptData.masterArtists) {
+      localScriptData.masterArtists.forEach((ma) => {
+        if (ma.characterName) {
+          masterMap.set(ma.characterName.toLowerCase(), ma.finalArtist || "Unassigned")
+        }
+      })
+    }
+
+    const charStatusMap = new Map<
+      string,
+      {
+        character: string
+        status: ScriptLineStatus
+        epsSet: Set<string>
+      }
+    >()
+
+    localScriptData.lines.forEach((line) => {
+      if (!line.status || line.status === "Inputted" || !line.character) return
+
+      const targetChar =
+        line.status === "Wrong Cast" && line.correctCharacter
+          ? line.correctCharacter.trim()
+          : line.character.trim()
+
+      const groupKey = `${targetChar.toLowerCase()}__${line.status}`
+
+      if (!charStatusMap.has(groupKey)) {
+        charStatusMap.set(groupKey, {
+          character: targetChar,
+          status: line.status as ScriptLineStatus,
+          epsSet: new Set<string>(),
+        })
+      }
+
+      if (line.eps) {
+        charStatusMap.get(groupKey)!.epsSet.add(line.eps.trim())
+      }
+    })
+
+    const reports: Array<{
+      id: string
+      status: ScriptLineStatus
+      epSummary: string
+      minEps: number
+    }> = []
+
+    charStatusMap.forEach(({ character, status, epsSet }, groupKey) => {
+      const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
+      const sortedEps = Array.from(epsSet)
+        .sort((a, b) => Number(a) - Number(b))
+        .map((e) => e.padStart(3, "0"))
+
+      const epsJoined = sortedEps.join(", ")
+      const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
+      const epSummary = `EP${epsJoined} ${character}/${actor}`
+
+      reports.push({
+        id: groupKey,
+        status,
+        epSummary,
+        minEps,
+      })
+    })
+
+    return reports.sort((a, b) => a.minEps - b.minEps)
+  }, [localScriptData])
+
+  const handleToggleVoReportCheck = async (itemId: string) => {
+    const currentChecks = (localProgress.voReportChecks as Record<string, boolean>) || {}
+    const isChecked = !!currentChecks[itemId]
+    const updatedChecks = { ...currentChecks, [itemId]: !isChecked }
+    const newProgress = { ...localProgress, voReportChecks: updatedChecks }
+
+    setLocalProgress(newProgress)
+
+    try {
+      await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ progress: newProgress }),
+      })
+    } catch (err) {
+      console.error("Failed to toggle VO report item check:", err)
+      setLocalProgress(localProgress)
+    }
+  }
 
   const handleOpenScript = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -846,6 +940,55 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                     {episode.number}
                   </span>
                 </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Quick Summary of VO Report (below episode checklist) */}
+      {!shouldCollapse && !isTodayTask && voReportSummaryItems.length > 0 && (
+        <div className="mb-3 bg-muted/20 p-2 rounded-lg border border-border/50">
+          <div className="flex items-center justify-between mb-1.5 border-b pb-1">
+            <span className="text-[10px] font-bold text-foreground tracking-wide flex items-center gap-1">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> VO Report Summary ({voReportSummaryItems.length})
+            </span>
+          </div>
+          <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+            {voReportSummaryItems.map((item) => {
+              const isChecked = !!(localProgress.voReportChecks as Record<string, boolean>)?.[item.id]
+              const statusStyle = STATUS_STYLE_MAP[item.status] || {
+                label: item.status,
+                bg: "bg-gray-100",
+                text: "text-gray-700",
+                border: "border-gray-200",
+              }
+
+              return (
+                <label
+                  key={item.id}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:bg-background/80 p-0.5 rounded transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => handleToggleVoReportCheck(item.id)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-600 flex-shrink-0"
+                  />
+                  <span
+                    className={`text-[9px] px-1.5 py-0.2 rounded font-bold border flex-shrink-0 whitespace-nowrap ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+                  >
+                    {statusStyle.label}
+                  </span>
+                  <span
+                    className={`font-mono text-foreground font-semibold leading-tight text-[10px] ${
+                      isChecked ? "line-through text-muted-foreground/60" : ""
+                    }`}
+                  >
+                    {item.epSummary}
+                  </span>
+                </label>
               )
             })}
           </div>
