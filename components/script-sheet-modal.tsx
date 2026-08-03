@@ -1227,9 +1227,10 @@ export function ScriptSheetModal({
                                       className="fixed inset-0 z-20"
                                       onClick={() => setOpenLineStatusDropdown(null)}
                                     />
-                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-30 w-32 bg-popover border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-30 w-36 min-w-[140px] bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
                                       {SCRIPT_LINE_STATUSES.map((st) => {
                                         const style = STATUS_STYLE_MAP[st]
+                                        const isSelected = line.status === st
                                         return (
                                           <button
                                             key={st}
@@ -1238,13 +1239,15 @@ export function ScriptSheetModal({
                                               handleUpdateLineStatus(line.id, st)
                                               setOpenLineStatusDropdown(null)
                                             }}
-                                            className={`w-full flex items-center gap-2 px-2 py-1 text-[10px] font-bold rounded-md transition-colors cursor-pointer ${
-                                              line.status === st ? "bg-muted font-extrabold" : "hover:bg-muted/60"
+                                            className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${
+                                              isSelected
+                                                ? "bg-primary/10 text-foreground font-bold"
+                                                : "text-foreground hover:bg-muted"
                                             }`}
                                           >
-                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
-                                            <span className={style?.text || "text-foreground"}>{st}</span>
-                                            {line.status === st && <Check className="w-3 h-3 ml-auto text-primary" />}
+                                            <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
+                                            <span className="flex-1 text-left text-foreground">{st}</span>
+                                            {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
                                           </button>
                                         )
                                       })}
