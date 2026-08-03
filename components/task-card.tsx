@@ -813,16 +813,13 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                   { label: "Completed", key: "completed" },
                 ]
               : [
+                  { label: "Preparation", key: "prep" },
                   { label: "Check VO", key: "checkVO" },
-                  { label: "Pitch Shift", key: "pitchShift" },
-                  { label: "Mixing", key: "mixing" },
+                  { label: "Editing", key: "editing" },
                   { label: "Completed", key: "completed" },
                 ]
 
             const isStepCompleted = (key: string) => {
-              if (!isCaptionTask) {
-                return localProgress[key as keyof typeof localProgress] === true
-              }
               switch (key) {
                 case "prep":
                   return !!(localProgress.vocalSplit && localProgress.voEnhance && localProgress.subtitleJoin)
@@ -838,7 +835,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                     (!!(localProgress.vocalSplit && localProgress.voEnhance && localProgress.subtitleJoin) &&
                       !!localProgress.checkVO &&
                       !!(localProgress.pitchShift && localProgress.volumeAdjustment && localProgress.subseq && localProgress.mixingVO) &&
-                      !!(localProgress.inputReplacementText && localProgress.inputSyncSRT && localProgress.reCheckSRT))
+                      (!isCaptionTask || !!(localProgress.inputReplacementText && localProgress.inputSyncSRT && localProgress.reCheckSRT)))
                   )
                 default:
                   return false
@@ -850,53 +847,46 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
               const targetVal = !currentDone
               const updated = { ...localProgress }
 
-              if (!isCaptionTask) {
-                updated[key as keyof typeof localProgress] = targetVal as any
-                if (key === "completed" && targetVal) {
-                  updated.checkVO = true
-                  updated.pitchShift = true
-                  updated.mixing = true
-                  updated.mixingSRT = true
-                }
-              } else {
-                switch (key) {
-                  case "prep":
-                    updated.vocalSplit = targetVal
-                    updated.voEnhance = targetVal
-                    updated.subtitleJoin = targetVal
-                    break
-                  case "checkVO":
-                    updated.checkVO = targetVal
-                    break
-                  case "editing":
-                    updated.pitchShift = targetVal
-                    updated.volumeAdjustment = targetVal
-                    updated.subseq = targetVal
-                    updated.mixingVO = targetVal
-                    break
-                  case "captionEdit":
-                    updated.inputReplacementText = targetVal
-                    updated.inputSyncSRT = targetVal
-                    updated.reCheckSRT = targetVal
-                    break
-                  case "completed":
-                    updated.completed = targetVal
-                    if (targetVal) {
-                      updated.vocalSplit = true
-                      updated.voEnhance = true
-                      updated.subtitleJoin = true
-                      updated.checkVO = true
-                      updated.pitchShift = true
-                      updated.volumeAdjustment = true
-                      updated.subseq = true
-                      updated.mixingVO = true
+              switch (key) {
+                case "prep":
+                  updated.vocalSplit = targetVal
+                  updated.voEnhance = targetVal
+                  updated.subtitleJoin = targetVal
+                  break
+                case "checkVO":
+                  updated.checkVO = targetVal
+                  break
+                case "editing":
+                  updated.pitchShift = targetVal
+                  updated.volumeAdjustment = targetVal
+                  updated.subseq = targetVal
+                  updated.mixingVO = targetVal
+                  break
+                case "captionEdit":
+                  updated.inputReplacementText = targetVal
+                  updated.inputSyncSRT = targetVal
+                  updated.reCheckSRT = targetVal
+                  break
+                case "completed":
+                  updated.completed = targetVal
+                  if (targetVal) {
+                    updated.vocalSplit = true
+                    updated.voEnhance = true
+                    updated.subtitleJoin = true
+                    updated.checkVO = true
+                    updated.pitchShift = true
+                    updated.volumeAdjustment = true
+                    updated.subseq = true
+                    updated.mixingVO = true
+                    if (isCaptionTask) {
                       updated.inputReplacementText = true
                       updated.inputSyncSRT = true
                       updated.reCheckSRT = true
                     }
-                    break
-                }
+                  }
+                  break
               }
+
               return updated
             }
 
