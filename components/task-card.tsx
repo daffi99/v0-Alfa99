@@ -901,11 +901,29 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                   disabled={isStepUpdating}
                   onClick={async (e) => {
                     e.stopPropagation()
+                    if (isStepUpdating) return
                     setUpdatingStepKey(item.key)
+
+                    const willBeCompletedNow = item.key === "completed" && !isCompleted
+                    const willBeUncompletedNow = item.key === "completed" && isCompleted
+
                     const newProgress = getToggledProgress(item.key)
                     setLocalProgress(newProgress)
 
                     const willBeCompleted = item.key === "completed" && !isCompleted
+
+                    // Sync episode states when Completed step is toggled
+                    if (item.key === "completed") {
+                      if (willBeCompletedNow) {
+                        task.episodes.forEach((ep) => {
+                          if (!ep.completed) onToggleEpisode(columnId, task.id, ep.id)
+                        })
+                      } else if (willBeUncompletedNow) {
+                        task.episodes.forEach((ep) => {
+                          if (ep.completed) onToggleEpisode(columnId, task.id, ep.id)
+                        })
+                      }
+                    }
 
                     try {
                       const updateData: any = { progress: newProgress }
@@ -1249,7 +1267,33 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
           taskCategory={task.category}
           taskProgress={localProgress}
           onUpdateProgress={async (newProgress) => {
+            const isCap = task.category === "Caption" || (!task.category && task.title.toLowerCase().includes("caption"))
+            const wasDone = !!(localProgress.completed || (
+              !!(localProgress.vocalSplit && localProgress.voEnhance && localProgress.subtitleJoin) &&
+              !!localProgress.checkVO &&
+              !!(localProgress.pitchShift && localProgress.volumeAdjustment && localProgress.subseq && localProgress.mixingVO) &&
+              (!isCap || !!(localProgress.inputReplacementText && localProgress.inputSyncSRT && localProgress.reCheckSRT))
+            ))
+
             setLocalProgress(newProgress)
+
+            const nowDone = !!(newProgress.completed || (
+              !!(newProgress.vocalSplit && newProgress.voEnhance && newProgress.subtitleJoin) &&
+              !!newProgress.checkVO &&
+              !!(newProgress.pitchShift && newProgress.volumeAdjustment && newProgress.subseq && newProgress.mixingVO) &&
+              (!isCap || !!(newProgress.inputReplacementText && newProgress.inputSyncSRT && newProgress.reCheckSRT))
+            ))
+
+            if (!wasDone && nowDone) {
+              task.episodes.forEach((ep) => {
+                if (!ep.completed) onToggleEpisode(columnId, task.id, ep.id)
+              })
+            } else if (wasDone && !nowDone) {
+              task.episodes.forEach((ep) => {
+                if (ep.completed) onToggleEpisode(columnId, task.id, ep.id)
+              })
+            }
+
             try {
               await fetch(`/api/tasks/${task.id}`, {
                 method: "PATCH",

@@ -529,10 +529,36 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
 
     if (!task) return
 
+    const newEpisodes = task.episodes.map((ep) => (ep.id === episodeId ? { ...ep, completed: !ep.completed } : ep))
+    const allEpsCompleted = newEpisodes.length > 0 && newEpisodes.every((ep) => ep.completed)
+
+    let updatedProgress = { ...(task.progress || {}) }
+    const isCaptionTask = task.category === "Caption" || (!task.category && task.title.toLowerCase().includes("caption"))
+
+    if (allEpsCompleted) {
+      updatedProgress.completed = true
+      updatedProgress.vocalSplit = true
+      updatedProgress.voEnhance = true
+      updatedProgress.subtitleJoin = true
+      updatedProgress.checkVO = true
+      updatedProgress.pitchShift = true
+      updatedProgress.volumeAdjustment = true
+      updatedProgress.subseq = true
+      updatedProgress.mixingVO = true
+      if (isCaptionTask) {
+        updatedProgress.inputReplacementText = true
+        updatedProgress.inputSyncSRT = true
+        updatedProgress.reCheckSRT = true
+      }
+    } else if (updatedProgress.completed) {
+      updatedProgress.completed = false
+    }
+
     // Toggle episode locally
     const updatedTask = {
       ...task,
-      episodes: task.episodes.map((ep) => (ep.id === episodeId ? { ...ep, completed: !ep.completed } : ep)),
+      episodes: newEpisodes,
+      progress: updatedProgress,
     }
 
     // Optimistically update board
@@ -563,7 +589,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
       const response = await fetch(`/api/tasks/${dbTaskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completedEpisodes }),
+        body: JSON.stringify({ completedEpisodes, progress: updatedProgress }),
       })
 
       if (!response.ok) {
