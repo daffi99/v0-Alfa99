@@ -1045,26 +1045,26 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                     onClick={(e) => e.stopPropagation()}
                     className="flex items-center justify-between gap-2 text-[9px] cursor-pointer hover:bg-background/80 p-1 rounded transition-colors"
                   >
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <span
+                      className={`font-mono text-foreground font-semibold leading-tight text-[9px] min-w-0 flex-1 ${
+                        isChecked ? "line-through text-muted-foreground/60" : ""
+                      }`}
+                    >
+                      {item.epSummary}
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       <span
-                        className={`text-[8.5px] px-1 py-0.2 rounded font-bold border flex-shrink-0 whitespace-nowrap ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+                        className={`text-[8.5px] px-1 py-0.2 rounded font-bold border whitespace-nowrap ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
                       >
                         {statusStyle.label}
                       </span>
-                      <span
-                        className={`font-mono text-foreground font-semibold leading-tight text-[9px] ${
-                          isChecked ? "line-through text-muted-foreground/60" : ""
-                        }`}
-                      >
-                        {item.epSummary}
-                      </span>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleVoReportCheck(item.id)}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-600 flex-shrink-0"
+                      />
                     </div>
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => handleToggleVoReportCheck(item.id)}
-                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-600 flex-shrink-0 ml-1"
-                    />
                   </label>
                 )
               })}
