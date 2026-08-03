@@ -124,22 +124,6 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       }
     })
 
-    // Include all checked keys so items are NEVER wiped out from main card view
-    Object.entries(checkedVoReportKeys).forEach(([groupKey, isChecked]) => {
-      if (!isChecked || charStatusMap.has(groupKey)) return
-      const [charNameLower, statusStr] = groupKey.split("__")
-      const matchedMaster = localScriptData.masterArtists?.find(
-        (ma) => ma.characterName.trim().toLowerCase() === charNameLower
-      )
-      const characterName = matchedMaster ? matchedMaster.characterName : charNameLower
-
-      charStatusMap.set(groupKey, {
-        character: characterName,
-        status: statusStr as ScriptLineStatus,
-        epsSet: new Set<string>(),
-      })
-    })
-
     const reports: Array<{
       id: string
       status: ScriptLineStatus
