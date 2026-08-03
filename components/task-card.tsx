@@ -1052,7 +1052,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
                     </div>
                     <span
                       className={`font-mono text-foreground font-semibold leading-tight text-[9px] min-w-0 flex-1 ${
-                        isChecked ? "text-muted-foreground" : ""
+                        isChecked ? "line-through text-muted-foreground/60" : ""
                       }`}
                     >
                       {item.epSummary}
