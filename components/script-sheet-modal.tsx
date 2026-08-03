@@ -171,24 +171,40 @@ export function ScriptSheetModal({
   const [isResetVoaModalOpen, setIsResetVoaModalOpen] = useState(false)
 
   const handleConfirmResetVoaReport = () => {
+    // Convert all issue lines to Inputted, saving previousStatus
+    const updatedLines = data.lines.map((line) => {
+      if (line.status !== "Inputted") {
+        return {
+          ...line,
+          status: "Inputted" as ScriptLineStatus,
+          previousStatus: line.status,
+        }
+      }
+      return line
+    })
+
     const currentChecks: Record<string, any> = localProgress && typeof localProgress === "object" ? { ...localProgress } : {}
-    const updatedProgress = { ...currentChecks, voReportChecks: {} }
+    const voChecks: Record<string, boolean> = { ...(currentChecks.voReportChecks || {}) }
+
+    updatedLines.forEach((line) => {
+      if (!line.character) return
+      const targetChar = (
+        line.status === "Wrong Cast" && line.correctCharacter
+          ? line.correctCharacter
+          : line.character
+      ).trim().toLowerCase()
+
+      const origStatus = line.previousStatus || "Beluman"
+      const groupKey = `${targetChar}__${origStatus}`
+      voChecks[groupKey] = true
+    })
+
+    const updatedProgress = { ...currentChecks, voReportChecks: voChecks }
     setLocalProgress(updatedProgress)
 
     if (onUpdateProgress) {
       onUpdateProgress(updatedProgress)
     }
-
-    const updatedLines = data.lines.map((line) => {
-      if (line.status === "Inputted") {
-        return {
-          ...line,
-          status: (line.previousStatus || "Beluman") as ScriptLineStatus,
-          previousStatus: undefined,
-        }
-      }
-      return line
-    })
 
     updateData({ ...data, lines: updatedLines })
     setIsResetVoaModalOpen(false)
@@ -1624,10 +1640,10 @@ export function ScriptSheetModal({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setIsResetVoaModalOpen(true)}
-                    className="h-8 px-3 text-xs bg-red-50 hover:bg-red-100 text-red-700 font-semibold border border-red-200 rounded-md transition-colors flex items-center gap-1.5 active:scale-95 cursor-pointer"
-                    title="Reset all VOA report checks and restore line statuses"
+                    className="h-8 px-3 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold border border-emerald-300 rounded-md transition-colors flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                    title="Mark all VOA report lines as Inputted"
                   >
-                    <RotateCcw className="w-3.5 h-3.5" /> Reset All VOA Report
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Mark All as Inputted
                   </button>
                   <button
                     onClick={handleCopyReport}
@@ -1882,22 +1898,22 @@ export function ScriptSheetModal({
             </div>
           </div>
         )}
-        {/* Modal Confirmation for Resetting All VOA Reports */}
+        {/* Modal Confirmation for Setting All VOA Reports to Inputted */}
         {isResetVoaModalOpen && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-background border border-border rounded-xl shadow-2xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center gap-3 border-b pb-3">
-                <div className="p-2.5 rounded-full bg-red-100 text-red-600 flex-shrink-0">
-                  <RotateCcw className="w-5 h-5" />
+                <div className="p-2.5 rounded-full bg-emerald-100 text-emerald-700 flex-shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">Reset All VOA Reports</h3>
-                  <p className="text-xs text-muted-foreground">Restore line statuses & uncheck all report items</p>
+                  <h3 className="text-sm font-bold text-foreground">Mark All VOA Reports as Inputted</h3>
+                  <p className="text-xs text-muted-foreground">Set all line statuses to Inputted & resolve all report entries</p>
                 </div>
               </div>
 
               <p className="text-xs text-foreground leading-relaxed">
-                Are you sure you want to reset all VOA report checks? This will uncheck all report items on the main card and restore script lines back to their issue statuses.
+                Are you sure you want to mark all VOA report items as Inputted? This will set all remaining script lines to Inputted and mark all VOA report entries as resolved.
               </p>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t">
@@ -1909,9 +1925,9 @@ export function ScriptSheetModal({
                 </button>
                 <button
                   onClick={handleConfirmResetVoaReport}
-                  className="px-3.5 py-1.5 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" /> Confirm Reset All
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Confirm Mark All as Inputted
                 </button>
               </div>
             </div>
