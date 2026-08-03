@@ -173,6 +173,9 @@ export function ScriptSheetModal({
   // Status Action Custom Dropdown Menu State
   const [openActionDropdown, setOpenActionDropdown] = useState<string | null>(null)
 
+  // Line Status Custom Dropdown Menu State
+  const [openLineStatusDropdown, setOpenLineStatusDropdown] = useState<string | null>(null)
+
   const handleConfirmResetVoaReport = () => {
     // Convert all lines to Inputted
     const updatedLines = data.lines.map((line) => {
@@ -1204,21 +1207,51 @@ export function ScriptSheetModal({
                               </td>
                             )}
                             <td className="p-2 border-r text-center">
-                              <select
-                                value={line.status}
-                                onChange={(e) => handleUpdateLineStatus(line.id, e.target.value as ScriptLineStatus)}
-                                className={`h-5 text-[10px] px-1.5 rounded-full font-bold transition-all border outline-none cursor-pointer ${
-                                  STATUS_STYLE_MAP[line.status]?.bg || "bg-gray-100"
-                                } ${STATUS_STYLE_MAP[line.status]?.text || "text-gray-800"} ${
-                                  STATUS_STYLE_MAP[line.status]?.border || "border-gray-200"
-                                }`}
-                              >
-                                {SCRIPT_LINE_STATUSES.map((st) => (
-                                  <option key={st} value={st} className="bg-background text-foreground font-semibold">
-                                    {st}
-                                  </option>
-                                ))}
-                              </select>
+                              <div className="relative inline-block text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenLineStatusDropdown(openLineStatusDropdown === line.id ? null : line.id)}
+                                  className={`h-5 text-[10px] px-2 rounded-full font-bold transition-all border outline-none cursor-pointer flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap ${
+                                    STATUS_STYLE_MAP[line.status]?.bg || "bg-gray-100"
+                                  } ${STATUS_STYLE_MAP[line.status]?.text || "text-gray-800"} ${
+                                    STATUS_STYLE_MAP[line.status]?.border || "border-gray-200"
+                                  }`}
+                                >
+                                  <span>{line.status}</span>
+                                  <ChevronDown className="w-2.5 h-2.5 opacity-70" />
+                                </button>
+
+                                {openLineStatusDropdown === line.id && (
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-20"
+                                      onClick={() => setOpenLineStatusDropdown(null)}
+                                    />
+                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-30 w-32 bg-popover border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                                      {SCRIPT_LINE_STATUSES.map((st) => {
+                                        const style = STATUS_STYLE_MAP[st]
+                                        return (
+                                          <button
+                                            key={st}
+                                            type="button"
+                                            onClick={() => {
+                                              handleUpdateLineStatus(line.id, st)
+                                              setOpenLineStatusDropdown(null)
+                                            }}
+                                            className={`w-full flex items-center gap-2 px-2 py-1 text-[10px] font-bold rounded-md transition-colors cursor-pointer ${
+                                              line.status === st ? "bg-muted font-extrabold" : "hover:bg-muted/60"
+                                            }`}
+                                          >
+                                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
+                                            <span className={style?.text || "text-foreground"}>{st}</span>
+                                            {line.status === st && <Check className="w-3 h-3 ml-auto text-primary" />}
+                                          </button>
+                                        )
+                                      })}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             </td>
                             <td className="p-2 text-center">
                               <button
