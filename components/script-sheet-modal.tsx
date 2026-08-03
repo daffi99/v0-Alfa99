@@ -103,7 +103,7 @@ export function ScriptSheetModal({
 }: ScriptSheetModalProps) {
   const [activeTab, setActiveTab] = useState<"lines" | "master" | "summary" | "episodes" | "report">("lines")
   const [data, setData] = useState<ScriptData>(scriptData)
-  const [localProgress, setLocalProgress] = useState<Record<string, boolean>>(taskProgress || {})
+  const [localProgress, setLocalProgress] = useState<Record<string, any>>(taskProgress || {})
   const [isProgressExpanded, setIsProgressExpanded] = useState(true)
 
   React.useEffect(() => {
@@ -195,6 +195,45 @@ export function ScriptSheetModal({
   const updateData = (newData: ScriptData) => {
     setData(newData)
     onSave(newData)
+
+    if (onUpdateProgress && newData.lines) {
+      const currentChecks: Record<string, any> = localProgress && typeof localProgress === "object" ? { ...localProgress } : {}
+      const voChecks: Record<string, boolean> = { ...(currentChecks.voReportChecks || {}) }
+
+      const groupTotalMap = new Map<string, number>()
+      const groupInputtedMap = new Map<string, number>()
+
+      newData.lines.forEach((line) => {
+        if (!line.character) return
+        const targetChar = (
+          line.status === "Wrong Cast" && line.correctCharacter
+            ? line.correctCharacter
+            : line.character
+        ).trim().toLowerCase()
+
+        const origStatus = line.previousStatus || line.status
+        if (origStatus === "Inputted") return
+
+        const groupKey = `${targetChar}__${origStatus}`
+        groupTotalMap.set(groupKey, (groupTotalMap.get(groupKey) || 0) + 1)
+        if (line.status === "Inputted") {
+          groupInputtedMap.set(groupKey, (groupInputtedMap.get(groupKey) || 0) + 1)
+        }
+      })
+
+      groupTotalMap.forEach((total, groupKey) => {
+        const inputted = groupInputtedMap.get(groupKey) || 0
+        if (inputted === total && total > 0) {
+          voChecks[groupKey] = true
+        } else if (inputted < total) {
+          voChecks[groupKey] = false
+        }
+      })
+
+      const updatedProgress = { ...currentChecks, voReportChecks: voChecks }
+      setLocalProgress(updatedProgress)
+      onUpdateProgress(updatedProgress)
+    }
   }
 
   // Filtered script lines for Tab 1
