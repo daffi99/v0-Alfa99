@@ -102,27 +102,19 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
     >()
 
     localScriptData.lines.forEach((line) => {
-      if (!line.character) return
+      if (!line.character || line.status === "Inputted") return
 
       const targetChar =
         line.status === "Wrong Cast" && line.correctCharacter
           ? line.correctCharacter.trim()
           : line.character.trim()
 
-      const isInputted = line.status === "Inputted"
-      const possibleKeys = Array.from(Object.keys(checkedVoReportKeys)).filter((k) =>
-        k.startsWith(`${targetChar.toLowerCase()}__`)
-      )
-
-      if (isInputted && possibleKeys.length === 0) return
-
-      const effectiveStatus = !isInputted ? line.status : (possibleKeys[0]?.split("__")[1] as ScriptLineStatus) || "Beluman"
-      const groupKey = `${targetChar.toLowerCase()}__${effectiveStatus}`
+      const groupKey = `${targetChar.toLowerCase()}__${line.status}`
 
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
           character: targetChar,
-          status: effectiveStatus as ScriptLineStatus,
+          status: line.status as ScriptLineStatus,
           epsSet: new Set<string>(),
         })
       }
