@@ -41,6 +41,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
   const [updatingStepKey, setUpdatingStepKey] = useState<string | null>(null)
   const [updatingEpisodeId, setUpdatingEpisodeId] = useState<string | null>(null)
   const [updatingSubtaskId, setUpdatingSubtaskId] = useState<string | null>(null)
+  const [isVoReportExpanded, setIsVoReportExpanded] = useState(true)
   const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [localScriptData, setLocalScriptData] = useState<ScriptData | undefined>(() => {
@@ -949,49 +950,63 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       {/* Quick Summary of VO Report (below episode checklist) */}
       {!shouldCollapse && !isTodayTask && voReportSummaryItems.length > 0 && (
         <div className="mb-3 bg-muted/20 p-2 rounded-lg border border-border/50">
-          <div className="flex items-center justify-between mb-1.5 border-b pb-1">
+          <div className="flex items-center justify-between border-b pb-1">
             <span className="text-[10px] font-bold text-foreground tracking-wide flex items-center gap-1">
               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> VO Report Summary ({voReportSummaryItems.length})
             </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsVoReportExpanded(!isVoReportExpanded)
+              }}
+              className="text-muted-foreground hover:text-foreground p-0.5 rounded transition-colors"
+              title={isVoReportExpanded ? "Collapse Summary" : "Expand Summary"}
+            >
+              {isVoReportExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
           </div>
-          <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
-            {voReportSummaryItems.map((item) => {
-              const isChecked = !!(localProgress.voReportChecks as Record<string, boolean>)?.[item.id]
-              const statusStyle = STATUS_STYLE_MAP[item.status] || {
-                label: item.status,
-                bg: "bg-gray-100",
-                text: "text-gray-700",
-                border: "border-gray-200",
-              }
+          {isVoReportExpanded && (
+            <div className="space-y-1 max-h-44 overflow-y-auto pr-1 mt-1.5">
+              {voReportSummaryItems.map((item) => {
+                const isChecked = !!(localProgress.voReportChecks as Record<string, boolean>)?.[item.id]
+                const statusStyle = STATUS_STYLE_MAP[item.status] || {
+                  label: item.status,
+                  bg: "bg-gray-100",
+                  text: "text-gray-700",
+                  border: "border-gray-200",
+                }
 
-              return (
-                <label
-                  key={item.id}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1.5 text-[10px] cursor-pointer hover:bg-background/80 p-0.5 rounded transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => handleToggleVoReportCheck(item.id)}
-                    className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-600 flex-shrink-0"
-                  />
-                  <span
-                    className={`text-[9px] px-1.5 py-0.2 rounded font-bold border flex-shrink-0 whitespace-nowrap ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+                return (
+                  <label
+                    key={item.id}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center justify-between gap-2 text-[9px] cursor-pointer hover:bg-background/80 p-1 rounded transition-colors"
                   >
-                    {statusStyle.label}
-                  </span>
-                  <span
-                    className={`font-mono text-foreground font-semibold leading-tight text-[10px] ${
-                      isChecked ? "line-through text-muted-foreground/60" : ""
-                    }`}
-                  >
-                    {item.epSummary}
-                  </span>
-                </label>
-              )
-            })}
-          </div>
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <span
+                        className={`text-[8.5px] px-1 py-0.2 rounded font-bold border flex-shrink-0 whitespace-nowrap ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+                      >
+                        {statusStyle.label}
+                      </span>
+                      <span
+                        className={`font-mono text-foreground font-semibold leading-tight text-[9px] ${
+                          isChecked ? "line-through text-muted-foreground/60" : ""
+                        }`}
+                      >
+                        {item.epSummary}
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleToggleVoReportCheck(item.id)}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-600 flex-shrink-0 ml-1"
+                    />
+                  </label>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
