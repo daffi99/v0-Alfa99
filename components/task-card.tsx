@@ -188,6 +188,8 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
     let updatedScriptData = localScriptData
     if (localScriptData && localScriptData.lines) {
       const [charNameLower, originalStatus] = itemId.split("__")
+      const isBeluman = originalStatus === "Beluman"
+
       const updatedLines = localScriptData.lines.map((line) => {
         const targetChar = (
           line.status === "Wrong Cast" && line.correctCharacter
@@ -195,13 +197,28 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
             : line.character
         )?.trim().toLowerCase()
 
-        if (
-          targetChar === charNameLower &&
-          (line.status === originalStatus || (isChecked && line.status === "Inputted"))
-        ) {
-          return {
-            ...line,
-            status: willBeChecked ? ("Inputted" as ScriptLineStatus) : (originalStatus as ScriptLineStatus),
+        if (targetChar !== charNameLower) return line
+
+        if (willBeChecked) {
+          // Store previousStatus when checking line to Inputted
+          if (line.status === originalStatus) {
+            return {
+              ...line,
+              status: "Inputted" as ScriptLineStatus,
+              previousStatus: originalStatus as ScriptLineStatus,
+            }
+          }
+        } else {
+          // Restore exact previousStatus when unchecking
+          if (
+            line.status === "Inputted" &&
+            (line.previousStatus === originalStatus || (!line.previousStatus && isBeluman))
+          ) {
+            return {
+              ...line,
+              status: (line.previousStatus || originalStatus) as ScriptLineStatus,
+              previousStatus: undefined,
+            }
           }
         }
         return line

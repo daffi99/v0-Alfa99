@@ -25,6 +25,7 @@ export interface ScriptLine {
   lineText: string
   voErrorNote?: string
   status: ScriptLineStatus
+  previousStatus?: ScriptLineStatus
 }
 
 export interface MasterArtistMapping {
