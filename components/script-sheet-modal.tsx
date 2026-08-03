@@ -176,6 +176,10 @@ export function ScriptSheetModal({
   // Line Status Custom Dropdown Menu State
   const [openLineStatusDropdown, setOpenLineStatusDropdown] = useState<string | null>(null)
 
+  // Filter Custom Dropdown Menu States
+  const [isCharFilterOpen, setIsCharFilterOpen] = useState(false)
+  const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false)
+
   const handleConfirmResetVoaReport = () => {
     // Convert all lines to Inputted
     const updatedLines = data.lines.map((line) => {
@@ -1051,35 +1055,141 @@ export function ScriptSheetModal({
                     />
                   </div>
 
-                  <select
-                    value={selectedCharacterFilter}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedCharacterFilter(e.target.value)}
-                    className="h-8 text-xs px-2 bg-background border border-input rounded-md focus:outline-none"
-                  >
-                    <option value="all">All Characters</option>
-                    {Array.from(new Set(data.lines.map((l) => l.character))).map(
-                      (char) => (
-                        <option key={char} value={char}>
-                          {char}
-                        </option>
-                      )
+                  {/* Custom Character Filter Dropdown */}
+                  <div className="relative inline-block text-left">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCharFilterOpen(!isCharFilterOpen)
+                        setIsStatusFilterOpen(false)
+                      }}
+                      className="h-8 px-3 text-xs font-semibold bg-background hover:bg-muted/80 text-foreground border border-input rounded-md shadow-2xs flex items-center gap-2 cursor-pointer transition-colors active:scale-95 whitespace-nowrap"
+                    >
+                      <span>
+                        {selectedCharacterFilter === "all"
+                          ? "All Characters"
+                          : selectedCharacterFilter}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+
+                    {isCharFilterOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-20"
+                          onClick={() => setIsCharFilterOpen(false)}
+                        />
+                        <div className="absolute left-0 top-full mt-1 z-30 w-52 max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCharacterFilter("all")
+                              setIsCharFilterOpen(false)
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                              selectedCharacterFilter === "all"
+                                ? "bg-primary/10 text-primary font-bold"
+                                : "text-foreground hover:bg-muted"
+                            }`}
+                          >
+                            <span>All Characters</span>
+                            {selectedCharacterFilter === "all" && <Check className="w-3.5 h-3.5 text-primary" />}
+                          </button>
+                          {Array.from(new Set(data.lines.map((l) => l.character))).filter(Boolean).map((char) => {
+                            const isSelected = selectedCharacterFilter === char
+                            return (
+                              <button
+                                key={char}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCharacterFilter(char)
+                                  setIsCharFilterOpen(false)
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? "bg-primary/10 text-primary font-bold"
+                                    : "text-foreground hover:bg-muted"
+                                }`}
+                              >
+                                <span className="truncate">{char}</span>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </>
                     )}
-                  </select>
-                  <select
-                    value={selectedStatusFilter}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStatusFilter(e.target.value)}
-                    className="h-8 text-xs px-2 bg-background border border-input rounded-md focus:outline-none font-medium"
-                  >
-                    <option value="all">All Statuses ({totalLines})</option>
-                    {SCRIPT_LINE_STATUSES.map((st) => {
-                      const count = data.lines.filter((l) => l.status === st).length
-                      return (
-                        <option key={st} value={st}>
-                          {st} ({count})
-                        </option>
-                      )
-                    })}
-                  </select>
+                  </div>
+
+                  {/* Custom Status Filter Dropdown */}
+                  <div className="relative inline-block text-left">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsStatusFilterOpen(!isStatusFilterOpen)
+                        setIsCharFilterOpen(false)
+                      }}
+                      className="h-8 px-3 text-xs font-semibold bg-background hover:bg-muted/80 text-foreground border border-input rounded-md shadow-2xs flex items-center gap-2 cursor-pointer transition-colors active:scale-95 whitespace-nowrap"
+                    >
+                      <span>
+                        {selectedStatusFilter === "all"
+                          ? `All Statuses (${totalLines})`
+                          : `${selectedStatusFilter} (${data.lines.filter((l) => l.status === selectedStatusFilter).length})`}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+
+                    {isStatusFilterOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-20"
+                          onClick={() => setIsStatusFilterOpen(false)}
+                        />
+                        <div className="absolute left-0 top-full mt-1 z-30 w-52 max-h-72 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedStatusFilter("all")
+                              setIsStatusFilterOpen(false)
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                              selectedStatusFilter === "all"
+                                ? "bg-primary/10 text-primary font-bold"
+                                : "text-foreground hover:bg-muted"
+                            }`}
+                          >
+                            <span>All Statuses</span>
+                            <span className="text-[10px] font-mono opacity-60">({totalLines})</span>
+                          </button>
+                          {SCRIPT_LINE_STATUSES.map((st) => {
+                            const count = data.lines.filter((l) => l.status === st).length
+                            const style = STATUS_STYLE_MAP[st]
+                            const isSelected = selectedStatusFilter === st
+                            return (
+                              <button
+                                key={st}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStatusFilter(st)
+                                  setIsStatusFilterOpen(false)
+                                }}
+                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? "bg-primary/10 font-bold text-foreground"
+                                    : "text-foreground hover:bg-muted"
+                                }`}
+                              >
+                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
+                                <span className="flex-1 text-left">{st}</span>
+                                <span className="text-[10px] font-mono text-muted-foreground font-bold">({count})</span>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
