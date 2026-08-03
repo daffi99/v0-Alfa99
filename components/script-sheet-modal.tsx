@@ -1079,14 +1079,14 @@ export function ScriptSheetModal({
                           className="fixed inset-0 z-20"
                           onClick={() => setIsCharFilterOpen(false)}
                         />
-                        <div className="absolute left-0 top-full mt-1 z-30 w-52 max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                        <div className="absolute left-0 top-full mt-1 z-30 w-60 min-w-[220px] max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedCharacterFilter("all")
                               setIsCharFilterOpen(false)
                             }}
-                            className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                            className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
                               selectedCharacterFilter === "all"
                                 ? "bg-primary/10 text-primary font-bold"
                                 : "text-foreground hover:bg-muted"
@@ -1105,13 +1105,13 @@ export function ScriptSheetModal({
                                   setSelectedCharacterFilter(char)
                                   setIsCharFilterOpen(false)
                                 }}
-                                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                                className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
                                   isSelected
                                     ? "bg-primary/10 text-primary font-bold"
                                     : "text-foreground hover:bg-muted"
                                 }`}
                               >
-                                <span className="truncate">{char}</span>
+                                <span className="truncate text-foreground font-semibold flex-1 text-left">{char}</span>
                                 {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
                               </button>
                             )
@@ -1145,14 +1145,14 @@ export function ScriptSheetModal({
                           className="fixed inset-0 z-20"
                           onClick={() => setIsStatusFilterOpen(false)}
                         />
-                        <div className="absolute left-0 top-full mt-1 z-30 w-52 max-h-72 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                        <div className="absolute left-0 top-full mt-1 z-30 w-60 min-w-[220px] max-h-72 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedStatusFilter("all")
                               setIsStatusFilterOpen(false)
                             }}
-                            className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                            className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
                               selectedStatusFilter === "all"
                                 ? "bg-primary/10 text-primary font-bold"
                                 : "text-foreground hover:bg-muted"
@@ -1173,16 +1173,20 @@ export function ScriptSheetModal({
                                   setSelectedStatusFilter(st)
                                   setIsStatusFilterOpen(false)
                                 }}
-                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                                className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
                                   isSelected
                                     ? "bg-primary/10 font-bold text-foreground"
                                     : "text-foreground hover:bg-muted"
                                 }`}
                               >
-                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
-                                <span className="flex-1 text-left">{st}</span>
-                                <span className="text-[10px] font-mono text-muted-foreground font-bold">({count})</span>
-                                {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
+                                  <span className="truncate text-foreground font-semibold">{st}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <span className="text-[10px] font-mono text-muted-foreground font-bold">({count})</span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                                </div>
                               </button>
                             )
                           })}
