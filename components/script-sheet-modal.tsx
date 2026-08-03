@@ -673,12 +673,16 @@ export function ScriptSheetModal({
     updateData({ ...data, checkedCharacters: currentChecks })
   }
 
-  // Batch update line status for a specific character across all script lines (Inputted or Beluman)
-  const handleBatchUpdateCharacterStatus = (charName: string, newStatus: "Inputted" | "Beluman") => {
+  // Batch update line status for a specific character across all script lines (Inputted, Beluman, Broken, etc.)
+  const handleBatchUpdateCharacterStatus = (charName: string, newStatus: ScriptLineStatus) => {
     const targetName = charName.trim().toLowerCase()
     const updatedLines = data.lines.map((line) => {
       if (line.character && line.character.trim().toLowerCase() === targetName) {
-        return { ...line, status: newStatus }
+        return {
+          ...line,
+          status: newStatus,
+          previousStatus: newStatus === "Inputted" ? line.status : undefined,
+        }
       }
       return line
     })
@@ -1392,25 +1396,24 @@ export function ScriptSheetModal({
                         </td>
                         <td className="p-2.5 text-right pr-3">
                           <div className="flex items-center justify-end gap-2">
-                            <span className="text-[10px] font-mono text-muted-foreground bg-muted/60 px-2 py-0.5 rounded border border-border/60">
+                            <span className="text-[10px] font-mono text-muted-foreground bg-muted/60 px-2 py-1 rounded border border-border/60">
                               <b className="text-emerald-700">{cs.inputtedLinesCount}</b>/<b className="text-muted-foreground">{cs.linesCount}</b> In
                             </span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => handleBatchUpdateCharacterStatus(cs.character, "Inputted")}
-                                className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded transition-all active:scale-95 whitespace-nowrap"
-                                title={`Mark all ${cs.linesCount} lines for ${cs.character} as Inputted`}
-                              >
-                                Inputted
-                              </button>
-                              <button
-                                onClick={() => handleBatchUpdateCharacterStatus(cs.character, "Beluman")}
-                                className="px-2 py-0.5 text-[10px] font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded transition-all active:scale-95 whitespace-nowrap"
-                                title={`Mark all ${cs.linesCount} lines for ${cs.character} as Beluman`}
-                              >
-                                Beluman
-                              </button>
-                            </div>
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  handleBatchUpdateCharacterStatus(cs.character, e.target.value as ScriptLineStatus)
+                                }
+                              }}
+                              className="px-2.5 py-1 text-[11px] font-semibold bg-background hover:bg-muted/50 border border-border rounded-md shadow-xs focus:ring-1 focus:ring-primary cursor-pointer transition-colors text-foreground"
+                              title={`Set status for all ${cs.linesCount} lines of ${cs.character}`}
+                            >
+                              <option value="" disabled>-- Set Status --</option>
+                              <option value="Inputted" className="text-emerald-700 font-medium">Inputted</option>
+                              <option value="Beluman" className="text-red-600 font-medium">Beluman</option>
+                              <option value="Broken" className="text-amber-600 font-medium">Broken</option>
+                            </select>
                           </div>
                         </td>
                       </tr>
