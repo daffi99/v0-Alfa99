@@ -190,13 +190,11 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleSubtask, onE
       const isBeluman = originalStatus === "Beluman"
 
       const updatedLines = localScriptData.lines.map((line) => {
-        const targetChar = (
-          line.status === "Wrong Cast" && line.correctCharacter
-            ? line.correctCharacter
-            : line.character
-        )?.trim().toLowerCase()
+        const lineChar = (line.character || "").trim().toLowerCase()
+        const correctChar = (line.correctCharacter || "").trim().toLowerCase()
+        const matchesChar = lineChar === charNameLower || (correctChar !== "" && correctChar === charNameLower)
 
-        if (targetChar !== charNameLower) return line
+        if (!matchesChar) return line
 
         if (willBeChecked) {
           // Store previousStatus when checking line to Inputted
