@@ -1678,22 +1678,15 @@ export function ScriptSheetModal({
                     {missingReports.map((item, idx) => (
                       <tr key={idx} className={`hover:bg-muted/30 transition-colors ${item.isResolved ? "bg-emerald-50/20" : ""}`}>
                         <td className="p-2.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span
-                              className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
-                                STATUS_STYLE_MAP[item.status]?.bg || "bg-gray-100"
-                              } ${STATUS_STYLE_MAP[item.status]?.text || "text-gray-800"} ${
-                                STATUS_STYLE_MAP[item.status]?.border || "border-gray-200"
-                              } ${item.isResolved ? "line-through opacity-60" : ""}`}
-                            >
-                              {item.status}
-                            </span>
-                            {item.isResolved && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                                <Check className="w-3 h-3 text-emerald-600" /> Resolved
-                              </span>
-                            )}
-                          </div>
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                              STATUS_STYLE_MAP[item.status]?.bg || "bg-gray-100"
+                            } ${STATUS_STYLE_MAP[item.status]?.text || "text-gray-800"} ${
+                              STATUS_STYLE_MAP[item.status]?.border || "border-gray-200"
+                            } ${item.isResolved ? "line-through opacity-60" : ""}`}
+                          >
+                            {item.status}
+                          </span>
                         </td>
                         <td className={`p-2.5 font-semibold ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
                           {item.character}
