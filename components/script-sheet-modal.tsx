@@ -766,136 +766,144 @@ export function ScriptSheetModal({
             </div>
 
             {isProgressExpanded && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-card p-2 rounded-md border text-[10px] mt-1.5 shadow-2xs">
-                {/* Group 1: Prep */}
-                <div className="space-y-1 border-r pr-2 last:border-r-0 border-border/40">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 bg-card p-2 rounded-md border text-[10px] mt-1.5 shadow-2xs">
+                {/* Group 1: Prep (1 line) */}
+                <div className="border-r pr-2 last:border-r-0 border-border/40">
                   <div className="font-bold text-foreground border-b pb-0.5 mb-1 flex items-center justify-between text-[10px]">
                     <span>Prep</span>
                     <span className="text-[9px] font-mono text-muted-foreground font-semibold">
                       {prepCompletedCount}/3
                     </span>
                   </div>
-                  {[
-                    { label: "Vocal Split", key: "vocalSplit" },
-                    { label: "VO Enhance", key: "voEnhance" },
-                    { label: "Subtitle Join", key: "subtitleJoin" },
-                  ].map((item) => {
-                    const isChecked = !!localProgress[item.key]
-                    return (
-                      <label
-                        key={item.key}
-                        className="flex items-center gap-1.5 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleSubStep(item.key)}
-                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
-                        />
-                        <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
-                          {item.label}
-                        </span>
-                      </label>
-                    )
-                  })}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {[
+                      { label: "Vocal Split", key: "vocalSplit" },
+                      { label: "VO Enhance", key: "voEnhance" },
+                      { label: "Subtitle Join", key: "subtitleJoin" },
+                    ].map((item) => {
+                      const isChecked = !!localProgress[item.key]
+                      return (
+                        <label
+                          key={item.key}
+                          className="flex items-center gap-1 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2 whitespace-nowrap"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleSubStep(item.key)}
+                            className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
+                          />
+                          <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
+                            {item.label}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
 
-                {/* Group 2: Check VO */}
-                <div className="space-y-1 border-r pr-2 last:border-r-0 border-border/40">
+                {/* Group 2: Check VO (1 line) */}
+                <div className="border-r pr-2 last:border-r-0 border-border/40">
                   <div className="font-bold text-foreground border-b pb-0.5 mb-1 flex items-center justify-between text-[10px]">
                     <span>Check VO</span>
                     <span className="text-[9px] font-mono text-muted-foreground font-semibold">
                       {checkVoCompletedCount}/1
                     </span>
                   </div>
-                  {[
-                    { label: "Check VO", key: "checkVO" },
-                  ].map((item) => {
-                    const isChecked = !!localProgress[item.key]
-                    return (
-                      <label
-                        key={item.key}
-                        className="flex items-center gap-1.5 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleSubStep(item.key)}
-                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
-                        />
-                        <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
-                          {item.label}
-                        </span>
-                      </label>
-                    )
-                  })}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {[
+                      { label: "Check VO", key: "checkVO" },
+                    ].map((item) => {
+                      const isChecked = !!localProgress[item.key]
+                      return (
+                        <label
+                          key={item.key}
+                          className="flex items-center gap-1 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2 whitespace-nowrap"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleSubStep(item.key)}
+                            className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
+                          />
+                          <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
+                            {item.label}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
 
-                {/* Group 3: Editing */}
-                <div className="space-y-1 border-r pr-2 last:border-r-0 border-border/40">
+                {/* Group 3: Editing (2 lines) */}
+                <div className="border-r pr-2 last:border-r-0 border-border/40">
                   <div className="font-bold text-foreground border-b pb-0.5 mb-1 flex items-center justify-between text-[10px]">
                     <span>Editing</span>
                     <span className="text-[9px] font-mono text-muted-foreground font-semibold">
                       {editingCompletedCount}/4
                     </span>
                   </div>
-                  {[
-                    { label: "Pitch Shift", key: "pitchShift" },
-                    { label: "Volume Adjustment", key: "volumeAdjustment" },
-                    { label: "Subseq", key: "subseq" },
-                    { label: "Mixing VO", key: "mixingVO" },
-                  ].map((item) => {
-                    const isChecked = !!localProgress[item.key]
-                    return (
-                      <label
-                        key={item.key}
-                        className="flex items-center gap-1.5 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleSubStep(item.key)}
-                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
-                        />
-                        <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
-                          {item.label}
-                        </span>
-                      </label>
-                    )
-                  })}
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                    {[
+                      { label: "Pitch Shift", key: "pitchShift" },
+                      { label: "Volume Adjustment", key: "volumeAdjustment" },
+                      { label: "Subseq", key: "subseq" },
+                      { label: "Mixing VO", key: "mixingVO" },
+                    ].map((item) => {
+                      const isChecked = !!localProgress[item.key]
+                      return (
+                        <label
+                          key={item.key}
+                          className="flex items-center gap-1 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2 whitespace-nowrap"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleSubStep(item.key)}
+                            className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
+                          />
+                          <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
+                            {item.label}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
 
-                {/* Group 4: Caption Edit */}
-                <div className="space-y-1">
+                {/* Group 4: Caption Edit (2 lines) */}
+                <div>
                   <div className="font-bold text-foreground border-b pb-0.5 mb-1 flex items-center justify-between text-[10px]">
                     <span>Caption Edit</span>
                     <span className="text-[9px] font-mono text-muted-foreground font-semibold">
                       {captionEditCompletedCount}/3
                     </span>
                   </div>
-                  {[
-                    { label: "Input Replacement text", key: "inputReplacementText" },
-                    { label: "Input Sync SRT", key: "inputSyncSRT" },
-                    { label: "Re check SRT", key: "reCheckSRT" },
-                  ].map((item) => {
-                    const isChecked = !!localProgress[item.key]
-                    return (
-                      <label
-                        key={item.key}
-                        className="flex items-center gap-1.5 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleSubStep(item.key)}
-                          className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
-                        />
-                        <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
-                          {item.label}
-                        </span>
-                      </label>
-                    )
-                  })}
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                    {[
+                      { label: "Input Replacement text", key: "inputReplacementText" },
+                      { label: "Input Sync SRT", key: "inputSyncSRT" },
+                      { label: "Re check SRT", key: "reCheckSRT" },
+                    ].map((item) => {
+                      const isChecked = !!localProgress[item.key]
+                      return (
+                        <label
+                          key={item.key}
+                          className="flex items-center gap-1 cursor-pointer text-[10px] text-muted-foreground hover:text-foreground select-none leading-tight py-0.2 whitespace-nowrap"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleSubStep(item.key)}
+                            className="rounded text-emerald-600 focus:ring-emerald-500 w-3 h-3 cursor-pointer accent-emerald-600 flex-shrink-0"
+                          />
+                          <span className={isChecked ? "line-through text-muted-foreground/60 font-medium" : "font-semibold text-foreground"}>
+                            {item.label}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )}
