@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       description: body.description,
       duration: body.duration ?? "00:10:00",
       category: body.category,
-      status: body.status,
+      status: body.status || "",
       stage: body.stage || "Backlog",
       episode_ranges: Array.isArray(body.episodeRanges) ? body.episodeRanges.join(",") : body.episodeRanges || "",
       completed_episodes: JSON.stringify(body.completedEpisodes || []),

@@ -162,7 +162,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
           description: task.description,
           duration: task.duration || "00:10:00",
           category: task.category,
-          status: task.status,
+          status: task.status || "",
           stage: stage,
           episodeRanges: task.episodeRanges,
           completedEpisodes: task.episodes.filter((ep) => ep.completed).map((ep) => ep.number),
@@ -746,7 +746,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
       const response = await fetch(`/api/tasks/${dbTaskId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: status || "" }),
       })
 
       if (!response.ok) {

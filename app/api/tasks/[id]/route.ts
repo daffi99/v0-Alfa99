@@ -18,6 +18,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       updated_at: new Date().toISOString(),
     }
 
+    if (body.status === null) {
+      updateData.status = ""
+    }
+
     if (body.completedEpisodes) {
       updateData.completed_episodes = JSON.stringify(body.completedEpisodes)
       delete updateData.completedEpisodes
