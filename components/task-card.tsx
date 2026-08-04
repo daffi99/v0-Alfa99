@@ -176,32 +176,6 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       isResolved: boolean
     }> = []
 
-    // Collect all episodes present in task or script lines
-    const allTaskEpsSet = new Set<string>()
-    if (task.episodes && task.episodes.length > 0) {
-      task.episodes.forEach((ep) => allTaskEpsSet.add(ep.number.toString().padStart(3, "0")))
-    }
-    localScriptData.lines.forEach((line) => {
-      if (line.eps) allTaskEpsSet.add(line.eps.trim().padStart(3, "0"))
-    })
-
-    // Track episodes that have non-Inputted issues / revisions
-    const issueEpsSet = new Set<string>()
-    localScriptData.lines.forEach((line) => {
-      if (!line.character) return
-      const lineIssueStatus = line.previousStatus || line.status
-      if (lineIssueStatus && lineIssueStatus !== "Inputted") {
-        if (line.eps) issueEpsSet.add(line.eps.trim().padStart(3, "0"))
-      }
-    })
-
-    // Clean episodes (episodes without any revisions / issue lines)
-    const cleanEps = Array.from(allTaskEpsSet)
-      .filter((ep) => !issueEpsSet.has(ep))
-      .sort((a, b) => Number(a) - Number(b))
-
-    const cleanText = cleanEps.length > 0 ? `EP${cleanEps.join(", ")}` : ""
-
     charStatusMap.forEach(({ character, status, epsSet, totalLines, inputtedLines }, groupKey) => {
       const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
       const sortedEps = Array.from(epsSet)
@@ -222,6 +196,31 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
         isResolved,
       })
     })
+
+    // Collect all episodes present in task or script lines
+    const allTaskEpsSet = new Set<string>()
+    if (task.episodes && task.episodes.length > 0) {
+      task.episodes.forEach((ep) => allTaskEpsSet.add(ep.number.toString().padStart(3, "0")))
+    }
+    localScriptData.lines.forEach((line) => {
+      if (line.eps) allTaskEpsSet.add(line.eps.trim().padStart(3, "0"))
+    })
+
+    // Track episodes that still have UNRESOLVED issues
+    const unresolvedIssueEpsSet = new Set<string>()
+    charStatusMap.forEach(({ epsSet, totalLines, inputtedLines }, groupKey) => {
+      const isResolved = !!checkedVoReportKeys[groupKey] || (totalLines > 0 && inputtedLines === totalLines)
+      if (!isResolved) {
+        epsSet.forEach((ep) => unresolvedIssueEpsSet.add(ep.trim().padStart(3, "0")))
+      }
+    })
+
+    // Episodes that are clean OR have all issues resolved
+    const resolvedEps = Array.from(allTaskEpsSet)
+      .filter((ep) => !unresolvedIssueEpsSet.has(ep))
+      .sort((a, b) => Number(a) - Number(b))
+
+    const cleanText = resolvedEps.length > 0 ? `EP${resolvedEps.join(", ")}` : ""
 
     return {
       voReportSummaryItems: reports.sort((a, b) => a.minEps - b.minEps),
