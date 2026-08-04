@@ -1544,8 +1544,10 @@ export function ScriptSheetModal({
                       return (
                         <tr
                           key={idx}
-                          className={`hover:bg-muted/40 transition-colors ${
-                            cs.isChecked ? "bg-emerald-50/30" : ""
+                          className={`transition-colors ${
+                            isBeluman
+                              ? "bg-red-500/10 hover:bg-red-500/15"
+                              : "bg-emerald-500/10 hover:bg-emerald-500/15"
                           }`}
                         >
                           <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold">
@@ -1571,15 +1573,7 @@ export function ScriptSheetModal({
                             </div>
                           </td>
                           <td className="p-2.5 font-bold text-foreground">
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                                  isBeluman ? "bg-red-500" : "bg-emerald-500"
-                                }`}
-                                title={isBeluman ? "Beluman (Pending)" : "Inputted (Complete)"}
-                              />
-                              <span>{cs.character}</span>
-                            </div>
+                            <span>{cs.character}</span>
                           </td>
                           <td className="p-2.5 text-center font-bold font-mono text-xs text-primary bg-primary/5">
                             {cs.linesCount}
