@@ -613,6 +613,8 @@ export function ScriptSheetModal({
         let newStatus = line.status
         if (cleanNote) {
           newStatus = "VO Error" as ScriptLineStatus
+        } else if (line.status === "VO Error" && !cleanNote) {
+          newStatus = "Inputted" as ScriptLineStatus
         }
 
         return {
@@ -637,8 +639,8 @@ export function ScriptSheetModal({
         let newStatus = l.status
         if (cleanNote && cleanNote.trim() !== "") {
           newStatus = "VO Error" as ScriptLineStatus
-        } else if (l.status === "VO Error" && (!cleanNote || cleanNote.trim() === "")) {
-          newStatus = "Beluman" as ScriptLineStatus
+        } else if ((l.status === "VO Error" || !l.status) && (!cleanNote || cleanNote.trim() === "")) {
+          newStatus = "Inputted" as ScriptLineStatus
         }
         return {
           ...l,
