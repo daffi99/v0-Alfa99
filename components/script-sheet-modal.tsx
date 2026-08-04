@@ -23,6 +23,7 @@ import {
   ChevronUp,
   AlertTriangle,
   RotateCcw,
+  MoreVertical,
 } from "lucide-react"
 import { normalizeMultilinesInQuotes, type ScriptData, type ScriptLine, type MasterArtistMapping, type ScriptLineStatus } from "./script-wizard-modal"
 
@@ -176,6 +177,48 @@ export function ScriptSheetModal({
 
   // Line Status Custom Dropdown Menu State
   const [openLineStatusDropdown, setOpenLineStatusDropdown] = useState<string | null>(null)
+
+  // 3-Dots Row Action Custom Dropdown Menu State
+  const [openRowActionDropdown, setOpenRowActionDropdown] = useState<string | null>(null)
+
+  // Add Line After Modal State
+  const [addLineModal, setAddLineModal] = useState<{
+    isOpen: boolean
+    afterLineId: string
+    afterEps: string
+    character: string
+    lineText: string
+  }>({
+    isOpen: false,
+    afterLineId: "",
+    afterEps: "",
+    character: "",
+    lineText: "",
+  })
+
+  // Save New Line
+  const handleSaveAddLine = () => {
+    if (!addLineModal.character || !addLineModal.lineText.trim()) return
+
+    const newLine: ScriptLine = {
+      id: `custom_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      eps: addLineModal.afterEps,
+      character: addLineModal.character.trim(),
+      lineText: addLineModal.lineText.trim(),
+      status: "Inputted",
+    }
+
+    const targetIndex = data.lines.findIndex((l) => l.id === addLineModal.afterLineId)
+    const updatedLines = [...data.lines]
+    if (targetIndex !== -1) {
+      updatedLines.splice(targetIndex + 1, 0, newLine)
+    } else {
+      updatedLines.push(newLine)
+    }
+
+    updateData({ ...data, lines: updatedLines })
+    setAddLineModal({ isOpen: false, afterLineId: "", afterEps: "", character: "", lineText: "" })
+  }
 
   // Filter Custom Dropdown Menu States
   const [isCharFilterOpen, setIsCharFilterOpen] = useState(false)
@@ -1435,12 +1478,60 @@ export function ScriptSheetModal({
                               </div>
                             </td>
                             <td className="p-2 text-center">
-                              <button
-                                onClick={() => handleDeleteLine(line.id)}
-                                className="p-1 rounded text-muted-foreground hover:text-red-600 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              <div className="relative inline-block text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenRowActionDropdown(openRowActionDropdown === line.id ? null : line.id)}
+                                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                  title="Actions"
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </button>
+
+                                {openRowActionDropdown === line.id && (
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-20"
+                                      onClick={() => setOpenRowActionDropdown(null)}
+                                    />
+                                    <div
+                                      className={`absolute right-0 ${
+                                        idx >= filteredLines.length - 4 ? "bottom-full mb-1" : "top-full mt-1"
+                                      } z-30 w-40 bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setAddLineModal({
+                                            isOpen: true,
+                                            afterLineId: line.id,
+                                            afterEps: line.eps || "",
+                                            character: line.character || "",
+                                            lineText: "",
+                                          })
+                                          setOpenRowActionDropdown(null)
+                                        }}
+                                        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+                                      >
+                                        <Plus className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                                        <span>Add Line After</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleDeleteLine(line.id)
+                                          setOpenRowActionDropdown(null)
+                                        }}
+                                        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-colors cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+                                        <span>Delete Line</span>
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         </React.Fragment>
@@ -2122,6 +2213,90 @@ export function ScriptSheetModal({
                   className="px-3.5 py-1.5 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" /> Confirm Reset All
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Modal for Adding Line After */}
+        {addLineModal.isOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b pb-3">
+                <div className="flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-primary" />
+                  <h3 className="font-bold text-sm text-foreground">Add Line After</h3>
+                  {addLineModal.afterEps && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary font-mono text-muted-foreground">
+                      EP {addLineModal.afterEps.padStart(3, "0")}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setAddLineModal({ isOpen: false, afterLineId: "", afterEps: "", character: "", lineText: "" })}
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                {/* Character selection */}
+                <div>
+                  <label className="block font-semibold text-foreground mb-1">
+                    Character Name <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={addLineModal.character}
+                    onChange={(e) => setAddLineModal({ ...addLineModal, character: e.target.value })}
+                    className="w-full h-9 px-3 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary font-medium"
+                  >
+                    <option value="">Select Character...</option>
+                    {Array.from(
+                      new Set(
+                        [
+                          ...data.masterArtists.map((ma) => ma.characterName),
+                          ...data.lines.map((l) => l.character).filter(Boolean),
+                        ].sort()
+                      )
+                    ).map((charName) => (
+                      <option key={charName} value={charName}>
+                        {charName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Line Text */}
+                <div>
+                  <label className="block font-semibold text-foreground mb-1">
+                    Script Line Text <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    placeholder="Write dialogue/script line here..."
+                    value={addLineModal.lineText}
+                    onChange={(e) => setAddLineModal({ ...addLineModal, lineText: e.target.value })}
+                    className="w-full min-h-[90px] p-3 text-xs font-mono rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t pt-3">
+                <button
+                  type="button"
+                  onClick={() => setAddLineModal({ isOpen: false, afterLineId: "", afterEps: "", character: "", lineText: "" })}
+                  className="px-3.5 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!addLineModal.character || !addLineModal.lineText.trim()}
+                  onClick={handleSaveAddLine}
+                  className="px-4 py-1.5 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 rounded-md shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Line</span>
                 </button>
               </div>
             </div>
