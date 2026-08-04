@@ -1530,25 +1530,7 @@ export function ScriptSheetModal({
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
                       <th className="p-2.5 w-10 text-center text-muted-foreground font-semibold">No.</th>
-                      <th className="p-2.5 w-24">
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="checkbox"
-                            checked={
-                              activeCharacterSummaries.length > 0 &&
-                              activeCharacterSummaries.every((cs) => cs.isChecked)
-                            }
-                            onChange={(e) => handleCheckAll(e.target.checked)}
-                            className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
-                            title={
-                              activeCharacterSummaries.every((cs) => cs.isChecked)
-                                ? "Uncheck All"
-                                : "Check All"
-                            }
-                          />
-                          <span>PS</span>
-                        </div>
-                      </th>
+                      <th className="p-2.5 w-20">PS</th>
                       <th className="p-2.5 w-32">Character</th>
                       <th className="p-2.5 w-20 text-center">Count</th>
                       <th className="p-2.5 w-28">Actor</th>
