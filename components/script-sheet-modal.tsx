@@ -282,24 +282,38 @@ export function ScriptSheetModal({
 
   if (!isOpen) return null
 
-  // Generate dynamic HSL character color mapping based on total number of characters
+  // Generate dynamic HSL character color mapping with Golden Angle (137.5°) for maximum contrast between main characters
   const characterColors = useMemo(() => {
     const map: Record<string, React.CSSProperties> = {}
-    const chars = Array.from(
+
+    // Calculate line counts per character to rank main characters first
+    const charLineCounts = new Map<string, number>()
+    data.lines.forEach((l) => {
+      if (!l.character) return
+      const key = l.character.trim().toLowerCase()
+      charLineCounts.set(key, (charLineCounts.get(key) || 0) + 1)
+    })
+
+    // Sort unique characters by line count descending (main characters first)
+    const allChars = Array.from(
       new Set(
         [
           ...data.masterArtists.map((ma) => ma.characterName.trim()),
           ...data.lines.map((l) => (l.character || "").trim()).filter(Boolean),
         ]
       )
-    )
-    const total = chars.length || 1
+    ).sort((a, b) => {
+      const countA = charLineCounts.get(a.toLowerCase()) || 0
+      const countB = charLineCounts.get(b.toLowerCase()) || 0
+      return countB - countA
+    })
 
-    chars.forEach((char, idx) => {
-      // Evenly space hue angles across 360° based on total number of characters (e.g. 16 characters = 16 colors)
-      const hue = Math.round((idx * 360) / total)
-      map[char] = {
-        backgroundColor: `hsla(${hue}, 75%, 48%, 0.20)`,
+    const GOLDEN_ANGLE = 137.508 // Golden ratio hue step for maximum visual contrast
+
+    allChars.forEach((charName, idx) => {
+      const hue = Math.round((idx * GOLDEN_ANGLE) % 360)
+      map[charName] = {
+        backgroundColor: `hsla(${hue}, 80%, 45%, 0.20)`,
       }
     })
     return map
