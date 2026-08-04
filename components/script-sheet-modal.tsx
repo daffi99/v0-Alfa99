@@ -181,16 +181,18 @@ export function ScriptSheetModal({
   // 3-Dots Row Action Custom Dropdown Menu State
   const [openRowActionDropdown, setOpenRowActionDropdown] = useState<string | null>(null)
 
-  // Add Line After Modal State
+  // Add Line Modal State (Before or After)
   const [addLineModal, setAddLineModal] = useState<{
     isOpen: boolean
-    afterLineId: string
+    position: "before" | "after"
+    refLineId: string
     afterEps: string
     character: string
     lineText: string
   }>({
     isOpen: false,
-    afterLineId: "",
+    position: "after",
+    refLineId: "",
     afterEps: "",
     character: "",
     lineText: "",
@@ -226,16 +228,17 @@ export function ScriptSheetModal({
       status: "Inputted",
     }
 
-    const targetIndex = data.lines.findIndex((l) => l.id === addLineModal.afterLineId)
+    const targetIndex = data.lines.findIndex((l) => l.id === addLineModal.refLineId)
     const updatedLines = [...data.lines]
     if (targetIndex !== -1) {
-      updatedLines.splice(targetIndex + 1, 0, newLine)
+      const insertIndex = addLineModal.position === "before" ? targetIndex : targetIndex + 1
+      updatedLines.splice(insertIndex, 0, newLine)
     } else {
       updatedLines.push(newLine)
     }
 
     updateData({ ...data, lines: updatedLines })
-    setAddLineModal({ isOpen: false, afterLineId: "", afterEps: "", character: "", lineText: "" })
+    setAddLineModal({ isOpen: false, position: "after", refLineId: "", afterEps: "", character: "", lineText: "" })
   }
 
   // Filter Custom Dropdown Menu States
@@ -279,17 +282,28 @@ export function ScriptSheetModal({
 
   if (!isOpen) return null
 
-  // Generate character color mapping
+  // Generate dynamic HSL character color mapping based on total number of characters
   const characterColors = useMemo(() => {
-    const map: Record<string, string> = {}
+    const map: Record<string, React.CSSProperties> = {}
     const chars = Array.from(
-      new Set(data.lines.map((l) => l.character).filter(Boolean))
+      new Set(
+        [
+          ...data.masterArtists.map((ma) => ma.characterName.trim()),
+          ...data.lines.map((l) => (l.character || "").trim()).filter(Boolean),
+        ]
+      )
     )
+    const total = chars.length || 1
+
     chars.forEach((char, idx) => {
-      map[char] = CHARACTER_COLOR_PALETTE[idx % CHARACTER_COLOR_PALETTE.length]
+      // Evenly space hue angles across 360° based on total number of characters (e.g. 16 characters = 16 colors)
+      const hue = Math.round((idx * 360) / total)
+      map[char] = {
+        backgroundColor: `hsla(${hue}, 65%, 50%, 0.08)`,
+      }
     })
     return map
-  }, [data.lines])
+  }, [data.lines, data.masterArtists])
 
   // Update Data Handler
   const updateData = (newData: ScriptData) => {
@@ -1396,162 +1410,194 @@ export function ScriptSheetModal({
                               </td>
                             </tr>
                           )}
-                          <tr
-                            className={`hover:bg-muted/40 transition-colors ${
-                              characterColors[line.character] || ""
-                            }`}
-                          >
-                            <td className="p-2 text-center border-r font-mono text-[11px] font-bold">
-                              {line.eps ? line.eps.trim().padStart(3, "0") : "-"}
-                            </td>
-                            <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
-                              {line.startTime || "-"}
-                            </td>
-                            <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
-                              {line.endTime || "-"}
-                            </td>
-                            <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
-                              {line.batchTime || "-"}
-                            </td>
-                            <td className="p-2 border-r font-semibold text-[10px] whitespace-nowrap truncate max-w-[80px]" title={line.character}>
-                              {line.character}
-                            </td>
-                            <td className="p-2 border-r whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed font-medium">
-                              {displayLineText}
-                            </td>
-                            {isCaptionTask && (
-                              <td className="p-2 border-r text-[10px] text-red-600 font-semibold">
-                                <div className="flex items-center gap-1">
-                                  <input
-                                    type="text"
-                                    placeholder="Note..."
-                                    value={line.voErrorNote || ""}
-                                    onChange={(e) => handleUpdateVoErrorNote(line.id, e.target.value)}
-                                    className="w-full bg-transparent text-red-600 font-medium placeholder:text-muted-foreground/30 outline-none border-b border-transparent focus:border-red-400 text-[10px] py-0"
-                                  />
-                                  {line.voErrorNote && (
+                          {(() => {
+                            const isVoError = line.status === "VO Error" || Boolean(line.voErrorNote)
+                            const isBeluman = line.status === "Beluman"
+                            const charStyle = characterColors[line.character]
+                            return (
+                              <tr
+                                style={!isVoError && !isBeluman ? charStyle : undefined}
+                                className={`transition-colors ${
+                                  isVoError
+                                    ? "bg-amber-500/15 hover:bg-amber-500/20"
+                                    : isBeluman
+                                    ? "bg-red-500/10 hover:bg-red-500/15"
+                                    : "hover:brightness-95 dark:hover:brightness-125"
+                                }`}
+                              >
+                                <td className="p-2 text-center border-r font-mono text-[11px] font-bold">
+                                  {line.eps ? line.eps.trim().padStart(3, "0") : "-"}
+                                </td>
+                                <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
+                                  {line.startTime || "-"}
+                                </td>
+                                <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
+                                  {line.endTime || "-"}
+                                </td>
+                                <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
+                                  {line.batchTime || "-"}
+                                </td>
+                                <td className="p-2 border-r font-semibold text-[10px] whitespace-nowrap truncate max-w-[80px]" title={line.character}>
+                                  {line.character}
+                                </td>
+                                <td className="p-2 border-r whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed font-medium">
+                                  {displayLineText}
+                                </td>
+                                {isCaptionTask && (
+                                  <td className="p-2 border-r text-[10px] text-red-600 font-semibold">
+                                    <div className="flex items-center gap-1">
+                                      <input
+                                        type="text"
+                                        placeholder="Note..."
+                                        value={line.voErrorNote || ""}
+                                        onChange={(e) => handleUpdateVoErrorNote(line.id, e.target.value)}
+                                        className="w-full bg-transparent text-red-600 font-medium placeholder:text-muted-foreground/30 outline-none border-b border-transparent focus:border-red-400 text-[10px] py-0"
+                                      />
+                                      {line.voErrorNote && (
+                                        <button
+                                          onClick={() => handleUpdateVoErrorNote(line.id, "")}
+                                          className="p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                                          title="Remove VO Error Note"
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                )}
+                                <td className="p-2 border-r text-center">
+                                  <div className="relative inline-block text-center">
                                     <button
-                                      onClick={() => handleUpdateVoErrorNote(line.id, "")}
-                                      className="p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
-                                      title="Remove VO Error Note"
+                                      type="button"
+                                      onClick={() => setOpenLineStatusDropdown(openLineStatusDropdown === line.id ? null : line.id)}
+                                      className={`h-5 text-[10px] px-2 rounded-full font-bold transition-all border outline-none cursor-pointer flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap ${
+                                        STATUS_STYLE_MAP[line.status]?.bg || "bg-gray-100"
+                                      } ${STATUS_STYLE_MAP[line.status]?.text || "text-gray-800"} ${
+                                        STATUS_STYLE_MAP[line.status]?.border || "border-gray-200"
+                                      }`}
                                     >
-                                      <X className="w-3 h-3" />
+                                      <span>{line.status}</span>
+                                      <ChevronDown className="w-2.5 h-2.5 opacity-70" />
                                     </button>
-                                  )}
-                                </div>
-                              </td>
-                            )}
-                            <td className="p-2 border-r text-center">
-                              <div className="relative inline-block text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => setOpenLineStatusDropdown(openLineStatusDropdown === line.id ? null : line.id)}
-                                  className={`h-5 text-[10px] px-2 rounded-full font-bold transition-all border outline-none cursor-pointer flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap ${
-                                    STATUS_STYLE_MAP[line.status]?.bg || "bg-gray-100"
-                                  } ${STATUS_STYLE_MAP[line.status]?.text || "text-gray-800"} ${
-                                    STATUS_STYLE_MAP[line.status]?.border || "border-gray-200"
-                                  }`}
-                                >
-                                  <span>{line.status}</span>
-                                  <ChevronDown className="w-2.5 h-2.5 opacity-70" />
-                                </button>
 
-                                {openLineStatusDropdown === line.id && (
-                                  <>
-                                    <div
-                                      className="fixed inset-0 z-20"
-                                      onClick={() => setOpenLineStatusDropdown(null)}
-                                    />
-                                    <div
-                                      className={`absolute left-1/2 -translate-x-1/2 ${
-                                        idx >= filteredLines.length - 6 ? "bottom-full mb-1" : "top-full mt-1"
-                                      } z-30 w-36 min-w-[140px] bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
+                                    {openLineStatusDropdown === line.id && (
+                                      <>
+                                        <div
+                                          className="fixed inset-0 z-20"
+                                          onClick={() => setOpenLineStatusDropdown(null)}
+                                        />
+                                        <div
+                                          className={`absolute left-1/2 -translate-x-1/2 ${
+                                            idx >= filteredLines.length - 6 ? "bottom-full mb-1" : "top-full mt-1"
+                                          } z-30 w-36 min-w-[140px] bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
+                                        >
+                                          {SCRIPT_LINE_STATUSES.map((st) => {
+                                            const style = STATUS_STYLE_MAP[st]
+                                            const isSelected = line.status === st
+                                            return (
+                                              <button
+                                                key={st}
+                                                type="button"
+                                                onClick={() => {
+                                                  handleUpdateLineStatus(line.id, st)
+                                                  setOpenLineStatusDropdown(null)
+                                                }}
+                                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${
+                                                  isSelected
+                                                    ? "bg-primary/10 text-foreground font-bold"
+                                                    : "text-foreground hover:bg-muted"
+                                                }`}
+                                              >
+                                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
+                                                <span className="flex-1 text-left text-foreground">{st}</span>
+                                                {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                                              </button>
+                                            )
+                                          })}
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-2 text-center">
+                                  <div className="relative inline-block text-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => setOpenRowActionDropdown(openRowActionDropdown === line.id ? null : line.id)}
+                                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                      title="Actions"
                                     >
-                                      {SCRIPT_LINE_STATUSES.map((st) => {
-                                        const style = STATUS_STYLE_MAP[st]
-                                        const isSelected = line.status === st
-                                        return (
+                                      <MoreVertical className="w-4 h-4" />
+                                    </button>
+
+                                    {openRowActionDropdown === line.id && (
+                                      <>
+                                        <div
+                                          className="fixed inset-0 z-20"
+                                          onClick={() => setOpenRowActionDropdown(null)}
+                                        />
+                                        <div
+                                          className={`absolute right-0 ${
+                                            idx >= filteredLines.length - 4 ? "bottom-full mb-1" : "top-full mt-1"
+                                          } z-30 w-44 bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
+                                        >
                                           <button
-                                            key={st}
                                             type="button"
                                             onClick={() => {
-                                              handleUpdateLineStatus(line.id, st)
-                                              setOpenLineStatusDropdown(null)
+                                              setAddLineModal({
+                                                isOpen: true,
+                                                position: "before",
+                                                refLineId: line.id,
+                                                afterEps: line.eps || "",
+                                                character: line.character || "",
+                                                lineText: "",
+                                              })
+                                              setOpenRowActionDropdown(null)
                                             }}
-                                            className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${
-                                              isSelected
-                                                ? "bg-primary/10 text-foreground font-bold"
-                                                : "text-foreground hover:bg-muted"
-                                            }`}
+                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
                                           >
-                                            <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
-                                            <span className="flex-1 text-left text-foreground">{st}</span>
-                                            {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                                            <Plus className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                                            <span>Add Line Before</span>
                                           </button>
-                                        )
-                                      })}
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-2 text-center">
-                              <div className="relative inline-block text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => setOpenRowActionDropdown(openRowActionDropdown === line.id ? null : line.id)}
-                                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                                  title="Actions"
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </button>
 
-                                {openRowActionDropdown === line.id && (
-                                  <>
-                                    <div
-                                      className="fixed inset-0 z-20"
-                                      onClick={() => setOpenRowActionDropdown(null)}
-                                    />
-                                    <div
-                                      className={`absolute right-0 ${
-                                        idx >= filteredLines.length - 4 ? "bottom-full mb-1" : "top-full mt-1"
-                                      } z-30 w-40 bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
-                                    >
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setAddLineModal({
-                                            isOpen: true,
-                                            afterLineId: line.id,
-                                            afterEps: line.eps || "",
-                                            character: line.character || "",
-                                            lineText: "",
-                                          })
-                                          setOpenRowActionDropdown(null)
-                                        }}
-                                        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
-                                      >
-                                        <Plus className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                                        <span>Add Line After</span>
-                                      </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setAddLineModal({
+                                                isOpen: true,
+                                                position: "after",
+                                                refLineId: line.id,
+                                                afterEps: line.eps || "",
+                                                character: line.character || "",
+                                                lineText: "",
+                                              })
+                                              setOpenRowActionDropdown(null)
+                                            }}
+                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+                                          >
+                                            <Plus className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                                            <span>Add Line After</span>
+                                          </button>
 
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          handleDeleteLine(line.id)
-                                          setOpenRowActionDropdown(null)
-                                        }}
-                                        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-colors cursor-pointer"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
-                                        <span>Delete Line</span>
-                                      </button>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              handleDeleteLine(line.id)
+                                              setOpenRowActionDropdown(null)
+                                            }}
+                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-colors cursor-pointer"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
+                                            <span>Delete Line</span>
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })()}
                         </React.Fragment>
                       )
                     })}
@@ -2243,7 +2289,9 @@ export function ScriptSheetModal({
               <div className="flex items-center justify-between border-b pb-3">
                 <div className="flex items-center gap-2">
                   <Plus className="w-5 h-5 text-primary" />
-                  <h3 className="font-bold text-sm text-foreground">Add Line After</h3>
+                  <h3 className="font-bold text-sm text-foreground">
+                    {addLineModal.position === "before" ? "Add Line Before" : "Add Line After"}
+                  </h3>
                   {addLineModal.afterEps && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary font-mono text-muted-foreground">
                       EP {addLineModal.afterEps.padStart(3, "0")}
@@ -2251,7 +2299,7 @@ export function ScriptSheetModal({
                   )}
                 </div>
                 <button
-                  onClick={() => setAddLineModal({ isOpen: false, afterLineId: "", afterEps: "", character: "", lineText: "" })}
+                  onClick={() => setAddLineModal({ isOpen: false, position: "after", refLineId: "", afterEps: "", character: "", lineText: "" })}
                   className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   <X className="w-4 h-4" />
@@ -2347,7 +2395,7 @@ export function ScriptSheetModal({
               <div className="flex items-center justify-end gap-2 border-t pt-3">
                 <button
                   type="button"
-                  onClick={() => setAddLineModal({ isOpen: false, afterLineId: "", afterEps: "", character: "", lineText: "" })}
+                  onClick={() => setAddLineModal({ isOpen: false, position: "after", refLineId: "", afterEps: "", character: "", lineText: "" })}
                   className="px-3.5 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer"
                 >
                   Cancel
