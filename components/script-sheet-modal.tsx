@@ -1216,7 +1216,7 @@ export function ScriptSheetModal({
                   </div>
 
                   {/* Custom Character Filter Dropdown */}
-                  <div className="relative inline-block text-left">
+                  <div className={`relative inline-block text-left ${isCharFilterOpen ? "z-40" : ""}`}>
                     <button
                       type="button"
                       onClick={() => {
@@ -1236,10 +1236,10 @@ export function ScriptSheetModal({
                     {isCharFilterOpen && (
                       <>
                         <div
-                          className="fixed inset-0 z-20"
+                          className="fixed inset-0 z-40"
                           onClick={() => setIsCharFilterOpen(false)}
                         />
-                        <div className="absolute left-0 top-full mt-1 z-30 w-60 min-w-[220px] max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                        <div className="absolute left-0 top-full mt-1 z-50 w-60 min-w-[220px] max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
                           <button
                             type="button"
                             onClick={() => {
@@ -1282,7 +1282,7 @@ export function ScriptSheetModal({
                   </div>
 
                   {/* Custom Status Filter Dropdown */}
-                  <div className="relative inline-block text-left">
+                  <div className={`relative inline-block text-left ${isStatusFilterOpen ? "z-40" : ""}`}>
                     <button
                       type="button"
                       onClick={() => {
@@ -1302,10 +1302,10 @@ export function ScriptSheetModal({
                     {isStatusFilterOpen && (
                       <>
                         <div
-                          className="fixed inset-0 z-20"
+                          className="fixed inset-0 z-40"
                           onClick={() => setIsStatusFilterOpen(false)}
                         />
-                        <div className="absolute left-0 top-full mt-1 z-30 w-60 min-w-[220px] max-h-72 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                        <div className="absolute left-0 top-full mt-1 z-50 w-60 min-w-[220px] max-h-72 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
                           <button
                             type="button"
                             onClick={() => {
@@ -1448,7 +1448,7 @@ export function ScriptSheetModal({
                                     : isBeluman
                                     ? "bg-red-500/10 hover:bg-red-500/15"
                                     : "hover:brightness-95 dark:hover:brightness-125"
-                                }`}
+                                } ${openLineStatusDropdown === line.id || openRowActionDropdown === line.id ? "relative z-40" : ""}`}
                               >
                                 <td className="p-2 text-center border-r font-mono text-[11px] font-bold">
                                   {line.eps ? line.eps.trim().padStart(3, "0") : "-"}
@@ -1491,7 +1491,7 @@ export function ScriptSheetModal({
                                   </td>
                                 )}
                                 <td className="p-2 border-r text-center">
-                                  <div className="relative inline-block text-center">
+                                  <div className={`relative inline-block text-center ${openLineStatusDropdown === line.id ? "z-40" : ""}`}>
                                     <button
                                       type="button"
                                       onClick={() => setOpenLineStatusDropdown(openLineStatusDropdown === line.id ? null : line.id)}
@@ -1508,13 +1508,13 @@ export function ScriptSheetModal({
                                     {openLineStatusDropdown === line.id && (
                                       <>
                                         <div
-                                          className="fixed inset-0 z-20"
+                                          className="fixed inset-0 z-40"
                                           onClick={() => setOpenLineStatusDropdown(null)}
                                         />
                                         <div
                                           className={`absolute left-1/2 -translate-x-1/2 ${
                                             idx >= filteredLines.length - 6 ? "bottom-full mb-1" : "top-full mt-1"
-                                          } z-30 w-36 min-w-[140px] bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
+                                          } z-50 w-36 min-w-[140px] bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
                                         >
                                           {SCRIPT_LINE_STATUSES.map((st) => {
                                             const style = STATUS_STYLE_MAP[st]
@@ -1545,7 +1545,7 @@ export function ScriptSheetModal({
                                   </div>
                                 </td>
                                 <td className="p-2 text-center">
-                                  <div className="relative inline-block text-center">
+                                  <div className={`relative inline-block text-center ${openRowActionDropdown === line.id ? "z-40" : ""}`}>
                                     <button
                                       type="button"
                                       onClick={() => setOpenRowActionDropdown(openRowActionDropdown === line.id ? null : line.id)}
@@ -1558,13 +1558,13 @@ export function ScriptSheetModal({
                                     {openRowActionDropdown === line.id && (
                                       <>
                                         <div
-                                          className="fixed inset-0 z-20"
+                                          className="fixed inset-0 z-40"
                                           onClick={() => setOpenRowActionDropdown(null)}
                                         />
                                         <div
                                           className={`absolute right-0 ${
                                             idx >= filteredLines.length - 4 ? "bottom-full mb-1" : "top-full mt-1"
-                                          } z-30 w-44 bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
+                                          } z-50 w-44 bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
                                         >
                                           <button
                                             type="button"
@@ -1765,7 +1765,7 @@ export function ScriptSheetModal({
                             isBeluman
                               ? "bg-red-500/10 hover:bg-red-500/15"
                               : "bg-emerald-500/10 hover:bg-emerald-500/15"
-                          }`}
+                          } ${openActionDropdown === cs.character ? "relative z-40" : ""}`}
                         >
                           <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold whitespace-nowrap">
                             <div className="flex items-center justify-center gap-1.5">
@@ -1825,7 +1825,7 @@ export function ScriptSheetModal({
                                 />
                                 <b>{cs.inputtedLinesCount}</b>/<b>{cs.linesCount}</b> In
                               </span>
-                            <div className="relative inline-block text-left">
+                            <div className={`relative inline-block text-left ${openActionDropdown === cs.character ? "z-40" : ""}`}>
                               <button
                                 type="button"
                                 onClick={() => setOpenActionDropdown(openActionDropdown === cs.character ? null : cs.character)}
@@ -1838,13 +1838,13 @@ export function ScriptSheetModal({
                               {openActionDropdown === cs.character && (
                                 <>
                                   <div
-                                    className="fixed inset-0 z-20"
+                                    className="fixed inset-0 z-40"
                                     onClick={() => setOpenActionDropdown(null)}
                                   />
                                   <div
                                     className={`absolute right-0 ${
                                       idx >= activeCharacterSummaries.length - 3 ? "bottom-full mb-1" : "top-full mt-1"
-                                    } z-30 w-36 bg-popover border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
+                                    } z-50 w-36 bg-popover border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
                                   >
                                     <button
                                       type="button"
