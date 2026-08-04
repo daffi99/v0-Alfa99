@@ -1396,7 +1396,11 @@ export function ScriptSheetModal({
                                       className="fixed inset-0 z-20"
                                       onClick={() => setOpenLineStatusDropdown(null)}
                                     />
-                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-30 w-36 min-w-[140px] bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                                    <div
+                                      className={`absolute left-1/2 -translate-x-1/2 ${
+                                        idx >= filteredLines.length - 6 ? "bottom-full mb-1" : "top-full mt-1"
+                                      } z-30 w-36 min-w-[140px] bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
+                                    >
                                       {SCRIPT_LINE_STATUSES.map((st) => {
                                         const style = STATUS_STYLE_MAP[st]
                                         const isSelected = line.status === st
@@ -1624,7 +1628,11 @@ export function ScriptSheetModal({
                                     className="fixed inset-0 z-20"
                                     onClick={() => setOpenActionDropdown(null)}
                                   />
-                                  <div className="absolute right-0 top-full mt-1 z-30 w-36 bg-popover border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                                  <div
+                                    className={`absolute right-0 ${
+                                      idx >= activeCharacterSummaries.length - 3 ? "bottom-full mb-1" : "top-full mt-1"
+                                    } z-30 w-36 bg-popover border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
+                                  >
                                     <button
                                       type="button"
                                       onClick={() => {
