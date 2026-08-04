@@ -52,11 +52,12 @@ export const SCRIPT_LINE_STATUSES: ScriptLineStatus[] = [
 ]
 
 export const STATUS_STYLE_MAP: Record<
-  ScriptLineStatus,
+  string,
   { label: string; bg: string; text: string; border: string }
 > = {
   Beluman: { label: "Beluman", bg: "bg-red-100", text: "text-red-700", border: "border-red-200" },
   Inputted: { label: "Inputted", bg: "bg-emerald-100", text: "text-emerald-800", border: "border-emerald-200" },
+  "No Revision": { label: "No Revision", bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-800 dark:text-emerald-300", border: "border-emerald-300 dark:border-emerald-800" },
   Missing: { label: "Missing", bg: "bg-red-700", text: "text-white", border: "border-red-800" },
   Broken: { label: "Broken", bg: "bg-purple-700", text: "text-white", border: "border-purple-800" },
   "VO Error": { label: "VO Error", bg: "bg-amber-200", text: "text-amber-900", border: "border-amber-300" },

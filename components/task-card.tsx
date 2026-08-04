@@ -170,11 +170,48 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
 
     const reports: Array<{
       id: string
-      status: ScriptLineStatus
+      status: string
       epSummary: string
       minEps: number
       isResolved: boolean
+      isCleanItem?: boolean
     }> = []
+
+    // Collect all episodes present in task or script lines
+    const allTaskEpsSet = new Set<string>()
+    if (task.episodes && task.episodes.length > 0) {
+      task.episodes.forEach((ep) => allTaskEpsSet.add(ep.number.toString().padStart(3, "0")))
+    }
+    localScriptData.lines.forEach((line) => {
+      if (line.eps) allTaskEpsSet.add(line.eps.trim().padStart(3, "0"))
+    })
+
+    // Track episodes that have non-Inputted issues / revisions
+    const issueEpsSet = new Set<string>()
+    localScriptData.lines.forEach((line) => {
+      if (!line.character) return
+      const lineIssueStatus = line.previousStatus || line.status
+      if (lineIssueStatus && lineIssueStatus !== "Inputted") {
+        if (line.eps) issueEpsSet.add(line.eps.trim().padStart(3, "0"))
+      }
+    })
+
+    // Clean episodes (episodes without any revisions / issue lines)
+    const cleanEps = Array.from(allTaskEpsSet)
+      .filter((ep) => !issueEpsSet.has(ep))
+      .sort((a, b) => Number(a) - Number(b))
+
+    if (cleanEps.length > 0) {
+      const cleanEpsJoined = cleanEps.join(", ")
+      reports.push({
+        id: "no_revision_clean_eps",
+        status: "No Revision",
+        epSummary: `EP${cleanEpsJoined}`,
+        minEps: Number(cleanEps[0]),
+        isResolved: true,
+        isCleanItem: true,
+      })
+    }
 
     charStatusMap.forEach(({ character, status, epsSet, totalLines, inputtedLines }, groupKey) => {
       const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
@@ -197,8 +234,12 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       })
     })
 
-    return reports.sort((a, b) => a.minEps - b.minEps)
-  }, [localScriptData, localProgress.voReportChecks])
+    return reports.sort((a, b) => {
+      if (a.isCleanItem && !b.isCleanItem) return -1
+      if (!a.isCleanItem && b.isCleanItem) return 1
+      return a.minEps - b.minEps
+    })
+  }, [localScriptData, localProgress.voReportChecks, task.episodes])
 
   const handleToggleVoReportCheck = async (itemId: string) => {
     const currentChecks = (localProgress.voReportChecks as Record<string, boolean>) || {}
@@ -1024,7 +1065,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
         <div className="mb-3 bg-muted/20 p-2 rounded-lg border border-border/50">
           <div className="flex items-center justify-between border-b pb-1">
             <span className="text-[10px] font-bold text-foreground tracking-wide flex items-center gap-1">
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> VO Report Summary ({voReportSummaryItems.length})
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> Summary ({voReportSummaryItems.length})
             </span>
             <button
               onClick={(e) => {
@@ -1063,17 +1104,21 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                     </div>
                     <span
                       className={`font-mono text-foreground font-semibold leading-tight text-[9px] min-w-0 flex-1 ${
-                        isChecked ? "line-through text-muted-foreground/60" : ""
+                        isChecked && !item.isCleanItem ? "line-through text-muted-foreground/60" : ""
                       }`}
                     >
                       {item.epSummary}
                     </span>
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => handleToggleVoReportCheck(item.id)}
-                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-600 flex-shrink-0 ml-1"
-                    />
+                    {item.isCleanItem ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 ml-1" />
+                    ) : (
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleVoReportCheck(item.id)}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer accent-emerald-600 flex-shrink-0 ml-1"
+                      />
+                    )}
                   </label>
                 )
               })}
