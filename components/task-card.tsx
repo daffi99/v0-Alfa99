@@ -1239,6 +1239,13 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
           isOpen={isWizardOpen}
           onClose={() => setIsWizardOpen(false)}
           taskTitle={task.title}
+          episodeRanges={
+            task.episodeRanges && task.episodeRanges.length > 0
+              ? task.episodeRanges
+              : task.episodes && task.episodes.length > 0
+              ? `${task.episodes[0]?.number.toString().padStart(3, "0")}-${task.episodes[task.episodes.length - 1]?.number.toString().padStart(3, "0")}`
+              : ""
+          }
           initialData={localScriptData}
           onComplete={(data) => {
             handleSaveScriptData(data)

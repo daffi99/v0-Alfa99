@@ -45,6 +45,7 @@ interface ScriptWizardModalProps {
   isOpen: boolean
   onClose: () => void
   taskTitle: string
+  episodeRanges?: string[] | string
   initialData?: ScriptData
   onComplete: (data: ScriptData) => void
 }
@@ -133,9 +134,13 @@ export function ScriptWizardModal({
   isOpen,
   onClose,
   taskTitle,
+  episodeRanges,
   initialData,
   onComplete,
 }: ScriptWizardModalProps) {
+  const episodeRangeText = Array.isArray(episodeRanges)
+    ? episodeRanges.join(", ")
+    : episodeRanges || ""
   const [step, setStep] = useState<1 | 2>(1)
 
   // Step 1 Raw & Parsed
@@ -336,8 +341,14 @@ export function ScriptWizardModal({
               <h2 className="text-lg font-bold text-foreground">
                 Script Setup Wizard
               </h2>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                {taskTitle}
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-secondary font-medium text-foreground inline-flex items-center gap-1.5 border border-border/50">
+                <span>{taskTitle}</span>
+                {episodeRangeText && (
+                  <>
+                    <span className="text-muted-foreground/60">•</span>
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-400">{episodeRangeText.startsWith("EP") ? episodeRangeText : `EP ${episodeRangeText}`}</span>
+                  </>
+                )}
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
