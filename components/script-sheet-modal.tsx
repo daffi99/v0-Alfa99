@@ -1716,7 +1716,12 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse border rounded-md">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2.5 w-10 text-center text-muted-foreground font-semibold">No.</th>
+                      <th className="p-2.5 w-16 text-center text-muted-foreground font-semibold">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <input type="checkbox" disabled className="rounded border-muted-foreground/40 h-3.5 w-3.5 opacity-50 cursor-default" />
+                          <span>No.</span>
+                        </div>
+                      </th>
                       <th className="p-2.5 w-20">PS</th>
                       <th className="p-2.5 w-32">Character</th>
                       <th className="p-2.5 w-20 text-center">Count</th>
@@ -1737,8 +1742,11 @@ export function ScriptSheetModal({
                               : "bg-emerald-500/10 hover:bg-emerald-500/15"
                           }`}
                         >
-                          <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold">
-                            {idx + 1}
+                          <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <input type="checkbox" disabled className="rounded border-muted-foreground/40 h-3.5 w-3.5 opacity-50 cursor-default" />
+                              <span>{idx + 1}</span>
+                            </div>
                           </td>
                           <td className="p-2.5 font-mono">
                             <div className="flex items-center gap-2">
@@ -1883,7 +1891,12 @@ export function ScriptSheetModal({
                         <table className="w-full text-xs text-left border-collapse">
                           <thead className="bg-muted/60 text-muted-foreground text-[11px]">
                             <tr>
-                              <th className="p-2.5 w-10 text-center text-muted-foreground font-semibold">No.</th>
+                              <th className="p-2.5 w-16 text-center text-muted-foreground font-semibold">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <input type="checkbox" disabled className="rounded border-muted-foreground/40 h-3.5 w-3.5 opacity-50 cursor-default" />
+                                  <span>No.</span>
+                                </div>
+                              </th>
                               <th className="p-2.5 w-24">PS</th>
                               <th className="p-2.5">Character</th>
                               <th className="p-2.5 w-28 text-center">Count</th>
@@ -1895,8 +1908,11 @@ export function ScriptSheetModal({
                           <tbody className="divide-y opacity-75">
                             {unusedCharacterSummaries.map((cs, idx) => (
                               <tr key={idx} className="hover:bg-muted/20">
-                                <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold">
-                                  {idx + 1}
+                                <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold whitespace-nowrap">
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <input type="checkbox" disabled className="rounded border-muted-foreground/40 h-3.5 w-3.5 opacity-50 cursor-default" />
+                                    <span>{idx + 1}</span>
+                                  </div>
                                 </td>
                                 <td className="p-2.5 font-mono">
                                   <div className="flex items-center gap-2">
