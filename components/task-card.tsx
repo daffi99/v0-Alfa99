@@ -982,7 +982,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
           <div className="grid grid-cols-5 gap-1">
             {task.episodes.map((episode) => {
               const isEpUpdating = updatingEpisodeId === episode.id
-              const isEpChecked = episode.completed || isStepCompleted("completed")
+              const isEpChecked = !!episode.completed
               return (
                 <div
                   key={episode.id}
