@@ -469,7 +469,12 @@ export function ScriptSheetModal({
       const lineIssueStatus = line.previousStatus || line.status
       if (!lineIssueStatus || lineIssueStatus === "Inputted") return
 
-      const groupKey = `${targetChar.toLowerCase()}__${lineIssueStatus}`
+      const eps = (line.eps || "").trim()
+      const groupKey =
+        lineIssueStatus === "Beluman"
+          ? `${targetChar.toLowerCase()}__${lineIssueStatus}`
+          : `${targetChar.toLowerCase()}__${lineIssueStatus}__${eps}`
+
       const isResolved = line.status === "Inputted" || !!checkedVoReportKeys[groupKey]
 
       if (!charStatusMap.has(groupKey)) {
@@ -481,8 +486,8 @@ export function ScriptSheetModal({
         })
       }
 
-      if (line.eps) {
-        charStatusMap.get(groupKey)!.epsSet.add(line.eps.trim())
+      if (eps) {
+        charStatusMap.get(groupKey)!.epsSet.add(eps)
       }
     })
 
