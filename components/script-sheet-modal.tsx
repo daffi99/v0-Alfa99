@@ -196,6 +196,24 @@ export function ScriptSheetModal({
     lineText: "",
   })
 
+  // Custom Character Select Popover State in Add Line Modal
+  const [isAddLineCharSelectOpen, setIsAddLineCharSelectOpen] = useState(false)
+  const [addLineCharSearchQuery, setAddLineCharSearchQuery] = useState("")
+
+  const filteredAddLineCharacters = useMemo(() => {
+    const allChars = Array.from(
+      new Set(
+        [
+          ...data.masterArtists.map((ma) => ma.characterName),
+          ...data.lines.map((l) => l.character).filter(Boolean),
+        ].sort()
+      )
+    )
+    if (!addLineCharSearchQuery.trim()) return allChars
+    const q = addLineCharSearchQuery.toLowerCase()
+    return allChars.filter((c) => c.toLowerCase().includes(q))
+  }, [data.masterArtists, data.lines, addLineCharSearchQuery])
+
   // Save New Line
   const handleSaveAddLine = () => {
     if (!addLineModal.character || !addLineModal.lineText.trim()) return
@@ -2246,25 +2264,70 @@ export function ScriptSheetModal({
                   <label className="block font-semibold text-foreground mb-1">
                     Character Name <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={addLineModal.character}
-                    onChange={(e) => setAddLineModal({ ...addLineModal, character: e.target.value })}
-                    className="w-full h-9 px-3 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary font-medium"
-                  >
-                    <option value="">Select Character...</option>
-                    {Array.from(
-                      new Set(
-                        [
-                          ...data.masterArtists.map((ma) => ma.characterName),
-                          ...data.lines.map((l) => l.character).filter(Boolean),
-                        ].sort()
-                      )
-                    ).map((charName) => (
-                      <option key={charName} value={charName}>
-                        {charName}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddLineCharSelectOpen(!isAddLineCharSelectOpen)}
+                      className="w-full h-9 px-3 text-xs rounded-md border border-input bg-background text-foreground hover:bg-muted/50 flex items-center justify-between font-medium cursor-pointer transition-colors shadow-2xs"
+                    >
+                      <span className={addLineModal.character ? "font-bold text-foreground" : "text-muted-foreground"}>
+                        {addLineModal.character || "Select Character..."}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                    </button>
+
+                    {isAddLineCharSelectOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-50"
+                          onClick={() => setIsAddLineCharSelectOpen(false)}
+                        />
+                        <div className="absolute left-0 right-0 top-full mt-1 z-55 bg-popover border border-border rounded-lg shadow-2xl p-1.5 flex flex-col space-y-1.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                          <div className="relative p-0.5">
+                            <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-2.5" />
+                            <input
+                              type="text"
+                              placeholder="Search character..."
+                              value={addLineCharSearchQuery}
+                              onChange={(e) => setAddLineCharSearchQuery(e.target.value)}
+                              className="w-full h-7 pl-7 pr-2 text-xs rounded border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                              autoFocus
+                            />
+                          </div>
+
+                          <div className="overflow-y-auto space-y-0.5 max-h-48 pr-0.5">
+                            {filteredAddLineCharacters.map((charName) => {
+                              const isSelected = addLineModal.character === charName
+                              return (
+                                <button
+                                  key={charName}
+                                  type="button"
+                                  onClick={() => {
+                                    setAddLineModal({ ...addLineModal, character: charName })
+                                    setIsAddLineCharSelectOpen(false)
+                                    setAddLineCharSearchQuery("")
+                                  }}
+                                  className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                                    isSelected
+                                      ? "bg-primary text-primary-foreground font-bold"
+                                      : "text-foreground hover:bg-muted"
+                                  }`}
+                                >
+                                  <span>{charName}</span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
+                                </button>
+                              )
+                            })}
+                            {filteredAddLineCharacters.length === 0 && (
+                              <div className="p-3 text-center text-xs text-muted-foreground">
+                                No matching characters found
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Line Text */}
