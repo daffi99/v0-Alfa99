@@ -199,6 +199,16 @@ export function ScriptSheetModal({
     lineText: "",
   })
 
+  // Interactive UI checkboxes for Character Summary rows
+  const [uiCheckedRows, setUiCheckedRows] = useState<Record<string, boolean>>({})
+
+  const toggleUiRowCheck = (key: string) => {
+    setUiCheckedRows((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
+  }
+
   // Custom Character Select Popover State in Add Line Modal
   const [isAddLineCharSelectOpen, setIsAddLineCharSelectOpen] = useState(false)
   const [addLineCharSearchQuery, setAddLineCharSearchQuery] = useState("")
@@ -1718,7 +1728,22 @@ export function ScriptSheetModal({
                     <tr>
                       <th className="p-2.5 w-16 text-center text-muted-foreground font-semibold">
                         <div className="flex items-center justify-center gap-1.5">
-                          <input type="checkbox" disabled className="rounded border-muted-foreground/40 h-3.5 w-3.5 opacity-50 cursor-default" />
+                          <input
+                            type="checkbox"
+                            checked={
+                              activeCharacterSummaries.length > 0 &&
+                              activeCharacterSummaries.every((cs) => !!uiCheckedRows[cs.character])
+                            }
+                            onChange={(e) => {
+                              const isChecked = e.target.checked
+                              const updated = { ...uiCheckedRows }
+                              activeCharacterSummaries.forEach((cs) => {
+                                updated[cs.character] = isChecked
+                              })
+                              setUiCheckedRows(updated)
+                            }}
+                            className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer accent-primary"
+                          />
                           <span>No.</span>
                         </div>
                       </th>
@@ -1744,7 +1769,12 @@ export function ScriptSheetModal({
                         >
                           <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold whitespace-nowrap">
                             <div className="flex items-center justify-center gap-1.5">
-                              <input type="checkbox" disabled className="rounded border-muted-foreground/40 h-3.5 w-3.5 opacity-50 cursor-default" />
+                              <input
+                                type="checkbox"
+                                checked={!!uiCheckedRows[cs.character]}
+                                onChange={() => toggleUiRowCheck(cs.character)}
+                                className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer accent-primary"
+                              />
                               <span>{idx + 1}</span>
                             </div>
                           </td>
@@ -1893,7 +1923,22 @@ export function ScriptSheetModal({
                             <tr>
                               <th className="p-2.5 w-16 text-center text-muted-foreground font-semibold">
                                 <div className="flex items-center justify-center gap-1.5">
-                                  <input type="checkbox" disabled className="rounded border-muted-foreground/40 h-3.5 w-3.5 opacity-50 cursor-default" />
+                                  <input
+                                    type="checkbox"
+                                    checked={
+                                      unusedCharacterSummaries.length > 0 &&
+                                      unusedCharacterSummaries.every((cs) => !!uiCheckedRows[`unused_${cs.character}`])
+                                    }
+                                    onChange={(e) => {
+                                      const isChecked = e.target.checked
+                                      const updated = { ...uiCheckedRows }
+                                      unusedCharacterSummaries.forEach((cs) => {
+                                        updated[`unused_${cs.character}`] = isChecked
+                                      })
+                                      setUiCheckedRows(updated)
+                                    }}
+                                    className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer accent-primary"
+                                  />
                                   <span>No.</span>
                                 </div>
                               </th>
@@ -1910,7 +1955,12 @@ export function ScriptSheetModal({
                               <tr key={idx} className="hover:bg-muted/20">
                                 <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold whitespace-nowrap">
                                   <div className="flex items-center justify-center gap-1.5">
-                                    <input type="checkbox" disabled className="rounded border-muted-foreground/40 h-3.5 w-3.5 opacity-50 cursor-default" />
+                                    <input
+                                      type="checkbox"
+                                      checked={!!uiCheckedRows[`unused_${cs.character}`]}
+                                      onChange={() => toggleUiRowCheck(`unused_${cs.character}`)}
+                                      className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer accent-primary"
+                                    />
                                     <span>{idx + 1}</span>
                                   </div>
                                 </td>
