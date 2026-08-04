@@ -151,12 +151,20 @@ export function ScriptSheetModal({
   // Copy indicator state
   const [copiedReport, setCopiedReport] = useState(false)
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null)
+  const [copiedCharName, setCopiedCharName] = useState<string | null>(null)
 
   // Copy single VOA Report line
   const handleCopySingleReportLine = (text: string, idx: number) => {
     navigator.clipboard.writeText(text)
     setCopiedRowIndex(idx)
     setTimeout(() => setCopiedRowIndex(null), 2000)
+  }
+
+  // Copy character name helper
+  const handleCopyCharName = (charName: string) => {
+    navigator.clipboard.writeText(charName)
+    setCopiedCharName(charName)
+    setTimeout(() => setCopiedCharName(null), 2000)
   }
 
   // Single-Column PS Paste Modal State
@@ -1668,7 +1676,21 @@ export function ScriptSheetModal({
                     {data.masterArtists.map((ma, idx) => (
                       <tr key={idx} className="hover:bg-muted/40 transition-colors">
                         <td className="p-2.5 font-semibold text-foreground">
-                          {ma.characterName}
+                          <div className="flex items-center gap-1.5 group">
+                            <span>{ma.characterName}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyCharName(ma.characterName)}
+                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors cursor-pointer opacity-70 group-hover:opacity-100"
+                              title={`Copy "${ma.characterName}"`}
+                            >
+                              {copiedCharName === ma.characterName ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
                         </td>
                         <td className="p-2.5 font-medium text-emerald-700">
                           {ma.finalArtist}
@@ -1798,7 +1820,21 @@ export function ScriptSheetModal({
                             </div>
                           </td>
                           <td className="p-2.5 font-bold text-foreground">
-                            <span>{cs.character}</span>
+                            <div className="flex items-center gap-1.5 group">
+                              <span>{cs.character}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCharName(cs.character)}
+                                className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors cursor-pointer opacity-70 group-hover:opacity-100"
+                                title={`Copy "${cs.character}"`}
+                              >
+                                {copiedCharName === cs.character ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
                           </td>
                           <td className="p-2.5 text-center font-bold font-mono text-xs text-primary bg-primary/5">
                             {cs.linesCount}
@@ -1977,7 +2013,23 @@ export function ScriptSheetModal({
                                     <span>{cs.ps}</span>
                                   </div>
                                 </td>
-                                <td className="p-2.5 font-medium text-muted-foreground">{cs.character}</td>
+                                <td className="p-2.5 font-medium text-muted-foreground">
+                                  <div className="flex items-center gap-1.5 group">
+                                    <span>{cs.character}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyCharName(cs.character)}
+                                      className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors cursor-pointer opacity-70 group-hover:opacity-100"
+                                      title={`Copy "${cs.character}"`}
+                                    >
+                                      {copiedCharName === cs.character ? (
+                                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                      ) : (
+                                        <Copy className="w-3.5 h-3.5" />
+                                      )}
+                                    </button>
+                                  </div>
+                                </td>
                                 <td className="p-2.5 text-center font-mono text-muted-foreground">0</td>
                                 <td className="p-2.5 text-muted-foreground">{cs.actor}</td>
                                 <td className="p-2.5 font-mono text-muted-foreground">-</td>
