@@ -24,7 +24,7 @@ import {
   AlertTriangle,
   RotateCcw,
 } from "lucide-react"
-import type { ScriptData, ScriptLine, MasterArtistMapping, ScriptLineStatus } from "./script-wizard-modal"
+import { normalizeMultilinesInQuotes, type ScriptData, type ScriptLine, type MasterArtistMapping, type ScriptLineStatus } from "./script-wizard-modal"
 
 interface ScriptSheetModalProps {
   isOpen: boolean
@@ -595,10 +595,12 @@ export function ScriptSheetModal({
   const handleApplySingleColumnVoError = () => {
     if (!voErrorPasteText) return
 
-    const voLines = voErrorPasteText
-      .replace(/\r\n/g, "\n")
-      .split("\n")
-      .map((v) => v.trim())
+    const voLines = normalizeMultilinesInQuotes(voErrorPasteText).map((v) => {
+      let val = v.trim()
+      // Strip outer quotes exported from Google Sheets
+      val = val.replace(/^["']|["']$/g, "").trim()
+      return val
+    })
 
     if (voLines.length === 0) return
 
@@ -606,14 +608,18 @@ export function ScriptSheetModal({
       if (idx < voLines.length) {
         const val = voLines[idx]
         const cleanNote =
-          val && val !== "-" && val.toLowerCase() !== "null" && val.toLowerCase() !== "undefined"
+          val &&
+          val !== "-" &&
+          val !== '""' &&
+          val.toLowerCase() !== "null" &&
+          val.toLowerCase() !== "undefined"
             ? val
             : undefined
 
         let newStatus = line.status
         if (cleanNote) {
           newStatus = "VO Error" as ScriptLineStatus
-        } else if (line.status === "VO Error" && !cleanNote) {
+        } else {
           newStatus = "Inputted" as ScriptLineStatus
         }
 
