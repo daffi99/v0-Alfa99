@@ -1542,6 +1542,7 @@ export function ScriptSheetModal({
                           />
                         </div>
                       </th>
+                      <th className="p-2.5 w-10 text-center text-muted-foreground font-semibold">No.</th>
                       <th className="p-2.5 w-20">PS</th>
                       <th className="p-2.5 w-32">Character</th>
                       <th className="p-2.5 w-20 text-center">Count</th>
@@ -1567,6 +1568,9 @@ export function ScriptSheetModal({
                               className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
                             />
                           ) : null}
+                        </td>
+                        <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold">
+                          {idx + 1}
                         </td>
                         <td className="p-2.5 font-mono">
                           {cs.ps !== "-" ? (
@@ -1654,7 +1658,7 @@ export function ScriptSheetModal({
                     ))}
                     {activeCharacterSummaries.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={8} className="p-8 text-center text-muted-foreground">
                           No active characters with lines.
                         </td>
                       </tr>
@@ -1687,6 +1691,7 @@ export function ScriptSheetModal({
                           <thead className="bg-muted/60 text-muted-foreground text-[11px]">
                             <tr>
                               <th className="p-2.5 w-14 text-center">Check</th>
+                              <th className="p-2.5 w-10 text-center text-muted-foreground font-semibold">No.</th>
                               <th className="p-2.5 w-24">PS</th>
                               <th className="p-2.5">Character</th>
                               <th className="p-2.5 w-28 text-center">Count</th>
@@ -1707,6 +1712,9 @@ export function ScriptSheetModal({
                                       className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
                                     />
                                   ) : null}
+                                </td>
+                                <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold">
+                                  {idx + 1}
                                 </td>
                                 <td className="p-2.5 font-mono">{cs.ps}</td>
                                 <td className="p-2.5 font-medium text-muted-foreground">{cs.character}</td>
