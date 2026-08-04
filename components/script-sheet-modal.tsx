@@ -299,7 +299,7 @@ export function ScriptSheetModal({
       // Evenly space hue angles across 360° based on total number of characters (e.g. 16 characters = 16 colors)
       const hue = Math.round((idx * 360) / total)
       map[char] = {
-        backgroundColor: `hsla(${hue}, 65%, 50%, 0.08)`,
+        backgroundColor: `hsla(${hue}, 75%, 48%, 0.20)`,
       }
     })
     return map
