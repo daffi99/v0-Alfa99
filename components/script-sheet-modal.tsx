@@ -322,9 +322,14 @@ export function ScriptSheetModal({
       })
     })
 
-    // Count line occurrences
+    // Count line occurrences (only count Inputted and Beluman statuses, skip all other statuses in this tab)
     data.lines.forEach((line) => {
       if (!line.character) return
+      const status = line.status || "Beluman"
+      if (status !== "Inputted" && status !== "Beluman") {
+        return // Skip lines with statuses other than Inputted and Beluman
+      }
+
       const charKey = line.character.trim().toLowerCase()
       if (!summaryMap.has(charKey)) {
         summaryMap.set(charKey, {
@@ -339,7 +344,7 @@ export function ScriptSheetModal({
       }
       const entry = summaryMap.get(charKey)!
       entry.linesCount += 1
-      if (line.status === "Inputted") {
+      if (status === "Inputted") {
         entry.inputtedLinesCount += 1
       } else {
         entry.belumanLinesCount += 1
@@ -1524,8 +1529,9 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse border rounded-md">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2.5 w-10 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                      <th className="p-2.5 w-10 text-center text-muted-foreground font-semibold">No.</th>
+                      <th className="p-2.5 w-24">
+                        <div className="flex items-center gap-1.5">
                           <input
                             type="checkbox"
                             checked={
@@ -1540,10 +1546,9 @@ export function ScriptSheetModal({
                                 : "Check All"
                             }
                           />
+                          <span>PS</span>
                         </div>
                       </th>
-                      <th className="p-2.5 w-10 text-center text-muted-foreground font-semibold">No.</th>
-                      <th className="p-2.5 w-20">PS</th>
                       <th className="p-2.5 w-32">Character</th>
                       <th className="p-2.5 w-20 text-center">Count</th>
                       <th className="p-2.5 w-28">Actor</th>
@@ -1552,52 +1557,73 @@ export function ScriptSheetModal({
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {activeCharacterSummaries.map((cs, idx) => (
-                      <tr
-                        key={idx}
-                        className={`hover:bg-muted/40 transition-colors ${
-                          cs.isChecked ? "bg-emerald-50/30" : ""
-                        }`}
-                      >
-                        <td className="p-2.5 text-center">
-                          {cs.ps !== "-" && Boolean(cs.ps) ? (
-                            <input
-                              type="checkbox"
-                              checked={cs.isChecked}
-                              onChange={() => handleToggleCharCheck(cs.character)}
-                              className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
-                            />
-                          ) : null}
-                        </td>
-                        <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold">
-                          {idx + 1}
-                        </td>
-                        <td className="p-2.5 font-mono">
-                          {cs.ps !== "-" ? (
-                            <span className="text-xs px-2 py-0.5 rounded bg-secondary font-mono">
-                              {cs.ps}
-                            </span>
-                          ) : (
-                            <span className="text-gray-300">-</span>
-                          )}
-                        </td>
-                        <td className="p-2.5 font-bold text-foreground">
-                          {cs.character}
-                        </td>
-                        <td className="p-2.5 text-center font-bold font-mono text-xs text-primary bg-primary/5">
-                          {cs.linesCount}
-                        </td>
-                        <td className="p-2.5 font-medium text-emerald-700">
-                          {cs.actor}
-                        </td>
-                        <td className="p-2.5 font-mono text-[11px] text-muted-foreground">
-                          {cs.episodesList || "None"}
-                        </td>
-                        <td className="p-2.5 text-right pr-3">
-                          <div className="flex items-center justify-end gap-2">
-                            <span className="text-[10px] font-mono text-muted-foreground bg-muted/60 px-2 py-1 rounded border border-border/60">
-                              <b className="text-emerald-700">{cs.inputtedLinesCount}</b>/<b className="text-muted-foreground">{cs.linesCount}</b> In
-                            </span>
+                    {activeCharacterSummaries.map((cs, idx) => {
+                      const isBeluman = cs.belumanLinesCount > 0
+                      return (
+                        <tr
+                          key={idx}
+                          className={`hover:bg-muted/40 transition-colors ${
+                            cs.isChecked ? "bg-emerald-50/30" : ""
+                          }`}
+                        >
+                          <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold">
+                            {idx + 1}
+                          </td>
+                          <td className="p-2.5 font-mono">
+                            <div className="flex items-center gap-2">
+                              {cs.ps !== "-" && Boolean(cs.ps) ? (
+                                <input
+                                  type="checkbox"
+                                  checked={cs.isChecked}
+                                  onChange={() => handleToggleCharCheck(cs.character)}
+                                  className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                />
+                              ) : null}
+                              {cs.ps !== "-" ? (
+                                <span className="text-xs px-2 py-0.5 rounded bg-secondary font-mono">
+                                  {cs.ps}
+                                </span>
+                              ) : (
+                                <span className="text-gray-300">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-2.5 font-bold text-foreground">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                                  isBeluman ? "bg-red-500" : "bg-emerald-500"
+                                }`}
+                                title={isBeluman ? "Beluman (Pending)" : "Inputted (Complete)"}
+                              />
+                              <span>{cs.character}</span>
+                            </div>
+                          </td>
+                          <td className="p-2.5 text-center font-bold font-mono text-xs text-primary bg-primary/5">
+                            {cs.linesCount}
+                          </td>
+                          <td className="p-2.5 font-medium text-emerald-700">
+                            {cs.actor}
+                          </td>
+                          <td className="p-2.5 font-mono text-[11px] text-muted-foreground">
+                            {cs.episodesList || "None"}
+                          </td>
+                          <td className="p-2.5 text-right pr-3">
+                            <div className="flex items-center justify-end gap-2">
+                              <span
+                                className={`text-[10px] font-mono flex items-center gap-1.5 px-2 py-1 rounded border font-medium ${
+                                  isBeluman
+                                    ? "bg-red-50/60 text-red-700 border-red-200"
+                                    : "bg-emerald-50/60 text-emerald-700 border-emerald-200"
+                                }`}
+                              >
+                                <span
+                                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                    isBeluman ? "bg-red-500" : "bg-emerald-500"
+                                  }`}
+                                />
+                                <b>{cs.inputtedLinesCount}</b>/<b>{cs.linesCount}</b> In
+                              </span>
                             <div className="relative inline-block text-left">
                               <button
                                 type="button"
@@ -1655,7 +1681,7 @@ export function ScriptSheetModal({
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    )})}
                     {activeCharacterSummaries.length === 0 && (
                       <tr>
                         <td colSpan={8} className="p-8 text-center text-muted-foreground">
@@ -1690,7 +1716,6 @@ export function ScriptSheetModal({
                         <table className="w-full text-xs text-left border-collapse">
                           <thead className="bg-muted/60 text-muted-foreground text-[11px]">
                             <tr>
-                              <th className="p-2.5 w-14 text-center">Check</th>
                               <th className="p-2.5 w-10 text-center text-muted-foreground font-semibold">No.</th>
                               <th className="p-2.5 w-24">PS</th>
                               <th className="p-2.5">Character</th>
@@ -1703,20 +1728,22 @@ export function ScriptSheetModal({
                           <tbody className="divide-y opacity-75">
                             {unusedCharacterSummaries.map((cs, idx) => (
                               <tr key={idx} className="hover:bg-muted/20">
-                                <td className="p-2.5 text-center">
-                                  {cs.ps !== "-" && Boolean(cs.ps) ? (
-                                    <input
-                                      type="checkbox"
-                                      checked={cs.isChecked}
-                                      onChange={() => handleToggleCharCheck(cs.character)}
-                                      className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
-                                    />
-                                  ) : null}
-                                </td>
                                 <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold">
                                   {idx + 1}
                                 </td>
-                                <td className="p-2.5 font-mono">{cs.ps}</td>
+                                <td className="p-2.5 font-mono">
+                                  <div className="flex items-center gap-2">
+                                    {cs.ps !== "-" && Boolean(cs.ps) ? (
+                                      <input
+                                        type="checkbox"
+                                        checked={cs.isChecked}
+                                        onChange={() => handleToggleCharCheck(cs.character)}
+                                        className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                      />
+                                    ) : null}
+                                    <span>{cs.ps}</span>
+                                  </div>
+                                </td>
                                 <td className="p-2.5 font-medium text-muted-foreground">{cs.character}</td>
                                 <td className="p-2.5 text-center font-mono text-muted-foreground">0</td>
                                 <td className="p-2.5 text-muted-foreground">{cs.actor}</td>
