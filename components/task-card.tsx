@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react"
 import dynamic from "next/dynamic"
 import type { Task } from "./kanban-board"
-import { CheckCircle2, Circle, Pencil, Loader2, ChevronDown, ChevronUp, ChevronRight, Trash2, ArrowRightLeft, FileSpreadsheet, FileText } from "lucide-react"
+import { CheckCircle2, Circle, Pencil, Loader2, ChevronDown, ChevronUp, ChevronRight, Trash2, ArrowRightLeft, FileSpreadsheet, FileText, Check } from "lucide-react"
 import { renderBlockNoteContent } from "./blocknote-note"
 import { ScriptWizardModal, type ScriptData, type ScriptLineStatus } from "./script-wizard-modal"
 import { ScriptSheetModal, STATUS_STYLE_MAP } from "./script-sheet-modal"
@@ -1048,8 +1048,8 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
         </div>
       )}
 
-      {/* Quick Summary section (below episode checklist) */}
-      {!shouldCollapse && !isTodayTask && (voReportSummaryItems.length > 0 || Boolean(cleanEpsText)) && (
+      {/* Quick Summary section (below episode checklist - only shown if issue summary items exist) */}
+      {!shouldCollapse && !isTodayTask && voReportSummaryItems.length > 0 && (
         <div className="mb-3 bg-muted/20 p-2 rounded-lg border border-border/50">
           <div className="flex items-center justify-between border-b pb-1 gap-1">
             <div className="flex items-center gap-1.5 flex-wrap min-w-0">
@@ -1058,8 +1058,8 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
               </span>
               {cleanEpsText && (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-mono text-[9px] font-bold border border-emerald-300 dark:border-emerald-800 whitespace-nowrap">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                  No Revision: {cleanEpsText}
+                  <Check className="w-3 h-3 text-emerald-600 flex-shrink-0 stroke-[3]" />
+                  {cleanEpsText}
                 </span>
               )}
             </div>
