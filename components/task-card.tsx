@@ -1062,8 +1062,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> Summary
               </span>
               {cleanEpsText && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-mono text-[8px] font-bold border border-emerald-300 dark:border-emerald-800 whitespace-nowrap">
-                  <Check className="w-2.5 h-2.5 text-emerald-600 flex-shrink-0 stroke-[3]" />
+                <span className="inline-flex items-center px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-mono text-[9px] font-bold border border-emerald-300 dark:border-emerald-800 whitespace-nowrap">
                   {cleanEpsText}
                 </span>
               )}
