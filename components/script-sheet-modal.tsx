@@ -167,6 +167,47 @@ export function ScriptSheetModal({
     setTimeout(() => setCopiedCharName(null), 2000)
   }
 
+  // Column Widths for Script Lines Table
+  const [colWidths, setColWidths] = useState<{
+    character: number
+    scriptText: number
+    voErrorNote: number
+  }>({
+    character: 120,
+    scriptText: 450,
+    voErrorNote: 140,
+  })
+
+  // Resize handler for table columns
+  const handleMouseDownResize = (
+    colKey: "character" | "scriptText" | "voErrorNote",
+    e: React.MouseEvent
+  ) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const startX = e.clientX
+    const startWidth = colWidths[colKey]
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX
+      const minWidth = colKey === "character" ? 70 : colKey === "scriptText" ? 150 : 80
+      const newWidth = Math.max(minWidth, startWidth + deltaX)
+      setColWidths((prev) => ({
+        ...prev,
+        [colKey]: newWidth,
+      }))
+    }
+
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove)
+      window.removeEventListener("mouseup", handleMouseUp)
+    }
+
+    window.addEventListener("mousemove", handleMouseMove)
+    window.addEventListener("mouseup", handleMouseUp)
+  }
+
   // Single-Column PS Paste Modal State
   const [isPsModalOpen, setIsPsModalOpen] = useState(false)
   const [psPasteText, setPsPasteText] = useState("")
@@ -1394,16 +1435,58 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2 w-10 text-center">Eps</th>
-                      <th className="p-2 w-16 text-center">Start</th>
-                      <th className="p-2 w-16 text-center">End</th>
-                      <th className="p-2 w-16 text-center">Batch</th>
-                      <th className="p-2 w-16">Character</th>
-                      <th className="p-2">Script file (Lines)</th>
+                      <th className="p-2 w-10 text-center border-r">Eps</th>
+                      <th className="p-2 w-16 text-center border-r">Start</th>
+                      <th className="p-2 w-16 text-center border-r">End</th>
+                      <th className="p-2 w-16 text-center border-r">Batch</th>
+                      <th
+                        style={{ width: `${colWidths.character}px`, minWidth: `${colWidths.character}px` }}
+                        className="p-2 relative select-none group border-r"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>Character</span>
+                          <div
+                            onMouseDown={(e) => handleMouseDownResize("character", e)}
+                            className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-primary/40 active:bg-primary z-20 flex items-center justify-center transition-colors"
+                            title="Drag to resize Character column"
+                          >
+                            <div className="w-0.5 h-4 bg-muted-foreground/30 group-hover:bg-primary/60 rounded-full" />
+                          </div>
+                        </div>
+                      </th>
+                      <th
+                        style={{ width: `${colWidths.scriptText}px`, minWidth: `${colWidths.scriptText}px` }}
+                        className="p-2 relative select-none group border-r"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>Script file (Lines)</span>
+                          <div
+                            onMouseDown={(e) => handleMouseDownResize("scriptText", e)}
+                            className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-primary/40 active:bg-primary z-20 flex items-center justify-center transition-colors"
+                            title="Drag to resize Script Lines column"
+                          >
+                            <div className="w-0.5 h-4 bg-muted-foreground/30 group-hover:bg-primary/60 rounded-full" />
+                          </div>
+                        </div>
+                      </th>
                       {isCaptionTask && (
-                        <th className="p-2 w-28 text-red-600 font-semibold text-[10px]">VO Error Note</th>
+                        <th
+                          style={{ width: `${colWidths.voErrorNote}px`, minWidth: `${colWidths.voErrorNote}px` }}
+                          className="p-2 relative select-none group border-r text-red-600 font-semibold text-[10px]"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>VO Error Note</span>
+                            <div
+                              onMouseDown={(e) => handleMouseDownResize("voErrorNote", e)}
+                              className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-red-400/40 active:bg-red-500 z-20 flex items-center justify-center transition-colors"
+                              title="Drag to resize VO Error Note column"
+                            >
+                              <div className="w-0.5 h-4 bg-red-300 rounded-full" />
+                            </div>
+                          </div>
+                        </th>
                       )}
-                      <th className="p-2 w-24 text-center">Status</th>
+                      <th className="p-2 w-24 text-center border-r">Status</th>
                       <th className="p-2 w-10 text-center">Action</th>
                     </tr>
                   </thead>
@@ -1470,14 +1553,25 @@ export function ScriptSheetModal({
                                 <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
                                   {line.batchTime || "-"}
                                 </td>
-                                <td className="p-2 border-r font-semibold text-[10px] whitespace-nowrap truncate max-w-[80px]" title={line.character}>
+                                <td
+                                  style={{ width: `${colWidths.character}px`, minWidth: `${colWidths.character}px`, maxWidth: `${colWidths.character}px` }}
+                                  className="p-2 border-r font-semibold text-[10px] whitespace-nowrap truncate overflow-hidden"
+                                  title={line.character}
+                                >
                                   {line.character}
                                 </td>
-                                <td className="p-2 border-r whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed font-medium">
+                                <td
+                                  style={{ width: `${colWidths.scriptText}px`, minWidth: `${colWidths.scriptText}px`, maxWidth: `${colWidths.scriptText}px` }}
+                                  className="p-2 border-r whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed font-medium"
+                                  title={displayLineText}
+                                >
                                   {displayLineText}
                                 </td>
                                 {isCaptionTask && (
-                                  <td className="p-2 border-r text-[10px] text-red-600 font-semibold">
+                                  <td
+                                    style={{ width: `${colWidths.voErrorNote}px`, minWidth: `${colWidths.voErrorNote}px`, maxWidth: `${colWidths.voErrorNote}px` }}
+                                    className="p-2 border-r text-[10px] text-red-600 font-semibold"
+                                  >
                                     <div className="flex items-center gap-1">
                                       <input
                                         type="text"
