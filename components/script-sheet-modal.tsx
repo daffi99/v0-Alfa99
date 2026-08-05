@@ -2329,20 +2329,20 @@ export function ScriptSheetModal({
                         </td>
                         <td className="p-2.5 whitespace-nowrap">
                           {item.startTimeFormatted !== "-" ? (
-                            <span className={`px-2 py-0.5 rounded bg-slate-100 text-slate-900 border border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700 font-mono font-bold text-[11px] inline-block shadow-2xs ${item.isResolved ? "opacity-50 line-through" : ""}`}>
+                            <span className={`px-2 py-0.5 rounded bg-slate-100 text-slate-900 border border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700 font-sans font-bold text-[11px] inline-block shadow-2xs ${item.isResolved ? "opacity-50 line-through" : ""}`}>
                               {item.startTimeFormatted}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground/50 font-mono text-xs">-</span>
+                            <span className="text-muted-foreground/50 font-sans text-xs">-</span>
                           )}
                         </td>
                         <td className="p-2.5 whitespace-nowrap">
                           {item.batchTimeFormatted !== "-" ? (
-                            <span className={`px-2 py-0.5 rounded bg-slate-100 text-slate-900 border border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700 font-mono font-bold text-[11px] inline-block shadow-2xs ${item.isResolved ? "opacity-50 line-through" : ""}`}>
+                            <span className={`px-2 py-0.5 rounded bg-slate-100 text-slate-900 border border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700 font-sans font-bold text-[11px] inline-block shadow-2xs ${item.isResolved ? "opacity-50 line-through" : ""}`}>
                               {item.batchTimeFormatted}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground/50 font-mono text-xs">-</span>
+                            <span className="text-muted-foreground/50 font-sans text-xs">-</span>
                           )}
                         </td>
                         <td className="p-2.5 font-medium text-foreground">
