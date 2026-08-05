@@ -2345,14 +2345,14 @@ export function ScriptSheetModal({
                             <span className="text-muted-foreground/50 font-mono text-xs">-</span>
                           )}
                         </td>
-                        <td className="p-2">
-                          <div className={`flex items-center justify-between gap-2 p-1.5 px-2.5 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 group ${item.isResolved ? "opacity-60" : ""}`}>
-                            <span className={`select-all font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 truncate ${item.isResolved ? "line-through text-muted-foreground" : ""}`}>
+                        <td className="p-2.5 font-medium text-foreground">
+                          <div className="flex items-center justify-between gap-2 group">
+                            <span className={`select-all font-mono text-xs ${item.isResolved ? "line-through text-muted-foreground/60" : ""}`}>
                               {item.reportString}
                             </span>
                             <button
                               onClick={() => handleCopySingleReportLine(item.reportString, idx)}
-                              className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 rounded transition-colors flex-shrink-0 cursor-pointer"
+                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded transition-colors flex-shrink-0 cursor-pointer"
                               title="Copy this report line"
                             >
                               {copiedRowIndex === idx ? (
