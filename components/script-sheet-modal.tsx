@@ -601,6 +601,8 @@ export function ScriptSheetModal({
         character: string
         status: ScriptLineStatus
         epsSet: Set<string>
+        startTimeSet: Set<string>
+        batchTimeSet: Set<string>
         isResolved: boolean
       }
     >()
@@ -633,12 +635,21 @@ export function ScriptSheetModal({
           character: targetChar,
           status: lineIssueStatus as ScriptLineStatus,
           epsSet: new Set<string>(),
+          startTimeSet: new Set<string>(),
+          batchTimeSet: new Set<string>(),
           isResolved,
         })
       }
 
+      const entry = charStatusMap.get(groupKey)!
       if (eps) {
-        charStatusMap.get(groupKey)!.epsSet.add(eps)
+        entry.epsSet.add(eps)
+      }
+      if (line.startTime && line.startTime.trim() && line.startTime.trim() !== "-") {
+        entry.startTimeSet.add(line.startTime.trim())
+      }
+      if (line.batchTime && line.batchTime.trim() && line.batchTime.trim() !== "-") {
+        entry.batchTimeSet.add(line.batchTime.trim())
       }
     })
 
@@ -650,11 +661,13 @@ export function ScriptSheetModal({
       actor: string
       reportString: string
       epSummary: string
+      startTimeFormatted: string
+      batchTimeFormatted: string
       minEps: number
       isResolved: boolean
     }> = []
 
-    charStatusMap.forEach(({ character, status, epsSet, isResolved }, groupKey) => {
+    charStatusMap.forEach(({ character, status, epsSet, startTimeSet, batchTimeSet, isResolved }, groupKey) => {
       const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
       const suffix = STATUS_REPORT_SUFFIX_MAP[status] || ""
       const sortedEps = Array.from(epsSet)
@@ -663,6 +676,9 @@ export function ScriptSheetModal({
 
       const epsJoined = sortedEps.length > 0 ? sortedEps.join(", ") : "000"
       const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
+
+      const startTimeFormatted = Array.from(startTimeSet).join(", ") || "-"
+      const batchTimeFormatted = Array.from(batchTimeSet).join(", ") || "-"
 
       const reportString = `${formattedTitle}_${epsJoined}_${character}/${actor}${suffix}`
       const epSummary = `EP${epsJoined} ${character}/${actor}`
@@ -675,6 +691,8 @@ export function ScriptSheetModal({
         actor,
         reportString,
         epSummary,
+        startTimeFormatted,
+        batchTimeFormatted,
         minEps,
         isResolved,
       })
@@ -2262,9 +2280,11 @@ export function ScriptSheetModal({
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
                       <th className="p-2.5 w-28">Status</th>
-                      <th className="p-2.5 w-36">Artist</th>
+                      <th className="p-2.5 w-32">Artist</th>
+                      <th className="p-2.5 w-24">Start Timing</th>
+                      <th className="p-2.5 w-24">Batch Timing</th>
                       <th className="p-2.5">Auto-Generated VOA Report String</th>
-                      <th className="p-2.5 w-40">EP Summary</th>
+                      <th className="p-2.5 w-36">EP Summary</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y font-mono text-[11px]">
@@ -2291,6 +2311,12 @@ export function ScriptSheetModal({
                         <td className={`p-2.5 font-semibold ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
                           {item.character}
                         </td>
+                        <td className={`p-2.5 font-mono text-[10px] whitespace-nowrap ${item.isResolved ? "line-through text-muted-foreground/60" : "text-muted-foreground font-medium"}`}>
+                          {item.startTimeFormatted}
+                        </td>
+                        <td className={`p-2.5 font-mono text-[10px] whitespace-nowrap ${item.isResolved ? "line-through text-muted-foreground/60" : "text-muted-foreground font-medium"}`}>
+                          {item.batchTimeFormatted}
+                        </td>
                         <td className="p-2.5 font-medium text-slate-800 bg-muted/20">
                           <div className="flex items-center justify-between gap-2 group">
                             <span className={`select-all font-mono ${item.isResolved ? "line-through text-muted-foreground/60" : ""}`}>
@@ -2316,7 +2342,7 @@ export function ScriptSheetModal({
                     ))}
                     {missingReports.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="p-12 text-center text-muted-foreground font-sans">
+                        <td colSpan={6} className="p-12 text-center text-muted-foreground font-sans">
                           <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                           <p className="font-semibold text-foreground">No Missing VOA Audio Files!</p>
                           <p className="text-xs mt-1">All script lines are marked as Inputted.</p>
