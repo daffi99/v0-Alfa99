@@ -910,6 +910,62 @@ export function ScriptSheetModal({
     setTimeout(() => setCopiedReport(false), 2000)
   }
 
+  // Toggle VOA Report checklist checkbox for a specific group
+  const handleToggleVoReportCheck = (groupKey: string) => {
+    const currentProgress: Record<string, any> =
+      localProgress && typeof localProgress === "object" ? { ...localProgress } : {}
+    const voChecks: Record<string, boolean> = {
+      ...(currentProgress.voReportChecks || {}),
+    }
+
+    const nextState = !voChecks[groupKey]
+    voChecks[groupKey] = nextState
+
+    const updatedProgress = { ...currentProgress, voReportChecks: voChecks }
+    setLocalProgress(updatedProgress)
+    if (onUpdateProgress) {
+      onUpdateProgress(updatedProgress)
+    }
+
+    const targetCharLower = groupKey.split("__")[0]
+    const targetStatus = groupKey.split("__")[1]
+
+    if (nextState) {
+      const updatedLines = data.lines.map((line) => {
+        const lineChar = (line.character || "").trim().toLowerCase()
+        const correctChar = (line.correctCharacter || "").trim().toLowerCase()
+        const targetChar = line.status === "Wrong Cast" && correctChar ? correctChar : lineChar
+        const issueStatus = (line.previousStatus || line.status).toLowerCase()
+
+        if (targetChar === targetCharLower && issueStatus === targetStatus.toLowerCase()) {
+          return {
+            ...line,
+            previousStatus: line.status !== "Inputted" ? line.status : line.previousStatus,
+            status: "Inputted" as ScriptLineStatus,
+          }
+        }
+        return line
+      })
+      updateData({ ...data, lines: updatedLines })
+    } else {
+      const updatedLines = data.lines.map((line) => {
+        const lineChar = (line.character || "").trim().toLowerCase()
+        const correctChar = (line.correctCharacter || "").trim().toLowerCase()
+        const targetChar = line.status === "Wrong Cast" && correctChar ? correctChar : lineChar
+        const issueStatus = (line.previousStatus || line.status).toLowerCase()
+
+        if (targetChar === targetCharLower && issueStatus === targetStatus.toLowerCase() && line.status === "Inputted") {
+          return {
+            ...line,
+            status: (line.previousStatus || "Beluman") as ScriptLineStatus,
+          }
+        }
+        return line
+      })
+      updateData({ ...data, lines: updatedLines })
+    }
+  }
+
   // Toggle character check in summary
   const handleToggleCharCheck = (charName: string) => {
     const currentChecks = { ...(data.checkedCharacters || {}) }
@@ -2296,6 +2352,7 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
+                      <th className="p-2.5 w-10 text-center">✓</th>
                       <th className="p-2.5 w-28">Status</th>
                       <th className="p-2.5 w-32">Artist</th>
                       <th className="p-2.5 w-36">Start Timing</th>
@@ -2306,6 +2363,15 @@ export function ScriptSheetModal({
                   <tbody className="divide-y font-mono text-[11px]">
                     {missingReports.map((item, idx) => (
                       <tr key={idx} className={`hover:bg-muted/30 transition-colors ${item.isResolved ? "bg-emerald-50/20" : ""}`}>
+                        <td className="p-2.5 text-center">
+                          <input
+                            type="checkbox"
+                            checked={item.isResolved}
+                            onChange={() => handleToggleVoReportCheck(item.groupKey)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                            title={item.isResolved ? "Mark as unresolved" : "Mark as resolved"}
+                          />
+                        </td>
                         <td className="p-2.5">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span
@@ -2367,7 +2433,7 @@ export function ScriptSheetModal({
                     ))}
                     {missingReports.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="p-12 text-center text-muted-foreground font-sans">
+                        <td colSpan={6} className="p-12 text-center text-muted-foreground font-sans">
                           <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                           <p className="font-semibold text-foreground">No Missing VOA Audio Files!</p>
                           <p className="text-xs mt-1">All script lines are marked as Inputted.</p>
