@@ -722,10 +722,7 @@ export function ScriptSheetModal({
   const handleApplySingleColumnPs = () => {
     if (!psPasteText) return
 
-    const psLines = psPasteText
-      .replace(/\r\n/g, "\n")
-      .split("\n")
-      .map((v) => v.trim())
+    const psLines = normalizeMultilinesInQuotes(psPasteText).map((v) => v.trim())
 
     if (psLines.length === 0) return
 

@@ -85,6 +85,35 @@ export function normalizeMultilinesInQuotes(rawText: string): string[] {
   return merged
 }
 
+// Helper to check if a token represents a PS (Pitch Shift / audio modifier) value
+export function isPsToken(token: string): boolean {
+  if (!token) return false
+  const trimmed = token.trim()
+  if (!trimmed) return false
+
+  // 1. Keyword match (Treble, Pitch, PS, Bass, Shift, Semitone, Speed, Tempo, Gain)
+  if (/\b(?:treble|pitch|ps|bass|shift|semitone|speed|tempo|gain)\b/i.test(trimmed)) {
+    return true
+  }
+
+  // 2. Numeric value (e.g. "0.97", "1.04", "-2", "+4", "0.9")
+  if (!isNaN(Number(trimmed))) {
+    return true
+  }
+
+  // 3. Signed number (e.g. "+4", "-2", "+3.5")
+  if (/^[+-]\d+(?:\.\d+)?$/.test(trimmed)) {
+    return true
+  }
+
+  // 4. Dual number / combined PS values (e.g. "0.97 1.04", "+4 0.97", "0.97 / +4", "0.97, +4")
+  if (/^[+-]?\d+(?:\.\d+)?[\s,/]+[+-]?\d+(?:\.\d+)?$/.test(trimmed)) {
+    return true
+  }
+
+  return false
+}
+
 // Helper to sanitize Voice Actor Name and extract PS value handling empty TSV columns (e.g. Sal\t\t\tRekha)
 export function sanitizeVoiceActorAndPsTokens(cols: string[]) {
   const nonEmpty = cols.map((c) => c.replace(/^["']|["']$/g, "").trim()).filter(Boolean)
@@ -95,35 +124,49 @@ export function sanitizeVoiceActorAndPsTokens(cols: string[]) {
   let artist = "Unassigned"
   let ps = ""
 
-  if (nonEmpty.length === 1) {
-    charName = nonEmpty[0]
-  } else if (nonEmpty.length === 2) {
-    // e.g. "Sal\t\t\tRekha" -> Sal (Character), Rekha (VOA)
-    // Or "Sal\t0.97" -> Sal (Character), 0.97 (PS)
-    if (!isNaN(Number(nonEmpty[1]))) {
-      ps = nonEmpty[1]
+  const rest = nonEmpty.slice(1)
+
+  if (rest.length === 1) {
+    const token = rest[0]
+    if (isPsToken(token)) {
+      ps = token
     } else {
-      artist = nonEmpty[1]
+      artist = token
     }
-  } else if (nonEmpty.length >= 3) {
-    // 3 or more non-empty columns
-    if (!isNaN(Number(nonEmpty[1]))) {
-      ps = nonEmpty[1]
-      artist = nonEmpty[2]
-    } else if (!isNaN(Number(nonEmpty[2]))) {
-      artist = nonEmpty[1]
-      ps = nonEmpty[2]
+  } else if (rest.length >= 2) {
+    // Find if any token is a PS token
+    const psIdx = rest.findIndex((t) => isPsToken(t))
+    if (psIdx !== -1) {
+      ps = rest[psIdx]
+      const artistTokens = rest.filter((_, idx) => idx !== psIdx)
+      artist = artistTokens.join(" ")
     } else {
-      artist = nonEmpty[1]
+      // Fallback: artist is rest[0]
+      artist = rest[0]
+      if (rest[1]) {
+        ps = rest[1]
+      }
     }
   }
 
-  // Strip trailing numbers/PS from artist name if any (e.g. "Rekha 0.97" -> "Rekha")
-  const match = artist.match(/^(.+?)\s+([0-9]+(?:\.[0-9]+)?)$/)
-  if (match) {
-    artist = match[1].trim()
-    if (!ps) {
-      ps = match[2].trim()
+  // Strip trailing PS from artist name if any (e.g. "Fred 0.97" or "Fred Treble +4")
+  if (artist && artist !== "Unassigned") {
+    // 1. Check trailing PS pattern with keyword like "Fred Treble +4" or "Fred PS: 0.97"
+    const kwMatch = artist.match(/^(.+?)\s+((?:\b(?:treble|pitch|ps|bass|shift|semitone|speed)\b.*|[+-]?\d+(?:\.\d+)?.*))$/i)
+    if (kwMatch && isPsToken(kwMatch[2])) {
+      artist = kwMatch[1].trim()
+      if (!ps) {
+        ps = kwMatch[2].trim()
+      }
+    } else {
+      // 2. Check trailing pure number pattern like "Fred 0.97"
+      const match = artist.match(/^(.+?)\s+([0-9]+(?:\.[0-9]+)?)$/)
+      if (match) {
+        artist = match[1].trim()
+        if (!ps) {
+          ps = match[2].trim()
+        }
+      }
     }
   }
 
@@ -185,7 +228,7 @@ export function ScriptWizardModal({
           cols[0] === "FALSE" ||
           cols[0] === "☑" ||
           cols[0] === "☐" ||
-          !isNaN(Number(cols[1])) ||
+          isPsToken(cols[1]) ||
           cols[1] === "")
       ) {
         const charName = cols[2]
@@ -205,7 +248,7 @@ export function ScriptWizardModal({
           })
         }
       } else {
-        // Standard / Flexible TSV format (e.g. Sal\t\t\tRekha or Elton\t0.97\t"Andreas 0.97")
+        // Standard / Flexible TSV format (e.g. Sal\t\t\tRekha or Elton\t0.97\t"Andreas 0.97" or Victor\tTreble +4\tFred)
         const cleaned = sanitizeVoiceActorAndPsTokens(cols)
         if (
           cleaned &&
