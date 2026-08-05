@@ -1267,185 +1267,187 @@ export function ScriptSheetModal({
           {/* TAB 1: SCRIPT LINES MANAGER */}
           {activeTab === "lines" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 bg-muted/30 p-2.5 rounded-lg border text-xs">
-                <div className="flex items-center gap-2 flex-1 min-w-[240px]">
-                  <div className="relative flex-1">
-                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
-                    <input
-                      type="text"
-                      placeholder="Search script lines or characters..."
-                      value={searchQuery}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                      className="w-full h-8 text-xs pl-8 pr-3 bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
+              {!isCheckVoMode && (
+                <div className="flex flex-wrap items-center justify-between gap-2 bg-muted/30 p-2.5 rounded-lg border text-xs">
+                  <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+                    <div className="relative flex-1">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+                      <input
+                        type="text"
+                        placeholder="Search script lines or characters..."
+                        value={searchQuery}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                        className="w-full h-8 text-xs pl-8 pr-3 bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
 
-                  {/* Custom Character Filter Dropdown */}
-                  <div className={`relative inline-block text-left ${isCharFilterOpen ? "z-40" : ""}`}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCharFilterOpen(!isCharFilterOpen)
-                        setIsStatusFilterOpen(false)
-                      }}
-                      className="h-8 px-3 text-xs font-semibold bg-background hover:bg-muted/80 text-foreground border border-input rounded-md shadow-2xs flex items-center gap-2 cursor-pointer transition-colors active:scale-95 whitespace-nowrap"
-                    >
-                      <span>
-                        {selectedCharacterFilter === "all"
-                          ? "All Characters"
-                          : selectedCharacterFilter}
-                      </span>
-                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
+                    {/* Custom Character Filter Dropdown */}
+                    <div className={`relative inline-block text-left ${isCharFilterOpen ? "z-40" : ""}`}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCharFilterOpen(!isCharFilterOpen)
+                          setIsStatusFilterOpen(false)
+                        }}
+                        className="h-8 px-3 text-xs font-semibold bg-background hover:bg-muted/80 text-foreground border border-input rounded-md shadow-2xs flex items-center gap-2 cursor-pointer transition-colors active:scale-95 whitespace-nowrap"
+                      >
+                        <span>
+                          {selectedCharacterFilter === "all"
+                            ? "All Characters"
+                            : selectedCharacterFilter}
+                        </span>
+                        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
 
-                    {isCharFilterOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setIsCharFilterOpen(false)}
-                        />
-                        <div className="absolute left-0 top-full mt-1 z-50 w-60 min-w-[220px] max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedCharacterFilter("all")
-                              setIsCharFilterOpen(false)
-                            }}
-                            className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                              selectedCharacterFilter === "all"
-                                ? "bg-primary/10 text-primary font-bold"
-                                : "text-foreground hover:bg-muted"
-                            }`}
-                          >
-                            <span>All Characters</span>
-                            {selectedCharacterFilter === "all" && <Check className="w-3.5 h-3.5 text-primary" />}
-                          </button>
-                          {Array.from(new Set(data.lines.map((l) => l.character))).filter(Boolean).map((char) => {
-                            const isSelected = selectedCharacterFilter === char
-                            return (
-                              <button
-                                key={char}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedCharacterFilter(char)
-                                  setIsCharFilterOpen(false)
-                                }}
-                                className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
-                                  isSelected
-                                    ? "bg-primary/10 text-primary font-bold"
-                                    : "text-foreground hover:bg-muted"
-                                }`}
-                              >
-                                <span className="truncate text-foreground font-semibold flex-1 text-left">{char}</span>
-                                {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Custom Status Filter Dropdown */}
-                  <div className={`relative inline-block text-left ${isStatusFilterOpen ? "z-40" : ""}`}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsStatusFilterOpen(!isStatusFilterOpen)
-                        setIsCharFilterOpen(false)
-                      }}
-                      className="h-8 px-3 text-xs font-semibold bg-background hover:bg-muted/80 text-foreground border border-input rounded-md shadow-2xs flex items-center gap-2 cursor-pointer transition-colors active:scale-95 whitespace-nowrap"
-                    >
-                      <span>
-                        {selectedStatusFilter === "all"
-                          ? `All Statuses (${totalLines})`
-                          : `${selectedStatusFilter} (${data.lines.filter((l) => l.status === selectedStatusFilter).length})`}
-                      </span>
-                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-
-                    {isStatusFilterOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setIsStatusFilterOpen(false)}
-                        />
-                        <div className="absolute left-0 top-full mt-1 z-50 w-60 min-w-[220px] max-h-72 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedStatusFilter("all")
-                              setIsStatusFilterOpen(false)
-                            }}
-                            className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                              selectedStatusFilter === "all"
-                                ? "bg-primary/10 text-primary font-bold"
-                                : "text-foreground hover:bg-muted"
-                            }`}
-                          >
-                            <span>All Statuses</span>
-                            <span className="text-[10px] font-mono opacity-60">({totalLines})</span>
-                          </button>
-                          {SCRIPT_LINE_STATUSES.map((st) => {
-                            const count = data.lines.filter((l) => l.status === st).length
-                            const style = STATUS_STYLE_MAP[st]
-                            const isSelected = selectedStatusFilter === st
-                            return (
-                              <button
-                                key={st}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedStatusFilter(st)
-                                  setIsStatusFilterOpen(false)
-                                }}
-                                className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
-                                  isSelected
-                                    ? "bg-primary/10 font-bold text-foreground"
-                                    : "text-foreground hover:bg-muted"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
-                                  <span className="truncate text-foreground font-semibold">{st}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 flex-shrink-0">
-                                  <span className="text-[10px] font-mono text-muted-foreground font-bold">({count})</span>
+                      {isCharFilterOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setIsCharFilterOpen(false)}
+                          />
+                          <div className="absolute left-0 top-full mt-1 z-50 w-60 min-w-[220px] max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedCharacterFilter("all")
+                                setIsCharFilterOpen(false)
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                                selectedCharacterFilter === "all"
+                                  ? "bg-primary/10 text-primary font-bold"
+                                  : "text-foreground hover:bg-muted"
+                              }`}
+                            >
+                              <span>All Characters</span>
+                              {selectedCharacterFilter === "all" && <Check className="w-3.5 h-3.5 text-primary" />}
+                            </button>
+                            {Array.from(new Set(data.lines.map((l) => l.character))).filter(Boolean).map((char) => {
+                              const isSelected = selectedCharacterFilter === char
+                              return (
+                                <button
+                                  key={char}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCharacterFilter(char)
+                                    setIsCharFilterOpen(false)
+                                  }}
+                                  className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                                    isSelected
+                                      ? "bg-primary/10 text-primary font-bold"
+                                      : "text-foreground hover:bg-muted"
+                                  }`}
+                                >
+                                  <span className="truncate text-foreground font-semibold flex-1 text-left">{char}</span>
                                   {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Custom Status Filter Dropdown */}
+                    <div className={`relative inline-block text-left ${isStatusFilterOpen ? "z-40" : ""}`}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsStatusFilterOpen(!isStatusFilterOpen)
+                          setIsCharFilterOpen(false)
+                        }}
+                        className="h-8 px-3 text-xs font-semibold bg-background hover:bg-muted/80 text-foreground border border-input rounded-md shadow-2xs flex items-center gap-2 cursor-pointer transition-colors active:scale-95 whitespace-nowrap"
+                      >
+                        <span>
+                          {selectedStatusFilter === "all"
+                            ? `All Statuses (${totalLines})`
+                            : `${selectedStatusFilter} (${data.lines.filter((l) => l.status === selectedStatusFilter).length})`}
+                        </span>
+                        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
+
+                      {isStatusFilterOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setIsStatusFilterOpen(false)}
+                          />
+                          <div className="absolute left-0 top-full mt-1 z-50 w-60 min-w-[220px] max-h-72 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedStatusFilter("all")
+                                setIsStatusFilterOpen(false)
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                                selectedStatusFilter === "all"
+                                  ? "bg-primary/10 text-primary font-bold"
+                                  : "text-foreground hover:bg-muted"
+                              }`}
+                            >
+                              <span>All Statuses</span>
+                              <span className="text-[10px] font-mono opacity-60">({totalLines})</span>
+                            </button>
+                            {SCRIPT_LINE_STATUSES.map((st) => {
+                              const count = data.lines.filter((l) => l.status === st).length
+                              const style = STATUS_STYLE_MAP[st]
+                              const isSelected = selectedStatusFilter === st
+                              return (
+                                <button
+                                  key={st}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedStatusFilter(st)
+                                    setIsStatusFilterOpen(false)
+                                  }}
+                                  className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                                    isSelected
+                                      ? "bg-primary/10 font-bold text-foreground"
+                                      : "text-foreground hover:bg-muted"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
+                                    <span className="truncate text-foreground font-semibold">{st}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    <span className="text-[10px] font-mono text-muted-foreground font-bold">({count})</span>
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {isCaptionTask && (
+                      <button
+                        onClick={() => setIsVoErrorModalOpen(true)}
+                        className="h-8 px-3 text-xs border border-red-200 text-red-700 bg-red-50/60 hover:bg-red-100 rounded-md transition-colors flex items-center gap-1.5 font-semibold"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-red-600" />
+                        Paste VO Error Column
+                      </button>
                     )}
+                    <button
+                      onClick={handleMarkFilteredInputted}
+                      className="h-8 px-3 text-xs border border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 rounded-md transition-colors flex items-center gap-1 font-medium"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Mark Filtered as Inputted
+                    </button>
+                    <button
+                      onClick={handleAddLine}
+                      className="h-8 px-3 text-xs bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Line
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  {isCaptionTask && (
-                    <button
-                      onClick={() => setIsVoErrorModalOpen(true)}
-                      className="h-8 px-3 text-xs border border-red-200 text-red-700 bg-red-50/60 hover:bg-red-100 rounded-md transition-colors flex items-center gap-1.5 font-semibold"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-red-600" />
-                      Paste VO Error Column
-                    </button>
-                  )}
-                  <button
-                    onClick={handleMarkFilteredInputted}
-                    className="h-8 px-3 text-xs border border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 rounded-md transition-colors flex items-center gap-1 font-medium"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Mark Filtered as Inputted
-                  </button>
-                  <button
-                    onClick={handleAddLine}
-                    className="h-8 px-3 text-xs bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Line
-                  </button>
-                </div>
-              </div>
+              )}
 
               <div className="flex-1 overflow-auto border rounded-lg">
                 <table className="w-full text-xs text-left border-collapse table-fixed">
