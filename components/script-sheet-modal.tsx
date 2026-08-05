@@ -420,7 +420,12 @@ export function ScriptSheetModal({
         const origStatus = line.previousStatus || line.status
         if (!origStatus || origStatus === "Inputted") return
 
-        const groupKey = `${targetChar.toLowerCase()}__${origStatus}`
+        const eps = (line.eps || "").trim()
+        const groupKey =
+          origStatus === "Beluman"
+            ? `${targetChar.toLowerCase()}__${origStatus}`
+            : `${targetChar.toLowerCase()}__${origStatus}__${eps}`
+
         groupTotalMap.set(groupKey, (groupTotalMap.get(groupKey) || 0) + 1)
         if (line.status === "Inputted") {
           groupInputtedMap.set(groupKey, (groupInputtedMap.get(groupKey) || 0) + 1)
@@ -910,7 +915,7 @@ export function ScriptSheetModal({
     setTimeout(() => setCopiedReport(false), 2000)
   }
 
-  // Toggle VOA Report checklist checkbox for a specific group (individual state, does not mutate script lines)
+  // Toggle VOA Report checklist checkbox for a specific individual report line item
   const handleToggleVoReportCheck = (groupKey: string) => {
     const currentProgress: Record<string, any> =
       localProgress && typeof localProgress === "object" ? { ...localProgress } : {}
@@ -918,13 +923,48 @@ export function ScriptSheetModal({
       ...(currentProgress.voReportChecks || {}),
     }
 
-    voChecks[groupKey] = !voChecks[groupKey]
+    const nextState = !voChecks[groupKey]
 
-    const updatedProgress = { ...currentProgress, voReportChecks: voChecks }
-    setLocalProgress(updatedProgress)
-    if (onUpdateProgress) {
-      onUpdateProgress(updatedProgress)
+    const parts = groupKey.split("__")
+    const groupChar = parts[0]?.toLowerCase() || ""
+    const groupStatus = parts[1]?.toLowerCase() || ""
+    const groupEps = parts[2]?.toLowerCase() || ""
+
+    const matchesGroup = (line: ScriptLine) => {
+      const lineChar = (line.character || "").trim().toLowerCase()
+      const correctChar = (line.correctCharacter || "").trim().toLowerCase()
+      const targetChar = line.status === "Wrong Cast" && correctChar ? correctChar : lineChar
+      const issueStatus = (line.previousStatus || line.status).trim().toLowerCase()
+      const eps = (line.eps || "").trim().toLowerCase()
+
+      if (targetChar !== groupChar) return false
+      if (issueStatus !== groupStatus) return false
+
+      if (groupEps) {
+        return eps === groupEps || Number(eps) === Number(groupEps)
+      }
+      return true
     }
+
+    const updatedLines = data.lines.map((line) => {
+      if (matchesGroup(line)) {
+        if (nextState) {
+          return {
+            ...line,
+            previousStatus: line.status !== "Inputted" ? line.status : line.previousStatus,
+            status: "Inputted" as ScriptLineStatus,
+          }
+        } else {
+          return {
+            ...line,
+            status: (line.previousStatus || groupStatus) as ScriptLineStatus,
+          }
+        }
+      }
+      return line
+    })
+
+    updateData({ ...data, lines: updatedLines })
   }
 
   // Toggle character check in summary
