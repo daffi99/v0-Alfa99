@@ -2356,6 +2356,7 @@ export function ScriptSheetModal({
                       <th className="p-2.5 w-10 text-center">✓</th>
                       <th className="p-2.5 w-28">Status</th>
                       <th className="p-2.5 w-32">Artist</th>
+                      <th className="p-2.5 w-24">EPS</th>
                       <th className="p-2.5 w-36">Start Timing</th>
                       <th className="p-2.5 w-36">Batch Timing</th>
                       <th className="p-2.5">Auto-Generated VOA Report String</th>
@@ -2393,6 +2394,11 @@ export function ScriptSheetModal({
                         </td>
                         <td className={`p-2.5 font-bold text-xs ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
                           {item.character}
+                        </td>
+                        <td className="p-2.5 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded bg-emerald-50 text-emerald-900 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 font-mono font-bold text-[11px] inline-block ${item.isResolved ? "opacity-50 line-through" : ""}`}>
+                            EP{item.epsJoined}
+                          </span>
                         </td>
                         <td className="p-2.5 whitespace-nowrap">
                           {item.startTimeFormatted !== "-" ? (
@@ -2434,7 +2440,7 @@ export function ScriptSheetModal({
                     ))}
                     {missingReports.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="p-12 text-center text-muted-foreground font-sans">
+                        <td colSpan={7} className="p-12 text-center text-muted-foreground font-sans">
                           <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                           <p className="font-semibold text-foreground">No Missing VOA Audio Files!</p>
                           <p className="text-xs mt-1">All script lines are marked as Inputted.</p>
