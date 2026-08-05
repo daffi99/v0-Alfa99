@@ -910,7 +910,7 @@ export function ScriptSheetModal({
     setTimeout(() => setCopiedReport(false), 2000)
   }
 
-  // Toggle VOA Report checklist checkbox for a specific group
+  // Toggle VOA Report checklist checkbox for a specific group (individual state, does not mutate script lines)
   const handleToggleVoReportCheck = (groupKey: string) => {
     const currentProgress: Record<string, any> =
       localProgress && typeof localProgress === "object" ? { ...localProgress } : {}
@@ -918,51 +918,12 @@ export function ScriptSheetModal({
       ...(currentProgress.voReportChecks || {}),
     }
 
-    const nextState = !voChecks[groupKey]
-    voChecks[groupKey] = nextState
+    voChecks[groupKey] = !voChecks[groupKey]
 
     const updatedProgress = { ...currentProgress, voReportChecks: voChecks }
     setLocalProgress(updatedProgress)
     if (onUpdateProgress) {
       onUpdateProgress(updatedProgress)
-    }
-
-    const targetCharLower = groupKey.split("__")[0]
-    const targetStatus = groupKey.split("__")[1]
-
-    if (nextState) {
-      const updatedLines = data.lines.map((line) => {
-        const lineChar = (line.character || "").trim().toLowerCase()
-        const correctChar = (line.correctCharacter || "").trim().toLowerCase()
-        const targetChar = line.status === "Wrong Cast" && correctChar ? correctChar : lineChar
-        const issueStatus = (line.previousStatus || line.status).toLowerCase()
-
-        if (targetChar === targetCharLower && issueStatus === targetStatus.toLowerCase()) {
-          return {
-            ...line,
-            previousStatus: line.status !== "Inputted" ? line.status : line.previousStatus,
-            status: "Inputted" as ScriptLineStatus,
-          }
-        }
-        return line
-      })
-      updateData({ ...data, lines: updatedLines })
-    } else {
-      const updatedLines = data.lines.map((line) => {
-        const lineChar = (line.character || "").trim().toLowerCase()
-        const correctChar = (line.correctCharacter || "").trim().toLowerCase()
-        const targetChar = line.status === "Wrong Cast" && correctChar ? correctChar : lineChar
-        const issueStatus = (line.previousStatus || line.status).toLowerCase()
-
-        if (targetChar === targetCharLower && issueStatus === targetStatus.toLowerCase() && line.status === "Inputted") {
-          return {
-            ...line,
-            status: (line.previousStatus || "Beluman") as ScriptLineStatus,
-          }
-        }
-        return line
-      })
-      updateData({ ...data, lines: updatedLines })
     }
   }
 
