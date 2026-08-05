@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   RotateCcw,
   MoreVertical,
+  Volume2,
 } from "lucide-react"
 import { normalizeMultilinesInQuotes, type ScriptData, type ScriptLine, type MasterArtistMapping, type ScriptLineStatus } from "./script-wizard-modal"
 
@@ -109,6 +110,7 @@ export function ScriptSheetModal({
   const [data, setData] = useState<ScriptData>(scriptData)
   const [localProgress, setLocalProgress] = useState<Record<string, any>>(taskProgress || {})
   const [isProgressExpanded, setIsProgressExpanded] = useState(true)
+  const [isCheckVoMode, setIsCheckVoMode] = useState(false)
 
   React.useEffect(() => {
     setLocalProgress(taskProgress || {})
@@ -173,9 +175,9 @@ export function ScriptSheetModal({
     scriptText: number
     voErrorNote: number
   }>({
-    character: 120,
-    scriptText: 450,
-    voErrorNote: 140,
+    character: 110,
+    scriptText: 320,
+    voErrorNote: 130,
   })
 
   // Resize handler for table columns
@@ -191,7 +193,7 @@ export function ScriptSheetModal({
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX
-      const minWidth = colKey === "character" ? 70 : colKey === "scriptText" ? 150 : 80
+      const minWidth = colKey === "character" ? 70 : colKey === "scriptText" ? 120 : 70
       const newWidth = Math.max(minWidth, startWidth + deltaX)
       setColWidths((prev) => ({
         ...prev,
@@ -991,6 +993,21 @@ export function ScriptSheetModal({
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsCheckVoMode(!isCheckVoMode)}
+              className={`px-3 py-1.5 text-xs border rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+                isCheckVoMode
+                  ? "bg-amber-500/15 border-amber-500/50 text-amber-700 dark:text-amber-300 font-semibold shadow-2xs"
+                  : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+              title="Toggle Check VO Mode to hide workflow progress steps"
+            >
+              <Volume2 className="w-3.5 h-3.5 text-amber-600" />
+              <span>Check VO Mode</span>
+              {isCheckVoMode && (
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              )}
+            </button>
+            <button
               onClick={onReRunWizard}
               className="px-3 py-1.5 text-xs border border-border rounded-md hover:bg-muted transition-colors flex items-center gap-1.5 whitespace-nowrap"
             >
@@ -1006,8 +1023,9 @@ export function ScriptSheetModal({
           </div>
         </div>
 
-        {/* Workflow Progress Checklist Panel */}
-        <div className="bg-muted/20 border-b py-1.5 px-3 transition-all">
+        {/* Workflow Progress Checklist Panel (Entirely hidden when Check VO Mode is active) */}
+        {!isCheckVoMode && (
+          <div className="bg-muted/20 border-b py-1.5 px-3 transition-all">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
@@ -1179,6 +1197,7 @@ export function ScriptSheetModal({
             </div>
           )}
         </div>
+        )}
 
         {/* Tab Buttons */}
         <div className="px-4 pt-3 bg-card border-b flex items-center gap-2 overflow-x-auto">
@@ -1429,19 +1448,19 @@ export function ScriptSheetModal({
               </div>
 
               <div className="flex-1 overflow-auto border rounded-lg">
-                <table className="w-full text-xs text-left border-collapse">
+                <table className="w-full text-xs text-left border-collapse table-fixed">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2 w-10 text-center border-r">Eps</th>
-                      <th className="p-2 w-16 text-center border-r">Start</th>
-                      <th className="p-2 w-16 text-center border-r">End</th>
-                      <th className="p-2 w-16 text-center border-r">Batch</th>
+                      <th className="p-2 w-10 text-center border-r shrink-0">Eps</th>
+                      <th className="p-2 w-14 text-center border-r shrink-0">Start</th>
+                      <th className="p-2 w-14 text-center border-r shrink-0">End</th>
+                      <th className="p-2 w-14 text-center border-r shrink-0">Batch</th>
                       <th
-                        style={{ width: `${colWidths.character}px`, minWidth: `${colWidths.character}px` }}
-                        className="p-2 relative select-none group border-r"
+                        style={{ width: `${colWidths.character}px` }}
+                        className="p-2 relative select-none group border-r shrink-0"
                       >
                         <div className="flex items-center justify-between">
-                          <span>Character</span>
+                          <span className="truncate">Character</span>
                           <div
                             onMouseDown={(e) => handleMouseDownResize("character", e)}
                             className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-primary/40 active:bg-primary z-20 flex items-center justify-center transition-colors"
@@ -1452,11 +1471,11 @@ export function ScriptSheetModal({
                         </div>
                       </th>
                       <th
-                        style={{ width: `${colWidths.scriptText}px`, minWidth: `${colWidths.scriptText}px` }}
-                        className="p-2 relative select-none group border-r"
+                        style={{ width: `${colWidths.scriptText}px` }}
+                        className="p-2 relative select-none group border-r shrink-0"
                       >
                         <div className="flex items-center justify-between">
-                          <span>Script file (Lines)</span>
+                          <span className="truncate">Script file (Lines)</span>
                           <div
                             onMouseDown={(e) => handleMouseDownResize("scriptText", e)}
                             className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-primary/40 active:bg-primary z-20 flex items-center justify-center transition-colors"
@@ -1468,11 +1487,11 @@ export function ScriptSheetModal({
                       </th>
                       {isCaptionTask && (
                         <th
-                          style={{ width: `${colWidths.voErrorNote}px`, minWidth: `${colWidths.voErrorNote}px` }}
-                          className="p-2 relative select-none group border-r text-red-600 font-semibold text-[10px]"
+                          style={{ width: `${colWidths.voErrorNote}px` }}
+                          className="p-2 relative select-none group border-r text-red-600 font-semibold text-[10px] shrink-0"
                         >
                           <div className="flex items-center justify-between">
-                            <span>VO Error Note</span>
+                            <span className="truncate">VO Error Note</span>
                             <div
                               onMouseDown={(e) => handleMouseDownResize("voErrorNote", e)}
                               className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-red-400/40 active:bg-red-500 z-20 flex items-center justify-center transition-colors"
@@ -1483,8 +1502,8 @@ export function ScriptSheetModal({
                           </div>
                         </th>
                       )}
-                      <th className="p-2 w-24 text-center border-r">Status</th>
-                      <th className="p-2 w-10 text-center">Action</th>
+                      <th className="p-2 w-20 text-center border-r shrink-0">Status</th>
+                      <th className="p-2 w-12 text-center shrink-0">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
