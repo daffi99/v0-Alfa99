@@ -68,6 +68,20 @@ export const STATUS_STYLE_MAP: Record<
   "Too Long": { label: "Too Long", bg: "bg-indigo-900", text: "text-white", border: "border-indigo-950" },
 }
 
+export function formatCompactTimeToken(timeStr: string): string {
+  if (!timeStr || timeStr === "-") return "-"
+  return timeStr
+    .split(",")
+    .map((t) => {
+      const trimmed = t.trim()
+      if (trimmed.startsWith("00:")) {
+        return trimmed.slice(3)
+      }
+      return trimmed
+    })
+    .join(", ")
+}
+
 export const STATUS_REPORT_SUFFIX_MAP: Record<ScriptLineStatus, string | null> = {
   Beluman: "_Missing audio file",
   Missing: "_Missing Sentence.",
@@ -677,8 +691,11 @@ export function ScriptSheetModal({
       const epsJoined = sortedEps.length > 0 ? sortedEps.join(", ") : "000"
       const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
 
-      const startTimeFormatted = Array.from(startTimeSet).join(", ") || "-"
-      const batchTimeFormatted = Array.from(batchTimeSet).join(", ") || "-"
+      const rawStart = Array.from(startTimeSet).join(", ") || "-"
+      const rawBatch = Array.from(batchTimeSet).join(", ") || "-"
+
+      const startTimeFormatted = formatCompactTimeToken(rawStart)
+      const batchTimeFormatted = formatCompactTimeToken(rawBatch)
 
       const reportString = `${formattedTitle}_${epsJoined}_${character}/${actor}${suffix}`
       const epSummary = `EP${epsJoined} ${character}/${actor}`
@@ -2281,8 +2298,8 @@ export function ScriptSheetModal({
                     <tr>
                       <th className="p-2.5 w-28">Status</th>
                       <th className="p-2.5 w-32">Artist</th>
-                      <th className="p-2.5 w-32">Start Timing</th>
-                      <th className="p-2.5 w-32">Batch Timing</th>
+                      <th className="p-2.5 w-36">Start Timing</th>
+                      <th className="p-2.5 w-36">Batch Timing</th>
                       <th className="p-2.5">Auto-Generated VOA Report String</th>
                     </tr>
                   </thead>
@@ -2307,23 +2324,35 @@ export function ScriptSheetModal({
                             )}
                           </div>
                         </td>
-                        <td className={`p-2.5 font-semibold ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
+                        <td className={`p-2.5 font-bold text-xs ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
                           {item.character}
                         </td>
-                        <td className={`p-2.5 font-mono text-xs font-bold whitespace-nowrap ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
-                          {item.startTimeFormatted}
+                        <td className="p-2.5 whitespace-nowrap">
+                          {item.startTimeFormatted !== "-" ? (
+                            <span className={`px-2 py-0.5 rounded bg-slate-100 text-slate-900 border border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700 font-mono font-bold text-[11px] inline-block shadow-2xs ${item.isResolved ? "opacity-50 line-through" : ""}`}>
+                              {item.startTimeFormatted}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/50 font-mono text-xs">-</span>
+                          )}
                         </td>
-                        <td className={`p-2.5 font-mono text-xs font-bold whitespace-nowrap ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
-                          {item.batchTimeFormatted}
+                        <td className="p-2.5 whitespace-nowrap">
+                          {item.batchTimeFormatted !== "-" ? (
+                            <span className={`px-2 py-0.5 rounded bg-slate-100 text-slate-900 border border-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700 font-mono font-bold text-[11px] inline-block shadow-2xs ${item.isResolved ? "opacity-50 line-through" : ""}`}>
+                              {item.batchTimeFormatted}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/50 font-mono text-xs">-</span>
+                          )}
                         </td>
-                        <td className="p-2.5 font-medium text-slate-800 bg-muted/20">
-                          <div className="flex items-center justify-between gap-2 group">
-                            <span className={`select-all font-mono ${item.isResolved ? "line-through text-muted-foreground/60" : ""}`}>
+                        <td className="p-2">
+                          <div className={`flex items-center justify-between gap-2 p-1.5 px-2.5 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 group ${item.isResolved ? "opacity-60" : ""}`}>
+                            <span className={`select-all font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 truncate ${item.isResolved ? "line-through text-muted-foreground" : ""}`}>
                               {item.reportString}
                             </span>
                             <button
                               onClick={() => handleCopySingleReportLine(item.reportString, idx)}
-                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded transition-colors flex-shrink-0"
+                              className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 rounded transition-colors flex-shrink-0 cursor-pointer"
                               title="Copy this report line"
                             >
                               {copiedRowIndex === idx ? (
