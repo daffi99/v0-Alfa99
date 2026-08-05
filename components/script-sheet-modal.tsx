@@ -2281,10 +2281,9 @@ export function ScriptSheetModal({
                     <tr>
                       <th className="p-2.5 w-28">Status</th>
                       <th className="p-2.5 w-32">Artist</th>
-                      <th className="p-2.5 w-24">Start Timing</th>
-                      <th className="p-2.5 w-24">Batch Timing</th>
+                      <th className="p-2.5 w-32">Start Timing</th>
+                      <th className="p-2.5 w-32">Batch Timing</th>
                       <th className="p-2.5">Auto-Generated VOA Report String</th>
-                      <th className="p-2.5 w-36">EP Summary</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y font-mono text-[11px]">
@@ -2311,11 +2310,23 @@ export function ScriptSheetModal({
                         <td className={`p-2.5 font-semibold ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
                           {item.character}
                         </td>
-                        <td className={`p-2.5 font-mono text-[10px] whitespace-nowrap ${item.isResolved ? "line-through text-muted-foreground/60" : "text-muted-foreground font-medium"}`}>
-                          {item.startTimeFormatted}
+                        <td className="p-2.5 whitespace-nowrap">
+                          {item.startTimeFormatted !== "-" ? (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 inline-block shadow-2xs ${item.isResolved ? "opacity-50 line-through" : ""}`}>
+                              {item.startTimeFormatted}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/60 text-[11px]">-</span>
+                          )}
                         </td>
-                        <td className={`p-2.5 font-mono text-[10px] whitespace-nowrap ${item.isResolved ? "line-through text-muted-foreground/60" : "text-muted-foreground font-medium"}`}>
-                          {item.batchTimeFormatted}
+                        <td className="p-2.5 whitespace-nowrap">
+                          {item.batchTimeFormatted !== "-" ? (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 inline-block shadow-2xs ${item.isResolved ? "opacity-50 line-through" : ""}`}>
+                              {item.batchTimeFormatted}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/60 text-[11px]">-</span>
+                          )}
                         </td>
                         <td className="p-2.5 font-medium text-slate-800 bg-muted/20">
                           <div className="flex items-center justify-between gap-2 group">
@@ -2335,14 +2346,11 @@ export function ScriptSheetModal({
                             </button>
                           </div>
                         </td>
-                        <td className={`p-2.5 font-bold ${item.isResolved ? "line-through text-emerald-800/50" : "text-emerald-800"}`}>
-                          {item.epSummary}
-                        </td>
                       </tr>
                     ))}
                     {missingReports.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="p-12 text-center text-muted-foreground font-sans">
+                        <td colSpan={5} className="p-12 text-center text-muted-foreground font-sans">
                           <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                           <p className="font-semibold text-foreground">No Missing VOA Audio Files!</p>
                           <p className="text-xs mt-1">All script lines are marked as Inputted.</p>
