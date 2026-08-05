@@ -2310,23 +2310,11 @@ export function ScriptSheetModal({
                         <td className={`p-2.5 font-semibold ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
                           {item.character}
                         </td>
-                        <td className="p-2.5 whitespace-nowrap">
-                          {item.startTimeFormatted !== "-" ? (
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 inline-block shadow-2xs ${item.isResolved ? "opacity-50 line-through" : ""}`}>
-                              {item.startTimeFormatted}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/60 text-[11px]">-</span>
-                          )}
+                        <td className={`p-2.5 font-mono text-xs font-bold whitespace-nowrap ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
+                          {item.startTimeFormatted}
                         </td>
-                        <td className="p-2.5 whitespace-nowrap">
-                          {item.batchTimeFormatted !== "-" ? (
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 inline-block shadow-2xs ${item.isResolved ? "opacity-50 line-through" : ""}`}>
-                              {item.batchTimeFormatted}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/60 text-[11px]">-</span>
-                          )}
+                        <td className={`p-2.5 font-mono text-xs font-bold whitespace-nowrap ${item.isResolved ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
+                          {item.batchTimeFormatted}
                         </td>
                         <td className="p-2.5 font-medium text-slate-800 bg-muted/20">
                           <div className="flex items-center justify-between gap-2 group">
