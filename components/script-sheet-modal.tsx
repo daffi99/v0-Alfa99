@@ -168,6 +168,7 @@ export function ScriptSheetModal({
   const [copiedReport, setCopiedReport] = useState(false)
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null)
   const [copiedCharName, setCopiedCharName] = useState<string | null>(null)
+  const [copiedScriptLineId, setCopiedScriptLineId] = useState<string | null>(null)
 
   // Copy single VOA Report line
   const handleCopySingleReportLine = (text: string, idx: number) => {
@@ -181,6 +182,13 @@ export function ScriptSheetModal({
     navigator.clipboard.writeText(charName)
     setCopiedCharName(charName)
     setTimeout(() => setCopiedCharName(null), 2000)
+  }
+
+  // Copy script line text helper
+  const handleCopyScriptLineText = (lineId: string, text: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedScriptLineId(lineId)
+    setTimeout(() => setCopiedScriptLineId(null), 2000)
   }
 
   // Column Widths for Script Lines Table
@@ -1778,6 +1786,21 @@ export function ScriptSheetModal({
                                             idx >= filteredLines.length - 4 && idx >= 4 ? "bottom-full mb-1" : "top-full mt-1"
                                           } z-50 w-44 bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
                                         >
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              handleCopyScriptLineText(line.id, displayLineText || line.lineText || "")
+                                              setOpenRowActionDropdown(null)
+                                            }}
+                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+                                          >
+                                            {copiedScriptLineId === line.id ? (
+                                              <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                                            ) : (
+                                              <Copy className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                                            )}
+                                            <span>{copiedScriptLineId === line.id ? "Copied Script!" : "Copy Script Line"}</span>
+                                          </button>
                                           <button
                                             type="button"
                                             onClick={() => {
