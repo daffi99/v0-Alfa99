@@ -383,6 +383,21 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
   const isTodayTask = task.title.trim().toLowerCase() === "today task"
   const shouldCollapse = canCollapse && !isExpanded
 
+  const progressColor = (() => {
+    if (percentComplete === 100 || isFinished) {
+      return { bar: "bg-emerald-500", text: "text-emerald-600" }
+    }
+    switch (task.status) {
+      case "In progress":
+        return { bar: "bg-blue-500", text: "text-blue-600" }
+      case "Wait VO":
+        return { bar: "bg-yellow-500", text: "text-yellow-600" }
+      case "Not started":
+      default:
+        return { bar: "bg-gray-400", text: "text-gray-600" }
+    }
+  })()
+
   // Update local progress when task changes
   useEffect(() => {
     setLocalProgress(task.progress || {})
@@ -624,17 +639,15 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       {/* Progress indicator - at top only if not finished */}
       {!isFinished && !isTodayTask && task.episodes.length > 0 && (
         <div className="mb-3">
-          {!shouldCollapse && (
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-medium text-muted-foreground">
-                {completedEpisodes} of {task.episodes.length} episodes completed
-              </span>
-              <span className="text-[10px] font-semibold text-emerald-600">{percentComplete}%</span>
-            </div>
-          )}
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-medium text-muted-foreground">
+              {completedEpisodes} of {task.episodes.length} episodes completed
+            </span>
+            <span className={`text-[10px] font-semibold ${progressColor.text}`}>{percentComplete}%</span>
+          </div>
           <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
             <div
-              className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+              className={`${progressColor.bar} h-full rounded-full transition-all duration-300`}
               style={{ width: `${percentComplete}%` }}
             />
           </div>

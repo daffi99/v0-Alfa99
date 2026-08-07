@@ -170,6 +170,28 @@ export function ScriptSheetModal({
   const [copiedCharName, setCopiedCharName] = useState<string | null>(null)
   const [copiedScriptLineId, setCopiedScriptLineId] = useState<string | null>(null)
 
+  // Highlighted line ID when navigating from VOA report
+  const [highlightedLineId, setHighlightedLineId] = useState<string | null>(null)
+
+  // Navigate to Script lines tab & auto-scroll to specified line
+  const handleNavigateToScriptLine = (lineId?: string) => {
+    if (!lineId) return
+    setSearchQuery("")
+    setSelectedCharacterFilter("all")
+    setSelectedStatusFilter("all")
+    setActiveTab("lines")
+    setHighlightedLineId(lineId)
+    setTimeout(() => {
+      const el = document.getElementById(`script-line-${lineId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
+    }, 120)
+    setTimeout(() => {
+      setHighlightedLineId((prev) => (prev === lineId ? null : prev))
+    }, 3500)
+  }
+
   // Copy single VOA Report line
   const handleCopySingleReportLine = (text: string, idx: number) => {
     navigator.clipboard.writeText(text)
@@ -631,6 +653,7 @@ export function ScriptSheetModal({
         startTimeSet: Set<string>
         batchTimeSet: Set<string>
         isResolved: boolean
+        firstLineId?: string
       }
     >()
 
@@ -665,6 +688,7 @@ export function ScriptSheetModal({
           startTimeSet: new Set<string>(),
           batchTimeSet: new Set<string>(),
           isResolved,
+          firstLineId: line.id,
         })
       }
 
@@ -692,9 +716,10 @@ export function ScriptSheetModal({
       batchTimeFormatted: string
       minEps: number
       isResolved: boolean
+      firstLineId?: string
     }> = []
 
-    charStatusMap.forEach(({ character, status, epsSet, startTimeSet, batchTimeSet, isResolved }, groupKey) => {
+    charStatusMap.forEach(({ character, status, epsSet, startTimeSet, batchTimeSet, isResolved, firstLineId }, groupKey) => {
       const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
       const suffix = STATUS_REPORT_SUFFIX_MAP[status] || ""
       const sortedEps = Array.from(epsSet)
@@ -725,6 +750,7 @@ export function ScriptSheetModal({
         batchTimeFormatted,
         minEps,
         isResolved,
+        firstLineId,
       })
     })
 
@@ -1377,8 +1403,18 @@ export function ScriptSheetModal({
                         placeholder="Search script lines or characters..."
                         value={searchQuery}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                        className="w-full h-8 text-xs pl-8 pr-3 bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="w-full h-8 text-xs pl-8 pr-7 bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                       />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery("")}
+                          className="absolute right-2 top-2 p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors cursor-pointer"
+                          title="Clear search"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
 
                     {/* Custom Character Filter Dropdown */}
@@ -1650,9 +1686,12 @@ export function ScriptSheetModal({
                             const charStyle = characterColors[line.character]
                             return (
                               <tr
+                                id={`script-line-${line.id}`}
                                 style={!isVoError && !isBeluman ? charStyle : undefined}
-                                className={`transition-colors ${
-                                  isVoError
+                                className={`transition-all duration-300 ${
+                                  highlightedLineId === line.id
+                                    ? "bg-amber-300/80 dark:bg-amber-500/50 ring-2 ring-amber-500 z-30 shadow-md animate-pulse"
+                                    : isVoError
                                     ? "bg-amber-500/15 hover:bg-amber-500/20"
                                     : isBeluman
                                     ? "bg-red-500/10 hover:bg-red-500/15"
@@ -2399,15 +2438,18 @@ export function ScriptSheetModal({
                         </td>
                         <td className="p-2.5">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span
-                              className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                            <button
+                              type="button"
+                              onClick={() => handleNavigateToScriptLine(item.firstLineId)}
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-bold border cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-2xs flex items-center gap-1 ${
                                 STATUS_STYLE_MAP[item.status]?.bg || "bg-gray-100"
                               } ${STATUS_STYLE_MAP[item.status]?.text || "text-gray-800"} ${
                                 STATUS_STYLE_MAP[item.status]?.border || "border-gray-200"
                               } ${item.isResolved ? "line-through opacity-60" : ""}`}
+                              title="Click to switch to Script tab & scroll to line"
                             >
-                              {item.status}
-                            </span>
+                              <span>{item.status}</span>
+                            </button>
                             {item.isResolved && (
                               <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
                                 <Check className="w-3 h-3 text-emerald-600" /> Resolved
@@ -2730,9 +2772,19 @@ export function ScriptSheetModal({
                               placeholder="Search character..."
                               value={addLineCharSearchQuery}
                               onChange={(e) => setAddLineCharSearchQuery(e.target.value)}
-                              className="w-full h-7 pl-7 pr-2 text-xs rounded border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                              className="w-full h-7 pl-7 pr-6 text-xs rounded border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                               autoFocus
                             />
+                            {addLineCharSearchQuery && (
+                              <button
+                                type="button"
+                                onClick={() => setAddLineCharSearchQuery("")}
+                                className="absolute right-2 top-2 p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors cursor-pointer"
+                                title="Clear search"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
 
                           <div className="overflow-y-auto space-y-0.5 max-h-48 pr-0.5">
