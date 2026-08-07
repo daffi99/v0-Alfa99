@@ -379,8 +379,9 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
     }
   })()
   const isFinished = task.status === "Finished"
+  const canCollapse = task.status !== "Not started" && task.status !== null
   const isTodayTask = task.title.trim().toLowerCase() === "today task"
-  const shouldCollapse = isFinished && !isExpanded
+  const shouldCollapse = canCollapse && !isExpanded
 
   // Update local progress when task changes
   useEffect(() => {
@@ -697,8 +698,8 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                         e.stopPropagation()
                         onUpdateStatus(columnId, task.id, status)
                         setIsStatusDropdownOpen(false)
-                        // If status is Finished, expand the card
-                        if (status === "Finished") {
+                        // If status is updated to any non-Not-started state, expand the card
+                        if (status !== "Not started" && status !== null) {
                           setIsExpanded(true)
                         }
                       }}
@@ -785,7 +786,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                 )}
               </div>
             )}
-            {isFinished && (
+            {canCollapse && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -843,7 +844,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
         </div>
       )}
 
-      <div className={isFinished ? "mb-0" : "mb-2"}>
+      <div className={shouldCollapse ? "mb-0" : "mb-2"}>
         <h3 className="font-bold text-black text-lg ">{task.title}</h3>
         {!isTodayTask && (
           <div className="flex items-center gap-1">
