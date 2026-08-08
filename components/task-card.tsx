@@ -1111,7 +1111,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                     onClick={(e) => e.stopPropagation()}
                     className="flex items-center gap-2 text-[9px] cursor-pointer hover:bg-background/80 p-1 rounded transition-colors"
                   >
-                    <div className="w-[72px] flex-shrink-0 flex justify-end">
+                    <div className="w-[84px] flex-shrink-0 flex justify-end">
                       <span
                         className={`text-[8.5px] px-1.5 py-0.2 rounded font-bold border whitespace-nowrap text-right ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
                       >

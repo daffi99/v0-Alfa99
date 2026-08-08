@@ -13,6 +13,8 @@ export type ScriptLineStatus =
   | "Wrong Cast"
   | "Too Short"
   | "Too Long"
+  | "Missing Onomatopoeia"
+  | "Onomatopoeia"
 
 export interface ScriptLine {
   id: string

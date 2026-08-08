@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useRef, useEffect } from "react"
 import {
   FileText,
   Users,
@@ -50,6 +50,7 @@ export const SCRIPT_LINE_STATUSES: ScriptLineStatus[] = [
   "Wrong Cast",
   "Too Short",
   "Too Long",
+  "Onomatopoeia",
 ]
 
 export const STATUS_STYLE_MAP: Record<
@@ -66,6 +67,8 @@ export const STATUS_STYLE_MAP: Record<
   "Wrong Cast": { label: "Wrong Cast", bg: "bg-amber-900", text: "text-amber-100", border: "border-amber-950" },
   "Too Short": { label: "Too Short", bg: "bg-teal-800", text: "text-white", border: "border-teal-900" },
   "Too Long": { label: "Too Long", bg: "bg-indigo-900", text: "text-white", border: "border-indigo-950" },
+  Onomatopoeia: { label: "Onomatopoeia", bg: "bg-fuchsia-100 dark:bg-fuchsia-950/60", text: "text-fuchsia-800 dark:text-fuchsia-300", border: "border-fuchsia-300 dark:border-fuchsia-800" },
+  "Missing Onomatopoeia": { label: "Onomatopoeia", bg: "bg-fuchsia-100 dark:bg-fuchsia-950/60", text: "text-fuchsia-800 dark:text-fuchsia-300", border: "border-fuchsia-300 dark:border-fuchsia-800" },
 }
 
 export function formatCompactTimeToken(timeStr: string): string {
@@ -82,6 +85,60 @@ export function formatCompactTimeToken(timeStr: string): string {
     .join(", ")
 }
 
+export function timeToSeconds(timeStr?: string): number | null {
+  if (!timeStr || timeStr === "-") return null
+  const clean = timeStr.trim()
+  const parts = clean.split(":").map((p) => parseFloat(p))
+  if (parts.some((p) => isNaN(p))) return null
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2]
+  if (parts.length === 2) return parts[0] * 60 + parts[1]
+  if (parts.length === 1) return parts[0]
+  return null
+}
+
+export function secondsToTimeString(sec: number, hasHours = false): string {
+  if (sec < 0) sec = 0
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  const s = Math.floor(sec % 60)
+  const pad = (n: number) => n.toString().padStart(2, "0")
+  if (hasHours || h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`
+  return `${pad(m)}:${pad(s)}`
+}
+
+export function computeDefaultTiming(refLine?: ScriptLine): { startTime: string; endTime: string } {
+  if (!refLine) return { startTime: "", endTime: "" }
+  const refTime = refLine.endTime || refLine.startTime
+  const sec = timeToSeconds(refTime)
+  if (sec === null) return { startTime: "", endTime: "" }
+  const newStartSec = sec + 2
+  const newEndSec = newStartSec + 2
+  const hasHours = !!refTime && refTime.includes(":") && refTime.split(":").length === 3
+  return {
+    startTime: secondsToTimeString(newStartSec, hasHours),
+    endTime: secondsToTimeString(newEndSec, hasHours),
+  }
+}
+
+export function getBatchTimeRange(startTimeStr?: string, endTimeStr?: string, batchTimeStr?: string): string {
+  if (!batchTimeStr || batchTimeStr === "-") return ""
+  const compactBatch = formatCompactTimeToken(batchTimeStr)
+  if (compactBatch.includes("-")) return compactBatch
+
+  const startSec = timeToSeconds(startTimeStr)
+  const endSec = timeToSeconds(endTimeStr)
+  const batchStartSec = timeToSeconds(batchTimeStr)
+
+  if (startSec !== null && endSec !== null && endSec > startSec && batchStartSec !== null) {
+    const duration = endSec - startSec
+    const batchEndSec = batchStartSec + duration
+    const hasHours = batchTimeStr.includes(":") && batchTimeStr.split(":").length === 3
+    const batchEndStr = secondsToTimeString(batchEndSec, hasHours)
+    return `${compactBatch}-${formatCompactTimeToken(batchEndStr)}`
+  }
+  return compactBatch
+}
+
 export const STATUS_REPORT_SUFFIX_MAP: Record<ScriptLineStatus, string | null> = {
   Beluman: "_Missing audio file",
   Missing: "_Missing Sentence.",
@@ -91,12 +148,87 @@ export const STATUS_REPORT_SUFFIX_MAP: Record<ScriptLineStatus, string | null> =
   "Wrong Cast": "_Missing Sentence, Wrong cast assigned.",
   "Too Short": "_Too short, can't sync with actor lips.",
   "Too Long": "_Too long, can't sync with actor lips.",
+  Onomatopoeia: "_Missing onomatopoeia",
+  "Missing Onomatopoeia": "_Missing onomatopoeia",
   Inputted: null, // Inputted lines do not create VOA report lines
 }
 
 export function formatReportTitle(title: string): string {
   // Format title: add "_" between Name and Number, e.g. "Germany 090 (120)" -> "Germany_090 (120)"
   return title.trim().replace(/([a-zA-Z]+)\s+(\d+)/g, "$1_$2")
+}
+
+export function TimeStepperInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string
+  value: string
+  onChange: (val: string) => void
+  placeholder?: string
+}) {
+  const handleStep = (deltaSeconds: number) => {
+    let currentSec = timeToSeconds(value)
+    if (currentSec === null) currentSec = 0
+    const newSec = Math.max(0, currentSec + deltaSeconds)
+    const hasHours = value.includes(":") && value.split(":").length === 3
+    onChange(secondsToTimeString(newSec, hasHours))
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <label className="block font-semibold text-foreground text-xs">{label}</label>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => handleStep(-1)}
+            className="px-1.5 py-0.5 text-[10px] font-bold bg-muted hover:bg-muted/80 text-foreground border border-input rounded flex items-center gap-0.5 cursor-pointer transition-colors active:scale-95"
+            title="Subtract 1 second"
+          >
+            -1s
+          </button>
+          <button
+            type="button"
+            onClick={() => handleStep(1)}
+            className="px-1.5 py-0.5 text-[10px] font-bold bg-muted hover:bg-muted/80 text-foreground border border-input rounded flex items-center gap-0.5 cursor-pointer transition-colors active:scale-95"
+            title="Add 1 second"
+          >
+            +1s
+          </button>
+        </div>
+      </div>
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          placeholder={placeholder || "00:00:00"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full h-8 pl-2.5 pr-7 text-xs font-mono rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+        />
+        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col -space-y-0.5">
+          <button
+            type="button"
+            onClick={() => handleStep(1)}
+            className="p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded cursor-pointer transition-colors"
+            title="Increase 1 second"
+          >
+            <ChevronUp className="w-3 h-3" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleStep(-1)}
+            className="p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded cursor-pointer transition-colors"
+            title="Decrease 1 second"
+          >
+            <ChevronDown className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 const CHARACTER_COLOR_PALETTE = [
@@ -277,6 +409,35 @@ export function ScriptSheetModal({
   // 3-Dots Row Action Custom Dropdown Menu State
   const [openRowActionDropdown, setOpenRowActionDropdown] = useState<string | null>(null)
 
+  // Scroll Container Ref & Persistent Scroll Position Memory State
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const lastScrollTopRef = useRef<number>(0)
+  const scrollStorageKey = useMemo(() => `script_scroll_${taskTitle.replace(/\s+/g, "_")}`, [taskTitle])
+
+  // Save scroll position to sessionStorage
+  const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const top = e.currentTarget.scrollTop
+    lastScrollTopRef.current = top
+    try {
+      sessionStorage.setItem(scrollStorageKey, top.toString())
+    } catch (err) {}
+  }
+
+  // Edit Timing Modal State
+  const [editTimingModal, setEditTimingModal] = useState<{
+    isOpen: boolean
+    lineId: string
+    startTime: string
+    endTime: string
+    batchTime: string
+  }>({
+    isOpen: false,
+    lineId: "",
+    startTime: "",
+    endTime: "",
+    batchTime: "",
+  })
+
   // Add Line Modal State (Before or After)
   const [addLineModal, setAddLineModal] = useState<{
     isOpen: boolean
@@ -285,6 +446,10 @@ export function ScriptSheetModal({
     afterEps: string
     character: string
     lineText: string
+    status?: ScriptLineStatus
+    startTime?: string
+    endTime?: string
+    batchTime?: string
   }>({
     isOpen: false,
     position: "after",
@@ -292,7 +457,28 @@ export function ScriptSheetModal({
     afterEps: "",
     character: "",
     lineText: "",
+    status: "Inputted",
+    startTime: "",
+    endTime: "",
+    batchTime: "",
   })
+
+  // Restore scroll position upon render / modal open / tab switch / data update
+  useEffect(() => {
+    if (!isOpen) return
+    let targetTop = lastScrollTopRef.current
+    try {
+      const saved = sessionStorage.getItem(scrollStorageKey)
+      if (saved) {
+        targetTop = parseInt(saved, 10)
+      }
+    } catch (err) {}
+
+    if (scrollContainerRef.current && targetTop > 0) {
+      scrollContainerRef.current.scrollTop = targetTop
+      lastScrollTopRef.current = targetTop
+    }
+  }, [isOpen, activeTab, data.lines, scrollStorageKey])
 
   // Interactive UI checkboxes for Character Summary rows
   const [uiCheckedRows, setUiCheckedRows] = useState<Record<string, boolean>>({})
@@ -331,7 +517,10 @@ export function ScriptSheetModal({
       eps: addLineModal.afterEps,
       character: addLineModal.character.trim(),
       lineText: addLineModal.lineText.trim(),
-      status: "Inputted",
+      status: addLineModal.status || "Inputted",
+      startTime: addLineModal.startTime?.trim() || undefined,
+      endTime: addLineModal.endTime?.trim() || undefined,
+      batchTime: addLineModal.batchTime?.trim() || undefined,
     }
 
     const targetIndex = data.lines.findIndex((l) => l.id === addLineModal.refLineId)
@@ -344,7 +533,38 @@ export function ScriptSheetModal({
     }
 
     updateData({ ...data, lines: updatedLines })
-    setAddLineModal({ isOpen: false, position: "after", refLineId: "", afterEps: "", character: "", lineText: "" })
+    setAddLineModal({
+      isOpen: false,
+      position: "after",
+      refLineId: "",
+      afterEps: "",
+      character: "",
+      lineText: "",
+      status: "Inputted",
+      startTime: "",
+      endTime: "",
+      batchTime: "",
+    })
+  }
+
+  // Save Edited Timing
+  const handleSaveEditTiming = () => {
+    if (!editTimingModal.lineId) return
+
+    const updatedLines = data.lines.map((line) => {
+      if (line.id === editTimingModal.lineId) {
+        return {
+          ...line,
+          startTime: editTimingModal.startTime.trim() || undefined,
+          endTime: editTimingModal.endTime.trim() || undefined,
+          batchTime: editTimingModal.batchTime.trim() || undefined,
+        }
+      }
+      return line
+    })
+
+    updateData({ ...data, lines: updatedLines })
+    setEditTimingModal({ isOpen: false, lineId: "", startTime: "", endTime: "", batchTime: "" })
   }
 
   // Filter Custom Dropdown Menu States
@@ -651,6 +871,7 @@ export function ScriptSheetModal({
         status: ScriptLineStatus
         epsSet: Set<string>
         startTimeSet: Set<string>
+        endTimeSet: Set<string>
         batchTimeSet: Set<string>
         isResolved: boolean
         firstLineId?: string
@@ -686,6 +907,7 @@ export function ScriptSheetModal({
           status: lineIssueStatus as ScriptLineStatus,
           epsSet: new Set<string>(),
           startTimeSet: new Set<string>(),
+          endTimeSet: new Set<string>(),
           batchTimeSet: new Set<string>(),
           isResolved,
           firstLineId: line.id,
@@ -698,6 +920,9 @@ export function ScriptSheetModal({
       }
       if (line.startTime && line.startTime.trim() && line.startTime.trim() !== "-") {
         entry.startTimeSet.add(line.startTime.trim())
+      }
+      if (line.endTime && line.endTime.trim() && line.endTime.trim() !== "-") {
+        entry.endTimeSet.add(line.endTime.trim())
       }
       if (line.batchTime && line.batchTime.trim() && line.batchTime.trim() !== "-") {
         entry.batchTimeSet.add(line.batchTime.trim())
@@ -719,9 +944,39 @@ export function ScriptSheetModal({
       firstLineId?: string
     }> = []
 
-    charStatusMap.forEach(({ character, status, epsSet, startTimeSet, batchTimeSet, isResolved, firstLineId }, groupKey) => {
+    charStatusMap.forEach(({ character, status, epsSet, startTimeSet, endTimeSet, batchTimeSet, isResolved, firstLineId }, groupKey) => {
       const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
-      const suffix = STATUS_REPORT_SUFFIX_MAP[status] || ""
+      let suffix = STATUS_REPORT_SUFFIX_MAP[status] || ""
+
+      if (status === "Onomatopoeia" || status === "Missing Onomatopoeia") {
+        const startArr = Array.from(startTimeSet)
+        const endArr = Array.from(endTimeSet)
+        const batchArr = Array.from(batchTimeSet)
+
+        let startEndRange = ""
+        if (startArr.length > 0 && endArr.length > 0) {
+          startEndRange = `${formatCompactTimeToken(startArr[0])}-${formatCompactTimeToken(endArr[0])}`
+        } else if (startArr.length > 0) {
+          startEndRange = formatCompactTimeToken(startArr[0])
+        }
+
+        let batchRange = ""
+        if (batchArr.length > 0) {
+          batchRange = getBatchTimeRange(startArr[0], endArr[0], batchArr[0])
+        }
+
+        let timingDetail = ""
+        if (startEndRange && batchRange) {
+          timingDetail = ` at ${startEndRange}/${batchRange}`
+        } else if (startEndRange) {
+          timingDetail = ` at ${startEndRange}`
+        } else if (batchRange) {
+          timingDetail = ` at ${batchRange}`
+        }
+
+        suffix = `_Missing onomatopoeia${timingDetail}`
+      }
+
       const sortedEps = Array.from(epsSet)
         .sort((a, b) => Number(a) - Number(b))
         .map((e) => e.padStart(3, "0"))
@@ -1585,7 +1840,11 @@ export function ScriptSheetModal({
                 </div>
               )}
 
-              <div className="flex-1 overflow-auto border rounded-lg">
+              <div
+                ref={scrollContainerRef}
+                onScroll={handleTableScroll}
+                className="flex-1 overflow-auto border rounded-lg"
+              >
                 <table className="w-full text-xs text-left border-collapse table-fixed">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
@@ -1640,7 +1899,7 @@ export function ScriptSheetModal({
                           </div>
                         </th>
                       )}
-                      <th className="p-2 w-20 text-center border-r shrink-0">Status</th>
+                      <th className="p-2 w-28 text-center border-r shrink-0">Status</th>
                       <th className="p-2 w-12 text-center shrink-0">Action</th>
                     </tr>
                   </thead>
@@ -1658,11 +1917,20 @@ export function ScriptSheetModal({
 
                       const displayLineText = line.lineText
                         ? line.lineText
+                            .replace(/Missing Onomatopoeia/gi, "Onomatopoeia")
                             .replace(/\\N/gi, " ")
                             .replace(/[\r\n]+/g, " ")
                             .replace(/\s+/g, " ")
                             .trim()
                         : ""
+
+                      const prevLine = idx > 0 ? filteredLines[idx - 1] : undefined
+                      const currStartSec = timeToSeconds(line.startTime)
+                      const prevEndSec = timeToSeconds(prevLine?.endTime || prevLine?.startTime)
+
+                      const isNoRange = !!line.startTime && (!line.endTime || line.endTime === "-" || line.startTime === line.endTime)
+                      const isOverlap = currStartSec !== null && prevEndSec !== null && currStartSec <= prevEndSec
+                      const isSpecialTimingMark = line.status === "Onomatopoeia" || line.status === "Missing Onomatopoeia"
 
                       return (
                         <React.Fragment key={line.id}>
@@ -1702,13 +1970,31 @@ export function ScriptSheetModal({
                                   {line.eps ? line.eps.trim().padStart(3, "0") : "-"}
                                 </td>
                                 <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
-                                  {line.startTime || "-"}
+                                  {isSpecialTimingMark && line.startTime && line.startTime !== "-" ? (
+                                    <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]" title={isOverlap ? "Overlapping start time" : isNoRange ? "No range timing" : "Missing Onomatopoeia timing"}>
+                                      {line.startTime}
+                                    </span>
+                                  ) : (
+                                    line.startTime || "-"
+                                  )}
                                 </td>
                                 <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
-                                  {line.endTime || "-"}
+                                  {isSpecialTimingMark && line.endTime && line.endTime !== "-" ? (
+                                    <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]">
+                                      {line.endTime}
+                                    </span>
+                                  ) : (
+                                    line.endTime || "-"
+                                  )}
                                 </td>
                                 <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
-                                  {line.batchTime || "-"}
+                                  {isSpecialTimingMark && line.batchTime && line.batchTime !== "-" ? (
+                                    <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]">
+                                      {line.batchTime}
+                                    </span>
+                                  ) : (
+                                    line.batchTime || "-"
+                                  )}
                                 </td>
                                 <td
                                   style={{ width: `${colWidths.character}px`, minWidth: `${colWidths.character}px`, maxWidth: `${colWidths.character}px` }}
@@ -1722,7 +2008,13 @@ export function ScriptSheetModal({
                                   className="p-2 border-r whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed font-medium"
                                   title={displayLineText}
                                 >
-                                  {displayLineText}
+                                  {line.status === "Onomatopoeia" || line.status === "Missing Onomatopoeia" ? (
+                                    <span className="px-2 py-0.5 rounded-full bg-fuchsia-500/20 text-fuchsia-800 dark:text-fuchsia-200 font-bold border border-fuchsia-400/40 text-[11px]">
+                                      {displayLineText}
+                                    </span>
+                                  ) : (
+                                    displayLineText
+                                  )}
                                 </td>
                                 {isCaptionTask && (
                                   <td
@@ -1760,7 +2052,7 @@ export function ScriptSheetModal({
                                         STATUS_STYLE_MAP[line.status]?.border || "border-gray-200"
                                       }`}
                                     >
-                                      <span>{line.status}</span>
+                                      <span>{STATUS_STYLE_MAP[line.status]?.label || line.status}</span>
                                       <ChevronDown className="w-2.5 h-2.5 opacity-70" />
                                     </button>
 
@@ -1777,7 +2069,7 @@ export function ScriptSheetModal({
                                         >
                                           {SCRIPT_LINE_STATUSES.map((st) => {
                                             const style = STATUS_STYLE_MAP[st]
-                                            const isSelected = line.status === st
+                                            const isSelected = line.status === st || (st === "Onomatopoeia" && line.status === "Missing Onomatopoeia")
                                             return (
                                               <button
                                                 key={st}
@@ -1793,7 +2085,7 @@ export function ScriptSheetModal({
                                                 }`}
                                               >
                                                 <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
-                                                <span className="flex-1 text-left text-foreground">{st}</span>
+                                                <span className="flex-1 text-left text-foreground">{style?.label || st}</span>
                                                 {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
                                               </button>
                                             )
@@ -1823,7 +2115,7 @@ export function ScriptSheetModal({
                                         <div
                                           className={`absolute right-0 ${
                                             idx >= filteredLines.length - 4 && idx >= 4 ? "bottom-full mb-1" : "top-full mt-1"
-                                          } z-50 w-44 bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
+                                          } z-50 w-48 bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
                                         >
                                           <button
                                             type="button"
@@ -1843,6 +2135,7 @@ export function ScriptSheetModal({
                                           <button
                                             type="button"
                                             onClick={() => {
+                                              const defaultTime = computeDefaultTiming(line)
                                               setAddLineModal({
                                                 isOpen: true,
                                                 position: "before",
@@ -1850,6 +2143,10 @@ export function ScriptSheetModal({
                                                 afterEps: line.eps || "",
                                                 character: line.character || "",
                                                 lineText: "",
+                                                status: "Inputted",
+                                                startTime: defaultTime.startTime,
+                                                endTime: defaultTime.endTime,
+                                                batchTime: line.batchTime || "",
                                               })
                                               setOpenRowActionDropdown(null)
                                             }}
@@ -1862,6 +2159,7 @@ export function ScriptSheetModal({
                                           <button
                                             type="button"
                                             onClick={() => {
+                                              const defaultTime = computeDefaultTiming(line)
                                               setAddLineModal({
                                                 isOpen: true,
                                                 position: "after",
@@ -1869,6 +2167,10 @@ export function ScriptSheetModal({
                                                 afterEps: line.eps || "",
                                                 character: line.character || "",
                                                 lineText: "",
+                                                status: "Inputted",
+                                                startTime: defaultTime.startTime,
+                                                endTime: defaultTime.endTime,
+                                                batchTime: line.batchTime || "",
                                               })
                                               setOpenRowActionDropdown(null)
                                             }}
@@ -1876,6 +2178,49 @@ export function ScriptSheetModal({
                                           >
                                             <Plus className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                                             <span>Add Line After</span>
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const defaultTime = computeDefaultTiming(line)
+                                              setAddLineModal({
+                                                isOpen: true,
+                                                position: "after",
+                                                refLineId: line.id,
+                                                afterEps: line.eps || "",
+                                                character: line.character || "",
+                                                lineText: "Onomatopoeia",
+                                                status: "Onomatopoeia",
+                                                startTime: defaultTime.startTime,
+                                                endTime: defaultTime.endTime,
+                                                batchTime: line.batchTime || "",
+                                              })
+                                              setOpenRowActionDropdown(null)
+                                            }}
+                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/40 rounded-md transition-colors cursor-pointer"
+                                          >
+                                            <Sparkles className="w-3.5 h-3.5 text-fuchsia-500 flex-shrink-0" />
+                                            <span>Add Onomatopoeia</span>
+                                          </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const defaultTime = computeDefaultTiming(prevLine)
+                                              setEditTimingModal({
+                                                isOpen: true,
+                                                lineId: line.id,
+                                                startTime: line.startTime || defaultTime.startTime,
+                                                endTime: line.endTime || defaultTime.endTime,
+                                                batchTime: line.batchTime || "",
+                                              })
+                                              setOpenRowActionDropdown(null)
+                                            }}
+                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+                                          >
+                                            <Clock className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                                            <span>Edit Timing</span>
                                           </button>
 
                                           <button
@@ -2716,7 +3061,66 @@ export function ScriptSheetModal({
             </div>
           </div>
         )}
-        {/* Modal for Adding Line After */}
+        {/* Modal for Editing 3 Timings */}
+        {editTimingModal.isOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-sm p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b pb-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <h3 className="font-bold text-sm text-foreground">Edit Line Timing</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditTimingModal({ isOpen: false, lineId: "", startTime: "", endTime: "", batchTime: "" })}
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <TimeStepperInput
+                  label="Start Time"
+                  value={editTimingModal.startTime}
+                  onChange={(val) => setEditTimingModal({ ...editTimingModal, startTime: val })}
+                  placeholder="e.g. 00:00:16"
+                />
+                <TimeStepperInput
+                  label="End Time"
+                  value={editTimingModal.endTime}
+                  onChange={(val) => setEditTimingModal({ ...editTimingModal, endTime: val })}
+                  placeholder="e.g. 00:00:18"
+                />
+                <TimeStepperInput
+                  label="Batch Time"
+                  value={editTimingModal.batchTime}
+                  onChange={(val) => setEditTimingModal({ ...editTimingModal, batchTime: val })}
+                  placeholder="e.g. 00:04:22"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t pt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditTimingModal({ isOpen: false, lineId: "", startTime: "", endTime: "", batchTime: "" })}
+                  className="px-3.5 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEditTiming}
+                  className="px-4 py-1.5 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md shadow-sm transition-colors cursor-pointer"
+                >
+                  Save Timing
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal for Adding Line */}
         {addLineModal.isOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
             <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
@@ -2733,8 +3137,8 @@ export function ScriptSheetModal({
                   )}
                 </div>
                 <button
-                  onClick={() => setAddLineModal({ isOpen: false, position: "after", refLineId: "", afterEps: "", character: "", lineText: "" })}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  onClick={() => setAddLineModal({ isOpen: false, position: "after", refLineId: "", afterEps: "", character: "", lineText: "", status: "Inputted", startTime: "", endTime: "", batchTime: "" })}
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2822,6 +3226,46 @@ export function ScriptSheetModal({
                   </div>
                 </div>
 
+                {/* Line Status */}
+                <div>
+                  <label className="block font-semibold text-foreground mb-1">
+                    Line Status
+                  </label>
+                  <select
+                    value={addLineModal.status || "Inputted"}
+                    onChange={(e) => setAddLineModal({ ...addLineModal, status: e.target.value as ScriptLineStatus })}
+                    className="w-full h-8 px-2.5 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                  >
+                    {SCRIPT_LINE_STATUSES.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Timing Inputs with Steppers */}
+                <div className="grid grid-cols-3 gap-2">
+                  <TimeStepperInput
+                    label="Start Time"
+                    value={addLineModal.startTime || ""}
+                    onChange={(val) => setAddLineModal({ ...addLineModal, startTime: val })}
+                    placeholder="e.g. 00:00:16"
+                  />
+                  <TimeStepperInput
+                    label="End Time"
+                    value={addLineModal.endTime || ""}
+                    onChange={(val) => setAddLineModal({ ...addLineModal, endTime: val })}
+                    placeholder="e.g. 00:00:18"
+                  />
+                  <TimeStepperInput
+                    label="Batch Time"
+                    value={addLineModal.batchTime || ""}
+                    onChange={(val) => setAddLineModal({ ...addLineModal, batchTime: val })}
+                    placeholder="e.g. 00:04:22"
+                  />
+                </div>
+
                 {/* Line Text */}
                 <div>
                   <label className="block font-semibold text-foreground mb-1">
@@ -2831,7 +3275,7 @@ export function ScriptSheetModal({
                     placeholder="Write dialogue/script line here..."
                     value={addLineModal.lineText}
                     onChange={(e) => setAddLineModal({ ...addLineModal, lineText: e.target.value })}
-                    className="w-full min-h-[90px] p-3 text-xs font-mono rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full min-h-[80px] p-3 text-xs font-mono rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -2839,7 +3283,7 @@ export function ScriptSheetModal({
               <div className="flex items-center justify-end gap-2 border-t pt-3">
                 <button
                   type="button"
-                  onClick={() => setAddLineModal({ isOpen: false, position: "after", refLineId: "", afterEps: "", character: "", lineText: "" })}
+                  onClick={() => setAddLineModal({ isOpen: false, position: "after", refLineId: "", afterEps: "", character: "", lineText: "", status: "Inputted", startTime: "", endTime: "", batchTime: "" })}
                   className="px-3.5 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer"
                 >
                   Cancel
