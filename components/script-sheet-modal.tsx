@@ -811,6 +811,14 @@ export function ScriptSheetModal({
 
   // Episode Character Summary Calculation (Tab 4)
   const episodeCharacterSummaries = useMemo(() => {
+    // Map overall line count per character across all episodes
+    const overallCharLineMap = new Map<string, number>()
+    data.lines.forEach((line) => {
+      if (!line.character) return
+      const charKey = line.character.trim()
+      overallCharLineMap.set(charKey, (overallCharLineMap.get(charKey) || 0) + 1)
+    })
+
     const epMap = new Map<string, Map<string, number>>()
 
     data.lines.forEach((line) => {
@@ -830,8 +838,10 @@ export function ScriptSheetModal({
         .map(([character, count]) => ({
           character,
           count,
+          overallCount: overallCharLineMap.get(character) || 0,
         }))
-        .sort((a, b) => b.count - a.count)
+        // Sort by OVERALL total line count descending, fallback to episode count, then character name
+        .sort((a, b) => b.overallCount - a.overallCount || b.count - a.count || a.character.localeCompare(b.character))
 
       const formattedEps = eps.padStart(3, "0")
       const characterNamesList = charactersInEp.map((c) => c.character).join(", ")
@@ -847,6 +857,11 @@ export function ScriptSheetModal({
 
     return episodes.sort((a, b) => Number(a.eps) - Number(b.eps))
   }, [data.lines])
+
+  // Total sum of all episode character counts across all episode rows
+  const totalEpisodeCharCountSum = useMemo(() => {
+    return episodeCharacterSummaries.reduce((sum, ep) => sum + ep.charactersCount, 0)
+  }, [episodeCharacterSummaries])
 
   // VOA Missing / Issue Audio Report Lines Calculation (Tab 5)
   const missingReports = useMemo(() => {
@@ -1628,7 +1643,7 @@ export function ScriptSheetModal({
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Layers className="w-3.5 h-3.5 text-indigo-500" /> Episode Character ({episodeCharacterSummaries.length})
+            <Layers className="w-3.5 h-3.5 text-indigo-500" /> Episode Character ({totalEpisodeCharCountSum})
           </button>
 
           <button
