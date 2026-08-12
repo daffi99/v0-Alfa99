@@ -160,6 +160,52 @@ export function formatReportTitle(title: string): string {
   return title.trim().replace(/([a-zA-Z]+)\s+(\d+)/g, "$1_$2")
 }
 
+export function formatEpisodeRangeNumbers(epsList: string[]): string {
+  if (!epsList || epsList.length === 0) return "000"
+
+  const epNumbers = Array.from(
+    new Set(
+      epsList
+        .map((e) => parseInt(e.trim(), 10))
+        .filter((num) => !isNaN(num))
+    )
+  ).sort((a, b) => a - b)
+
+  if (epNumbers.length === 0) return epsList.join(", ")
+
+  const ranges: string[] = []
+  let rangeStart = epNumbers[0]
+  let rangeEnd = epNumbers[0]
+
+  for (let i = 1; i < epNumbers.length; i++) {
+    const current = epNumbers[i]
+    if (current === rangeEnd + 1) {
+      rangeEnd = current
+    } else {
+      if (rangeStart === rangeEnd) {
+        ranges.push(rangeStart.toString().padStart(3, "0"))
+      } else {
+        ranges.push(`${rangeStart.toString().padStart(3, "0")}-${rangeEnd.toString().padStart(3, "0")}`)
+      }
+      rangeStart = current
+      rangeEnd = current
+    }
+  }
+
+  if (rangeStart === rangeEnd) {
+    ranges.push(rangeStart.toString().padStart(3, "0"))
+  } else {
+    ranges.push(`${rangeStart.toString().padStart(3, "0")}-${rangeEnd.toString().padStart(3, "0")}`)
+  }
+
+  return ranges.join(", ")
+}
+
+export function formatEpisodeRanges(epsList: string[]): string {
+  const rangeStr = formatEpisodeRangeNumbers(epsList)
+  return rangeStr ? `EP${rangeStr}` : "EP000"
+}
+
 export function shiftTimingValue(timeStr: string, deltaSeconds: number): string {
   if (!timeStr || timeStr === "-") return timeStr
   if (timeStr.includes("-") && timeStr.split("-").length === 2 && !timeStr.startsWith("-")) {
@@ -1026,17 +1072,18 @@ export function ScriptSheetModal({
         .sort((a, b) => Number(a) - Number(b))
         .map((e) => e.padStart(3, "0"))
 
-      const epsJoined = sortedEps.length > 0 ? sortedEps.join(", ") : "000"
+      const epsJoined = formatEpisodeRangeNumbers(Array.from(epsSet))
       const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
 
-      const rawStart = Array.from(startTimeSet).join(", ") || "-"
-      const rawBatch = Array.from(batchTimeSet).join(", ") || "-"
+      const isBeluman = status === "Beluman"
+      const rawStart = isBeluman ? "-" : (Array.from(startTimeSet).join(", ") || "-")
+      const rawBatch = isBeluman ? "-" : (Array.from(batchTimeSet).join(", ") || "-")
 
-      const startTimeFormatted = formatCompactTimeToken(rawStart)
-      const batchTimeFormatted = formatCompactTimeToken(rawBatch)
+      const startTimeFormatted = isBeluman ? "-" : formatCompactTimeToken(rawStart)
+      const batchTimeFormatted = isBeluman ? "-" : formatCompactTimeToken(rawBatch)
 
       const reportString = `${formattedTitle}_${epsJoined}_${character}/${actor}${suffix}`
-      const epSummary = `EP${epsJoined} ${character}/${actor}`
+      const epSummary = `${formatEpisodeRanges(Array.from(epsSet))} ${character}/${actor}`
 
       reports.push({
         groupKey,
