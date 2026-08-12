@@ -25,6 +25,8 @@ import {
   RotateCcw,
   MoreVertical,
   Volume2,
+  Link,
+  Unlink,
 } from "lucide-react"
 import { normalizeMultilinesInQuotes, type ScriptData, type ScriptLine, type MasterArtistMapping, type ScriptLineStatus } from "./script-wizard-modal"
 
@@ -463,6 +465,7 @@ export function ScriptSheetModal({
     endTime: "",
     batchTime: "",
   })
+  const [isEditBatchOverride, setIsEditBatchOverride] = useState(false)
 
   // Add Line Modal State (Before or After)
   const [addLineModal, setAddLineModal] = useState<{
@@ -488,6 +491,7 @@ export function ScriptSheetModal({
     endTime: "",
     batchTime: "",
   })
+  const [isAddLineBatchOverride, setIsAddLineBatchOverride] = useState(false)
 
   // Restore scroll position upon render / modal open / tab switch / data update
   useEffect(() => {
@@ -3126,6 +3130,19 @@ export function ScriptSheetModal({
                   value={editTimingModal.startTime}
                   onChange={(val) => {
                     setEditTimingModal((prev) => {
+                      if (isEditBatchOverride) {
+                        const oldStartSec = timeToSeconds(prev.startTime)
+                        const newStartSec = timeToSeconds(val)
+                        if (oldStartSec !== null && newStartSec !== null) {
+                          const delta = newStartSec - oldStartSec
+                          return {
+                            ...prev,
+                            startTime: val,
+                            endTime: shiftTimingValue(prev.endTime, delta),
+                          }
+                        }
+                        return { ...prev, startTime: val }
+                      }
                       const oldStartSec = timeToSeconds(prev.startTime)
                       const newStartSec = timeToSeconds(val)
                       if (oldStartSec !== null && newStartSec !== null) {
@@ -3145,7 +3162,7 @@ export function ScriptSheetModal({
                       ...prev,
                       startTime: shiftTimingValue(prev.startTime, delta),
                       endTime: shiftTimingValue(prev.endTime, delta),
-                      batchTime: shiftTimingValue(prev.batchTime, delta),
+                      batchTime: isEditBatchOverride ? prev.batchTime : shiftTimingValue(prev.batchTime, delta),
                     }))
                   }}
                   placeholder="e.g. 00:00:16"
@@ -3162,35 +3179,64 @@ export function ScriptSheetModal({
                   }}
                   placeholder="e.g. 00:00:18"
                 />
-                <TimeStepperInput
-                  label="Batch Time"
-                  value={editTimingModal.batchTime}
-                  onChange={(val) => {
-                    setEditTimingModal((prev) => {
-                      const oldBatchSec = timeToSeconds(prev.batchTime)
-                      const newBatchSec = timeToSeconds(val)
-                      if (oldBatchSec !== null && newBatchSec !== null) {
-                        const delta = newBatchSec - oldBatchSec
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-foreground">Batch Time</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditBatchOverride(!isEditBatchOverride)}
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 transition-colors cursor-pointer ${
+                        isEditBatchOverride
+                          ? "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700"
+                          : "bg-muted text-muted-foreground hover:text-foreground border-input"
+                      }`}
+                      title={isEditBatchOverride ? "Batch time is unlinked (Manual Override active)" : "Click to unlink & override Batch Time manually"}
+                    >
+                      {isEditBatchOverride ? <Unlink className="w-3 h-3 text-amber-600" /> : <Link className="w-3 h-3 text-muted-foreground" />}
+                      <span>{isEditBatchOverride ? "Manual Override" : "Linked"}</span>
+                    </button>
+                  </div>
+                  <TimeStepperInput
+                    label=""
+                    value={editTimingModal.batchTime}
+                    onChange={(val) => {
+                      setEditTimingModal((prev) => {
+                        if (isEditBatchOverride) {
+                          return { ...prev, batchTime: val }
+                        }
+                        const oldBatchSec = timeToSeconds(prev.batchTime)
+                        const newBatchSec = timeToSeconds(val)
+                        if (oldBatchSec !== null && newBatchSec !== null) {
+                          const delta = newBatchSec - oldBatchSec
+                          return {
+                            ...prev,
+                            batchTime: val,
+                            startTime: shiftTimingValue(prev.startTime, delta),
+                            endTime: shiftTimingValue(prev.endTime, delta),
+                          }
+                        }
+                        return { ...prev, batchTime: val }
+                      })
+                    }}
+                    onStep={(delta) => {
+                      setEditTimingModal((prev) => {
+                        if (isEditBatchOverride) {
+                          return {
+                            ...prev,
+                            batchTime: shiftTimingValue(prev.batchTime, delta),
+                          }
+                        }
                         return {
                           ...prev,
-                          batchTime: val,
                           startTime: shiftTimingValue(prev.startTime, delta),
                           endTime: shiftTimingValue(prev.endTime, delta),
+                          batchTime: shiftTimingValue(prev.batchTime, delta),
                         }
-                      }
-                      return { ...prev, batchTime: val }
-                    })
-                  }}
-                  onStep={(delta) => {
-                    setEditTimingModal((prev) => ({
-                      ...prev,
-                      startTime: shiftTimingValue(prev.startTime, delta),
-                      endTime: shiftTimingValue(prev.endTime, delta),
-                      batchTime: shiftTimingValue(prev.batchTime, delta),
-                    }))
-                  }}
-                  placeholder="e.g. 00:04:22"
-                />
+                      })
+                    }}
+                    placeholder="e.g. 00:04:22"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 border-t pt-3">
@@ -3344,6 +3390,19 @@ export function ScriptSheetModal({
                     value={addLineModal.startTime || ""}
                     onChange={(val) => {
                       setAddLineModal((prev) => {
+                        if (isAddLineBatchOverride) {
+                          const oldStartSec = timeToSeconds(prev.startTime || "")
+                          const newStartSec = timeToSeconds(val)
+                          if (oldStartSec !== null && newStartSec !== null) {
+                            const delta = newStartSec - oldStartSec
+                            return {
+                              ...prev,
+                              startTime: val,
+                              endTime: shiftTimingValue(prev.endTime || "", delta),
+                            }
+                          }
+                          return { ...prev, startTime: val }
+                        }
                         const oldStartSec = timeToSeconds(prev.startTime || "")
                         const newStartSec = timeToSeconds(val)
                         if (oldStartSec !== null && newStartSec !== null) {
@@ -3363,7 +3422,7 @@ export function ScriptSheetModal({
                         ...prev,
                         startTime: shiftTimingValue(prev.startTime || "", delta),
                         endTime: shiftTimingValue(prev.endTime || "", delta),
-                        batchTime: shiftTimingValue(prev.batchTime || "", delta),
+                        batchTime: isAddLineBatchOverride ? (prev.batchTime || "") : shiftTimingValue(prev.batchTime || "", delta),
                       }))
                     }}
                     placeholder="e.g. 00:00:16"
@@ -3380,35 +3439,64 @@ export function ScriptSheetModal({
                     }}
                     placeholder="e.g. 00:00:18"
                   />
-                  <TimeStepperInput
-                    label="Batch Time"
-                    value={addLineModal.batchTime || ""}
-                    onChange={(val) => {
-                      setAddLineModal((prev) => {
-                        const oldBatchSec = timeToSeconds(prev.batchTime || "")
-                        const newBatchSec = timeToSeconds(val)
-                        if (oldBatchSec !== null && newBatchSec !== null) {
-                          const delta = newBatchSec - oldBatchSec
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-foreground truncate">Batch Time</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddLineBatchOverride(!isAddLineBatchOverride)}
+                        className={`text-[9px] font-bold px-1 py-0.5 rounded border flex items-center gap-0.5 transition-colors cursor-pointer ${
+                          isAddLineBatchOverride
+                            ? "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700"
+                            : "bg-muted text-muted-foreground hover:text-foreground border-input"
+                        }`}
+                        title={isAddLineBatchOverride ? "Batch time is unlinked (Manual Override active)" : "Click to unlink & override Batch Time manually"}
+                      >
+                        {isAddLineBatchOverride ? <Unlink className="w-2.5 h-2.5 text-amber-600" /> : <Link className="w-2.5 h-2.5 text-muted-foreground" />}
+                        <span>{isAddLineBatchOverride ? "Override" : "Linked"}</span>
+                      </button>
+                    </div>
+                    <TimeStepperInput
+                      label=""
+                      value={addLineModal.batchTime || ""}
+                      onChange={(val) => {
+                        setAddLineModal((prev) => {
+                          if (isAddLineBatchOverride) {
+                            return { ...prev, batchTime: val }
+                          }
+                          const oldBatchSec = timeToSeconds(prev.batchTime || "")
+                          const newBatchSec = timeToSeconds(val)
+                          if (oldBatchSec !== null && newBatchSec !== null) {
+                            const delta = newBatchSec - oldBatchSec
+                            return {
+                              ...prev,
+                              batchTime: val,
+                              startTime: shiftTimingValue(prev.startTime || "", delta),
+                              endTime: shiftTimingValue(prev.endTime || "", delta),
+                            }
+                          }
+                          return { ...prev, batchTime: val }
+                        })
+                      }}
+                      onStep={(delta) => {
+                        setAddLineModal((prev) => {
+                          if (isAddLineBatchOverride) {
+                            return {
+                              ...prev,
+                              batchTime: shiftTimingValue(prev.batchTime || "", delta),
+                            }
+                          }
                           return {
                             ...prev,
-                            batchTime: val,
                             startTime: shiftTimingValue(prev.startTime || "", delta),
                             endTime: shiftTimingValue(prev.endTime || "", delta),
+                            batchTime: shiftTimingValue(prev.batchTime || "", delta),
                           }
-                        }
-                        return { ...prev, batchTime: val }
-                      })
-                    }}
-                    onStep={(delta) => {
-                      setAddLineModal((prev) => ({
-                        ...prev,
-                        startTime: shiftTimingValue(prev.startTime || "", delta),
-                        endTime: shiftTimingValue(prev.endTime || "", delta),
-                        batchTime: shiftTimingValue(prev.batchTime || "", delta),
-                      }))
-                    }}
-                    placeholder="e.g. 00:04:22"
-                  />
+                        })
+                      }}
+                      placeholder="e.g. 00:04:22"
+                    />
+                  </div>
                 </div>
 
                 {/* Line Text */}
