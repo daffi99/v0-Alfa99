@@ -1024,6 +1024,7 @@ export function ScriptSheetModal({
       groupKey: string
       status: ScriptLineStatus
       epsJoined: string
+      epsFormattedRange: string
       character: string
       actor: string
       reportString: string
@@ -1072,7 +1073,8 @@ export function ScriptSheetModal({
         .sort((a, b) => Number(a) - Number(b))
         .map((e) => e.padStart(3, "0"))
 
-      const epsJoined = formatEpisodeRangeNumbers(Array.from(epsSet))
+      const epsJoined = sortedEps.length > 0 ? sortedEps.join(", ") : "000"
+      const epsFormattedRange = formatEpisodeRanges(Array.from(epsSet))
       const minEps = sortedEps.length > 0 ? Number(sortedEps[0]) : 0
 
       const isBeluman = status === "Beluman"
@@ -1083,12 +1085,13 @@ export function ScriptSheetModal({
       const batchTimeFormatted = isBeluman ? "-" : formatCompactTimeToken(rawBatch)
 
       const reportString = `${formattedTitle}_${epsJoined}_${character}/${actor}${suffix}`
-      const epSummary = `${formatEpisodeRanges(Array.from(epsSet))} ${character}/${actor}`
+      const epSummary = `${epsFormattedRange} ${character}/${actor}`
 
       reports.push({
         groupKey,
         status,
         epsJoined,
+        epsFormattedRange,
         character,
         actor,
         reportString,
@@ -2899,7 +2902,7 @@ export function ScriptSheetModal({
                         </td>
                         <td className="p-2.5 whitespace-nowrap">
                           <span className={`px-2 py-0.5 rounded bg-emerald-50 text-emerald-900 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 font-mono font-bold text-[11px] inline-block ${item.isResolved ? "opacity-50 line-through" : ""}`}>
-                            EP{item.epsJoined}
+                            {item.epsFormattedRange}
                           </span>
                         </td>
                         <td className="p-2.5 whitespace-nowrap">
