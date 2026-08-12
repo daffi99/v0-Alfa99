@@ -158,23 +158,49 @@ export function formatReportTitle(title: string): string {
   return title.trim().replace(/([a-zA-Z]+)\s+(\d+)/g, "$1_$2")
 }
 
+export function shiftTimingValue(timeStr: string, deltaSeconds: number): string {
+  if (!timeStr || timeStr === "-") return timeStr
+  if (timeStr.includes("-") && timeStr.split("-").length === 2 && !timeStr.startsWith("-")) {
+    const [start, end] = timeStr.split("-").map((s) => s.trim())
+    const startSec = timeToSeconds(start)
+    const endSec = timeToSeconds(end)
+    if (startSec !== null && endSec !== null) {
+      const newStartSec = Math.max(0, startSec + deltaSeconds)
+      const newEndSec = Math.max(0, endSec + deltaSeconds)
+      const hasHours = start.includes(":") && start.split(":").length === 3
+      return `${secondsToTimeString(newStartSec, hasHours)}-${secondsToTimeString(newEndSec, hasHours)}`
+    }
+  }
+  const currentSec = timeToSeconds(timeStr)
+  if (currentSec === null) return timeStr
+  const newSec = Math.max(0, currentSec + deltaSeconds)
+  const hasHours = timeStr.includes(":") && timeStr.split(":").length === 3
+  return secondsToTimeString(newSec, hasHours)
+}
+
 export function TimeStepperInput({
   label,
   value,
   onChange,
+  onStep,
   placeholder,
 }: {
   label: string
   value: string
   onChange: (val: string) => void
+  onStep?: (deltaSeconds: number) => void
   placeholder?: string
 }) {
   const handleStep = (deltaSeconds: number) => {
-    let currentSec = timeToSeconds(value)
-    if (currentSec === null) currentSec = 0
-    const newSec = Math.max(0, currentSec + deltaSeconds)
-    const hasHours = value.includes(":") && value.split(":").length === 3
-    onChange(secondsToTimeString(newSec, hasHours))
+    if (onStep) {
+      onStep(deltaSeconds)
+    } else {
+      let currentSec = timeToSeconds(value)
+      if (currentSec === null) currentSec = 0
+      const newSec = Math.max(0, currentSec + deltaSeconds)
+      const hasHours = value.includes(":") && value.split(":").length === 3
+      onChange(secondsToTimeString(newSec, hasHours))
+    }
   }
 
   return (
@@ -3098,19 +3124,71 @@ export function ScriptSheetModal({
                 <TimeStepperInput
                   label="Start Time"
                   value={editTimingModal.startTime}
-                  onChange={(val) => setEditTimingModal({ ...editTimingModal, startTime: val })}
+                  onChange={(val) => {
+                    setEditTimingModal((prev) => {
+                      const oldStartSec = timeToSeconds(prev.startTime)
+                      const newStartSec = timeToSeconds(val)
+                      if (oldStartSec !== null && newStartSec !== null) {
+                        const delta = newStartSec - oldStartSec
+                        return {
+                          ...prev,
+                          startTime: val,
+                          endTime: shiftTimingValue(prev.endTime, delta),
+                          batchTime: shiftTimingValue(prev.batchTime, delta),
+                        }
+                      }
+                      return { ...prev, startTime: val }
+                    })
+                  }}
+                  onStep={(delta) => {
+                    setEditTimingModal((prev) => ({
+                      ...prev,
+                      startTime: shiftTimingValue(prev.startTime, delta),
+                      endTime: shiftTimingValue(prev.endTime, delta),
+                      batchTime: shiftTimingValue(prev.batchTime, delta),
+                    }))
+                  }}
                   placeholder="e.g. 00:00:16"
                 />
                 <TimeStepperInput
                   label="End Time"
                   value={editTimingModal.endTime}
                   onChange={(val) => setEditTimingModal({ ...editTimingModal, endTime: val })}
+                  onStep={(delta) => {
+                    setEditTimingModal((prev) => ({
+                      ...prev,
+                      endTime: shiftTimingValue(prev.endTime, delta),
+                    }))
+                  }}
                   placeholder="e.g. 00:00:18"
                 />
                 <TimeStepperInput
                   label="Batch Time"
                   value={editTimingModal.batchTime}
-                  onChange={(val) => setEditTimingModal({ ...editTimingModal, batchTime: val })}
+                  onChange={(val) => {
+                    setEditTimingModal((prev) => {
+                      const oldBatchSec = timeToSeconds(prev.batchTime)
+                      const newBatchSec = timeToSeconds(val)
+                      if (oldBatchSec !== null && newBatchSec !== null) {
+                        const delta = newBatchSec - oldBatchSec
+                        return {
+                          ...prev,
+                          batchTime: val,
+                          startTime: shiftTimingValue(prev.startTime, delta),
+                          endTime: shiftTimingValue(prev.endTime, delta),
+                        }
+                      }
+                      return { ...prev, batchTime: val }
+                    })
+                  }}
+                  onStep={(delta) => {
+                    setEditTimingModal((prev) => ({
+                      ...prev,
+                      startTime: shiftTimingValue(prev.startTime, delta),
+                      endTime: shiftTimingValue(prev.endTime, delta),
+                      batchTime: shiftTimingValue(prev.batchTime, delta),
+                    }))
+                  }}
                   placeholder="e.g. 00:04:22"
                 />
               </div>
@@ -3264,19 +3342,71 @@ export function ScriptSheetModal({
                   <TimeStepperInput
                     label="Start Time"
                     value={addLineModal.startTime || ""}
-                    onChange={(val) => setAddLineModal({ ...addLineModal, startTime: val })}
+                    onChange={(val) => {
+                      setAddLineModal((prev) => {
+                        const oldStartSec = timeToSeconds(prev.startTime || "")
+                        const newStartSec = timeToSeconds(val)
+                        if (oldStartSec !== null && newStartSec !== null) {
+                          const delta = newStartSec - oldStartSec
+                          return {
+                            ...prev,
+                            startTime: val,
+                            endTime: shiftTimingValue(prev.endTime || "", delta),
+                            batchTime: shiftTimingValue(prev.batchTime || "", delta),
+                          }
+                        }
+                        return { ...prev, startTime: val }
+                      })
+                    }}
+                    onStep={(delta) => {
+                      setAddLineModal((prev) => ({
+                        ...prev,
+                        startTime: shiftTimingValue(prev.startTime || "", delta),
+                        endTime: shiftTimingValue(prev.endTime || "", delta),
+                        batchTime: shiftTimingValue(prev.batchTime || "", delta),
+                      }))
+                    }}
                     placeholder="e.g. 00:00:16"
                   />
                   <TimeStepperInput
                     label="End Time"
                     value={addLineModal.endTime || ""}
                     onChange={(val) => setAddLineModal({ ...addLineModal, endTime: val })}
+                    onStep={(delta) => {
+                      setAddLineModal((prev) => ({
+                        ...prev,
+                        endTime: shiftTimingValue(prev.endTime || "", delta),
+                      }))
+                    }}
                     placeholder="e.g. 00:00:18"
                   />
                   <TimeStepperInput
                     label="Batch Time"
                     value={addLineModal.batchTime || ""}
-                    onChange={(val) => setAddLineModal({ ...addLineModal, batchTime: val })}
+                    onChange={(val) => {
+                      setAddLineModal((prev) => {
+                        const oldBatchSec = timeToSeconds(prev.batchTime || "")
+                        const newBatchSec = timeToSeconds(val)
+                        if (oldBatchSec !== null && newBatchSec !== null) {
+                          const delta = newBatchSec - oldBatchSec
+                          return {
+                            ...prev,
+                            batchTime: val,
+                            startTime: shiftTimingValue(prev.startTime || "", delta),
+                            endTime: shiftTimingValue(prev.endTime || "", delta),
+                          }
+                        }
+                        return { ...prev, batchTime: val }
+                      })
+                    }}
+                    onStep={(delta) => {
+                      setAddLineModal((prev) => ({
+                        ...prev,
+                        startTime: shiftTimingValue(prev.startTime || "", delta),
+                        endTime: shiftTimingValue(prev.endTime || "", delta),
+                        batchTime: shiftTimingValue(prev.batchTime || "", delta),
+                      }))
+                    }}
                     placeholder="e.g. 00:04:22"
                   />
                 </div>
