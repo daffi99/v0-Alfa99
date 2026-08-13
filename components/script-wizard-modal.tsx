@@ -116,6 +116,100 @@ export function isPsToken(token: string): boolean {
   return false
 }
 
+export function isPurePsString(str: string): boolean {
+  if (!str) return false
+  const trimmed = str.trim().replace(/^["']|["']$/g, "")
+  if (!trimmed) return false
+
+  if (!isNaN(Number(trimmed)) || /^[+-]\d+(?:\.\d+)?$/.test(trimmed)) {
+    return true
+  }
+
+  const words = trimmed.split(/\s+/).filter(Boolean)
+  if (words.length === 0) return false
+
+  const isPsWord = (w: string) => {
+    const cleanW = w.toLowerCase().replace(/[^a-z0-9.+-]/g, "")
+    if (!cleanW) return true
+    if (!isNaN(Number(cleanW)) || /^[+-]?\d+(?:\.\d+)?$/.test(cleanW)) return true
+    return ["ps", "pitch", "treble", "bass", "shift", "semitone", "speed", "tempo", "gain", "with"].includes(cleanW)
+  }
+
+  return words.every(isPsWord)
+}
+
+export function parseArtistAndPsString(str: string): { artist: string; ps: string } {
+  if (!str || !str.trim()) return { artist: "Unassigned", ps: "" }
+  let input = str.trim().replace(/^["']|["']$/g, "").trim()
+
+  // 1. Check arrow separator e.g. "Christoph -> ps 0.94 with treble +4" or "VOA Christoph -> ps 0.94"
+  const arrowMatch = input.match(/^(?:VOA\s+)?(.+?)\s*(?:->|=>|→|-|:)\s*(?:(?:ps|pitch)\s*:?\s*)?(.+)$/i)
+  if (arrowMatch) {
+    const candidateArtist = arrowMatch[1].trim().replace(/^VOA\s+/i, "").trim()
+    let candidatePs = arrowMatch[2].trim().replace(/^(?:ps|pitch|with)\s*:?\s*/i, "").trim()
+
+    if (candidateArtist && (isPsToken(candidatePs) || isPurePsString(candidatePs))) {
+      return {
+        artist: candidateArtist,
+        ps: candidatePs,
+      }
+    }
+  }
+
+  // 2. Check explicit "PS:" or "pitch:" pattern e.g. "Christoph PS: 0.94 treble +4" or "VOA Christoph ps: 0.94"
+  const explicitMatch = input.match(/^(?:VOA\s+)?(.+?)\s+[\(\[\{-]?\s*(?:PS|ps|pitch)\s*:\s*(.+?)[\)\]\}]?$/i)
+  if (explicitMatch) {
+    const candidateArtist = explicitMatch[1].trim().replace(/^VOA\s+/i, "").trim()
+    const candidatePs = explicitMatch[2].trim()
+    return {
+      artist: candidateArtist || "Unassigned",
+      ps: candidatePs,
+    }
+  }
+
+  // 3. Check Parentheses e.g. "Christoph (0.94 treble +4)" or "Christoph (ps 0.94)"
+  const parenMatch = input.match(/^(?:VOA\s+)?(.+?)\s*[\(\[\{]\s*(?:ps\s*:?\s*)?(.+?)\s*[\)\]\}]$/i)
+  if (parenMatch) {
+    const candidateArtist = parenMatch[1].trim().replace(/^VOA\s+/i, "").trim()
+    const candidatePs = parenMatch[2].trim()
+    if (isPsToken(candidatePs) || isPurePsString(candidatePs)) {
+      return {
+        artist: candidateArtist || "Unassigned",
+        ps: candidatePs,
+      }
+    }
+  }
+
+  // 4. Check Artist Name followed by PS parameters e.g. "Christoph 0.94 treble +4", "Christoph 0.94 with treble +4", "Christoph treble +4", "Christoph 0.97"
+  const psStartRegex = /^(?:VOA\s+)?(.+?)\s+((?:\b(?:ps|pitch|treble|bass|shift|semitone|speed|tempo|gain|with)\b\s*|[+-]?\d+(?:\.\d+)?\b.*)+)$/i
+  const match = input.match(psStartRegex)
+  if (match) {
+    let candidateArtist = match[1].trim().replace(/^VOA\s+/i, "").trim()
+    let candidatePs = match[2].trim().replace(/^(?:with|ps:?|pitch:?)\s+/i, "").trim()
+
+    if (!isPurePsString(candidateArtist) && candidateArtist.length > 0) {
+      return {
+        artist: candidateArtist,
+        ps: candidatePs,
+      }
+    }
+  }
+
+  // 5. Check if string is purely a PS token (no artist name) e.g. "0.94 treble +4"
+  if (isPurePsString(input)) {
+    return {
+      artist: "Unassigned",
+      ps: input.replace(/^(?:ps|pitch)\s*:?\s*/i, "").trim(),
+    }
+  }
+
+  // Default: Input is just an Artist Name e.g. "Christoph" or "Miles Palmer"
+  return {
+    artist: input.replace(/^VOA\s+/i, "").trim() || "Unassigned",
+    ps: "",
+  }
+}
+
 // Helper to sanitize Voice Actor Name and extract PS value handling empty TSV columns (e.g. Sal\t\t\tRekha)
 export function sanitizeVoiceActorAndPsTokens(cols: string[]) {
   const nonEmpty = cols.map((c) => c.replace(/^["']|["']$/g, "").trim()).filter(Boolean)
@@ -128,48 +222,42 @@ export function sanitizeVoiceActorAndPsTokens(cols: string[]) {
 
   const rest = nonEmpty.slice(1)
 
-  if (rest.length === 1) {
-    const token = rest[0]
-    if (isPsToken(token)) {
-      ps = token
-    } else {
-      artist = token
-    }
-  } else if (rest.length >= 2) {
-    // Find if any token is a PS token
-    const psIdx = rest.findIndex((t) => isPsToken(t))
-    if (psIdx !== -1) {
-      ps = rest[psIdx]
-      const artistTokens = rest.filter((_, idx) => idx !== psIdx)
-      artist = artistTokens.join(" ")
-    } else {
-      // Fallback: artist is rest[0]
-      artist = rest[0]
-      if (rest[1]) {
-        ps = rest[1]
-      }
-    }
-  }
-
-  // Strip trailing PS from artist name if any (e.g. "Fred 0.97" or "Fred Treble +4")
-  if (artist && artist !== "Unassigned") {
-    // 1. Check trailing PS pattern with keyword like "Fred Treble +4" or "Fred PS: 0.97"
-    const kwMatch = artist.match(/^(.+?)\s+((?:\b(?:treble|pitch|ps|bass|shift|semitone|speed)\b.*|[+-]?\d+(?:\.\d+)?.*))$/i)
-    if (kwMatch && isPsToken(kwMatch[2])) {
-      artist = kwMatch[1].trim()
-      if (!ps) {
-        ps = kwMatch[2].trim()
-      }
-    } else {
-      // 2. Check trailing pure number pattern like "Fred 0.97"
-      const match = artist.match(/^(.+?)\s+([0-9]+(?:\.[0-9]+)?)$/)
-      if (match) {
-        artist = match[1].trim()
-        if (!ps) {
-          ps = match[2].trim()
+  if (rest.length === 0) {
+    // If single text string provided e.g. "Mark VOA Christoph -> ps 0.94 with treble +4"
+    const parsed = parseArtistAndPsString(charName)
+    if (parsed.artist !== "Unassigned" && parsed.artist !== charName) {
+      const firstSpaceIdx = charName.search(/\s+/)
+      if (firstSpaceIdx !== -1) {
+        const potentialChar = charName.substring(0, firstSpaceIdx).trim()
+        const potentialRest = charName.substring(firstSpaceIdx).trim()
+        const parsedRest = parseArtistAndPsString(potentialRest)
+        return {
+          charName: potentialChar,
+          artist: parsedRest.artist,
+          ps: parsedRest.ps,
         }
       }
     }
+  } else if (rest.length === 1) {
+    const parsed = parseArtistAndPsString(rest[0])
+    artist = parsed.artist
+    ps = parsed.ps
+  } else if (rest.length >= 2) {
+    let foundArtist = ""
+    let foundPs = ""
+
+    for (const token of rest) {
+      const parsed = parseArtistAndPsString(token)
+      if (parsed.artist !== "Unassigned" && !foundArtist) {
+        foundArtist = parsed.artist
+      }
+      if (parsed.ps && !foundPs) {
+        foundPs = parsed.ps
+      }
+    }
+
+    artist = foundArtist || "Unassigned"
+    ps = foundPs
   }
 
   return { charName, artist: artist || "Unassigned", ps }
