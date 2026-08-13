@@ -142,6 +142,40 @@ export function parseArtistAndPsString(str: string): { artist: string; ps: strin
   if (!str || !str.trim()) return { artist: "Unassigned", ps: "" }
   let input = str.trim().replace(/^["']|["']$/g, "").trim()
 
+  // 0. Check multiline cell (e.g. Google Sheets export: "Christoph\n\n0.94\n\ntreble +4")
+  if (input.includes("\n")) {
+    const lines = input
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+
+    if (lines.length > 0) {
+      let foundArtist = ""
+      const psParts: string[] = []
+
+      for (const line of lines) {
+        if (isPurePsString(line) || isPsToken(line)) {
+          psParts.push(line.replace(/^(?:ps|pitch)\s*:?\s*/i, "").trim())
+        } else if (!foundArtist) {
+          const parsed = parseArtistAndPsString(line)
+          if (parsed.artist !== "Unassigned") {
+            foundArtist = parsed.artist
+          }
+          if (parsed.ps) {
+            psParts.push(parsed.ps)
+          }
+        }
+      }
+
+      if (foundArtist || psParts.length > 0) {
+        return {
+          artist: foundArtist || "Unassigned",
+          ps: psParts.join(" ").trim(),
+        }
+      }
+    }
+  }
+
   // 1. Check arrow separator e.g. "Christoph -> ps 0.94 with treble +4" or "VOA Christoph -> ps 0.94"
   const arrowMatch = input.match(/^(?:VOA\s+)?(.+?)\s*(?:->|=>|→|-|:)\s*(?:(?:ps|pitch)\s*:?\s*)?(.+)$/i)
   if (arrowMatch) {
