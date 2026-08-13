@@ -539,6 +539,10 @@ export function ScriptSheetModal({
   })
   const [isAddLineBatchOverride, setIsAddLineBatchOverride] = useState(false)
 
+  // Tab 3 Character Summary Search & VOA Filter State
+  const [summarySearchQuery, setSummarySearchQuery] = useState("")
+  const [summaryVoaFilter, setSummaryVoaFilter] = useState("ALL")
+
   // Restore scroll position upon render / modal open / tab switch / data update
   useEffect(() => {
     if (!isOpen) return
@@ -879,6 +883,37 @@ export function ScriptSheetModal({
       .filter((cs) => cs.linesCount > 0)
       .sort((a, b) => b.linesCount - a.linesCount)
   }, [characterSummaries])
+
+  // Unique VOA Voice Actor Names list for Tab 3 filter dropdown
+  const uniqueVoaArtists = useMemo(() => {
+    const artists = new Set<string>()
+    activeCharacterSummaries.forEach((cs) => {
+      if (cs.actor && cs.actor !== "Unassigned") {
+        artists.add(cs.actor)
+      }
+    })
+    return Array.from(artists).sort((a, b) => a.localeCompare(b))
+  }, [activeCharacterSummaries])
+
+  // Filtered Character Summaries for Tab 3 (search query + VOA dropdown filter)
+  const filteredCharacterSummaries = useMemo(() => {
+    return activeCharacterSummaries.filter((cs) => {
+      const query = summarySearchQuery.trim().toLowerCase()
+      const matchesQuery =
+        !query ||
+        cs.character.toLowerCase().includes(query) ||
+        cs.actor.toLowerCase().includes(query) ||
+        cs.ps.toLowerCase().includes(query)
+
+      const matchesVoa =
+        summaryVoaFilter === "ALL" ||
+        (summaryVoaFilter === "UNASSIGNED"
+          ? cs.actor === "Unassigned"
+          : cs.actor.toLowerCase() === summaryVoaFilter.toLowerCase())
+
+      return matchesQuery && matchesVoa
+    })
+  }, [activeCharacterSummaries, summarySearchQuery, summaryVoaFilter])
 
   // Unused characters (with 0 lines)
   const unusedCharacterSummaries = useMemo(() => {
@@ -1696,7 +1731,7 @@ export function ScriptSheetModal({
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            <BarChart3 className="w-3.5 h-3.5" /> Character Summary
+            <BarChart3 className="w-3.5 h-3.5" /> Character Summary ({activeCharacterSummaries.length})
           </button>
 
           <button
@@ -2423,26 +2458,74 @@ export function ScriptSheetModal({
           {/* TAB 3: CHARACTER & ACTOR SUMMARY REPORT (Sorted Highest to Lowest + Collapsed 0 Lines) */}
           {activeTab === "summary" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-3">
-              <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-lg border text-xs">
-                <span className="text-muted-foreground font-medium">
-                  Sorted by line count (Highest to Lowest) • {activeCharacterSummaries.length} Active Characters
-                </span>
+              {/* Search & VOA Filter Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-2.5 bg-card p-2.5 rounded-lg border shadow-2xs text-xs">
+                <div className="flex items-center gap-2 flex-1 min-w-[280px]">
+                  <div className="relative flex-1 max-w-xs">
+                    <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search character or VOA..."
+                      value={summarySearchQuery}
+                      onChange={(e) => setSummarySearchQuery(e.target.value)}
+                      className="w-full h-8 pl-8 pr-7 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
+                    />
+                    {summarySearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSummarySearchQuery("")}
+                        className="absolute right-2 top-2 p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors cursor-pointer"
+                        title="Clear search"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  <select
+                    value={summaryVoaFilter}
+                    onChange={(e) => setSummaryVoaFilter(e.target.value)}
+                    className="h-8 px-2.5 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium cursor-pointer max-w-[180px] truncate"
+                  >
+                    <option value="ALL">All VOA Artists ({uniqueVoaArtists.length})</option>
+                    {uniqueVoaArtists.map((artist) => (
+                      <option key={artist} value={artist}>
+                        {artist}
+                      </option>
+                    ))}
+                    <option value="UNASSIGNED">Unassigned Artists</option>
+                  </select>
+
+                  {(summarySearchQuery || summaryVoaFilter !== "ALL") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSummarySearchQuery("")
+                        setSummaryVoaFilter("ALL")
+                      }}
+                      className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer font-medium whitespace-nowrap"
+                    >
+                      Reset Filters
+                    </button>
+                  )}
+                </div>
+
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleCheckAll(true)}
-                    className="h-8 px-2.5 text-xs border border-border text-foreground hover:bg-muted font-medium rounded-md transition-colors"
+                    className="h-8 px-2.5 text-xs border border-border text-foreground hover:bg-muted font-medium rounded-md transition-colors cursor-pointer"
                   >
                     Check All
                   </button>
                   <button
                     onClick={() => handleCheckAll(false)}
-                    className="h-8 px-2.5 text-xs border border-border text-foreground hover:bg-muted font-medium rounded-md transition-colors"
+                    className="h-8 px-2.5 text-xs border border-border text-foreground hover:bg-muted font-medium rounded-md transition-colors cursor-pointer"
                   >
                     Uncheck All
                   </button>
                   <button
                     onClick={() => setIsPsModalOpen(true)}
-                    className="h-8 px-3 text-xs border border-border rounded-md hover:bg-muted font-medium transition-colors flex items-center gap-1.5"
+                    className="h-8 px-3 text-xs border border-border rounded-md hover:bg-muted font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Update Pitch Data (PS)
                   </button>
@@ -2459,13 +2542,13 @@ export function ScriptSheetModal({
                           <input
                             type="checkbox"
                             checked={
-                              activeCharacterSummaries.length > 0 &&
-                              activeCharacterSummaries.every((cs) => !!uiCheckedRows[cs.character])
+                              filteredCharacterSummaries.length > 0 &&
+                              filteredCharacterSummaries.every((cs) => !!uiCheckedRows[cs.character])
                             }
                             onChange={(e) => {
                               const isChecked = e.target.checked
                               const updated = { ...uiCheckedRows }
-                              activeCharacterSummaries.forEach((cs) => {
+                              filteredCharacterSummaries.forEach((cs) => {
                                 updated[cs.character] = isChecked
                               })
                               setUiCheckedRows(updated)
@@ -2484,7 +2567,7 @@ export function ScriptSheetModal({
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {activeCharacterSummaries.map((cs, idx) => {
+                    {filteredCharacterSummaries.map((cs, idx) => {
                       const isBeluman = cs.belumanLinesCount > 0
                       return (
                         <tr
