@@ -542,6 +542,7 @@ export function ScriptSheetModal({
   // Tab 3 Character Summary Search & VOA Filter State
   const [summarySearchQuery, setSummarySearchQuery] = useState("")
   const [summaryVoaFilter, setSummaryVoaFilter] = useState("ALL")
+  const [summaryStatusFilter, setSummaryStatusFilter] = useState("ALL")
 
   // Restore scroll position upon render / modal open / tab switch / data update
   useEffect(() => {
@@ -805,6 +806,7 @@ export function ScriptSheetModal({
         linesCount: number
         inputtedLinesCount: number
         belumanLinesCount: number
+        brokenLinesCount: number
         episodesSet: Set<string>
       }
     >()
@@ -818,17 +820,15 @@ export function ScriptSheetModal({
         linesCount: 0,
         inputtedLinesCount: 0,
         belumanLinesCount: 0,
+        brokenLinesCount: 0,
         episodesSet: new Set<string>(),
       })
     })
 
-    // Count line occurrences (only count Inputted and Beluman statuses, skip all other statuses in this tab)
+    // Count line occurrences for all statuses
     data.lines.forEach((line) => {
       if (!line.character) return
       const status = line.status || "Beluman"
-      if (status !== "Inputted" && status !== "Beluman") {
-        return // Skip lines with statuses other than Inputted and Beluman
-      }
 
       const charKey = line.character.trim().toLowerCase()
       if (!summaryMap.has(charKey)) {
@@ -839,6 +839,7 @@ export function ScriptSheetModal({
           linesCount: 0,
           inputtedLinesCount: 0,
           belumanLinesCount: 0,
+          brokenLinesCount: 0,
           episodesSet: new Set<string>(),
         })
       }
@@ -846,8 +847,10 @@ export function ScriptSheetModal({
       entry.linesCount += 1
       if (status === "Inputted") {
         entry.inputtedLinesCount += 1
-      } else {
+      } else if (status === "Beluman") {
         entry.belumanLinesCount += 1
+      } else {
+        entry.brokenLinesCount += 1
       }
       if (line.eps) {
         entry.episodesSet.add(line.eps.trim())
@@ -869,6 +872,7 @@ export function ScriptSheetModal({
         linesCount: entry.linesCount,
         inputtedLinesCount: entry.inputtedLinesCount,
         belumanLinesCount: entry.belumanLinesCount,
+        brokenLinesCount: entry.brokenLinesCount,
         episodesList: sortedEps.join(", "),
         isChecked,
       }
@@ -895,7 +899,7 @@ export function ScriptSheetModal({
     return Array.from(artists).sort((a, b) => a.localeCompare(b))
   }, [activeCharacterSummaries])
 
-  // Filtered Character Summaries for Tab 3 (search query + VOA dropdown filter)
+  // Filtered Character Summaries for Tab 3 (search query + VOA dropdown filter + Status filter)
   const filteredCharacterSummaries = useMemo(() => {
     return activeCharacterSummaries.filter((cs) => {
       const query = summarySearchQuery.trim().toLowerCase()
@@ -911,9 +915,18 @@ export function ScriptSheetModal({
           ? cs.actor === "Unassigned"
           : cs.actor.toLowerCase() === summaryVoaFilter.toLowerCase())
 
-      return matchesQuery && matchesVoa
+      let matchesStatus = true
+      if (summaryStatusFilter === "BELUMAN") {
+        matchesStatus = cs.belumanLinesCount > 0
+      } else if (summaryStatusFilter === "INPUTTED") {
+        matchesStatus = cs.inputtedLinesCount > 0
+      } else if (summaryStatusFilter === "BROKEN") {
+        matchesStatus = cs.brokenLinesCount > 0
+      }
+
+      return matchesQuery && matchesVoa && matchesStatus
     })
-  }, [activeCharacterSummaries, summarySearchQuery, summaryVoaFilter])
+  }, [activeCharacterSummaries, summarySearchQuery, summaryVoaFilter, summaryStatusFilter])
 
   // Unused characters (with 0 lines)
   const unusedCharacterSummaries = useMemo(() => {
@@ -2485,7 +2498,7 @@ export function ScriptSheetModal({
                   <select
                     value={summaryVoaFilter}
                     onChange={(e) => setSummaryVoaFilter(e.target.value)}
-                    className="h-8 px-2.5 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium cursor-pointer max-w-[180px] truncate"
+                    className="h-8 px-2.5 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium cursor-pointer max-w-[170px] truncate"
                   >
                     <option value="ALL">All VOA Artists ({uniqueVoaArtists.length})</option>
                     {uniqueVoaArtists.map((artist) => (
@@ -2496,12 +2509,24 @@ export function ScriptSheetModal({
                     <option value="UNASSIGNED">Unassigned Artists</option>
                   </select>
 
-                  {(summarySearchQuery || summaryVoaFilter !== "ALL") && (
+                  <select
+                    value={summaryStatusFilter}
+                    onChange={(e) => setSummaryStatusFilter(e.target.value)}
+                    className="h-8 px-2.5 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium cursor-pointer max-w-[140px] truncate"
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="BELUMAN">Beluman</option>
+                    <option value="INPUTTED">Inputted</option>
+                    <option value="BROKEN">Broken / Issues</option>
+                  </select>
+
+                  {(summarySearchQuery || summaryVoaFilter !== "ALL" || summaryStatusFilter !== "ALL") && (
                     <button
                       type="button"
                       onClick={() => {
                         setSummarySearchQuery("")
                         setSummaryVoaFilter("ALL")
+                        setSummaryStatusFilter("ALL")
                       }}
                       className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer font-medium whitespace-nowrap"
                     >
