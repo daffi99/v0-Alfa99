@@ -778,6 +778,29 @@ export function ScriptSheetModal({
     }
   }
 
+  // Dynamically compute characters matching the selected Status Filter for Tab 1 Character Filter dropdown
+  const availableCharacterFilterOptions = useMemo(() => {
+    const linesToUse =
+      selectedStatusFilter === "all"
+        ? data.lines
+        : data.lines.filter((line) => {
+            const lineIssueStatus = line.previousStatus || line.status
+            return line.status === selectedStatusFilter || lineIssueStatus === selectedStatusFilter
+          })
+
+    return Array.from(new Set(linesToUse.map((l) => l.character))).filter(Boolean)
+  }, [data.lines, selectedStatusFilter])
+
+  // Reset selected character filter if selected character is not present in the status-filtered characters
+  useEffect(() => {
+    if (
+      selectedCharacterFilter !== "all" &&
+      !availableCharacterFilterOptions.includes(selectedCharacterFilter)
+    ) {
+      setSelectedCharacterFilter("all")
+    }
+  }, [availableCharacterFilterOptions, selectedCharacterFilter])
+
   // Filtered script lines for Tab 1
   const filteredLines = useMemo(() => {
     return data.lines.filter((line) => {
@@ -788,9 +811,11 @@ export function ScriptSheetModal({
       const matchesChar =
         selectedCharacterFilter === "all" ||
         line.character === selectedCharacterFilter
+      const lineIssueStatus = line.previousStatus || line.status
       const matchesStatus =
         selectedStatusFilter === "all" ||
-        line.status === selectedStatusFilter
+        line.status === selectedStatusFilter ||
+        lineIssueStatus === selectedStatusFilter
       return matchesSearch && matchesChar && matchesStatus
     })
   }, [data.lines, searchQuery, selectedCharacterFilter, selectedStatusFilter])
@@ -1855,7 +1880,7 @@ export function ScriptSheetModal({
                               <span>All Characters</span>
                               {selectedCharacterFilter === "all" && <Check className="w-3.5 h-3.5 text-primary" />}
                             </button>
-                            {Array.from(new Set(data.lines.map((l) => l.character))).filter(Boolean).map((char) => {
+                            {availableCharacterFilterOptions.map((char) => {
                               const isSelected = selectedCharacterFilter === char
                               return (
                                 <button
