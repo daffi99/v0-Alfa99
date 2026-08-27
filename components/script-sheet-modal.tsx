@@ -162,7 +162,12 @@ export function formatReportTitle(title: string): string {
 
 export function normalizeCharKey(name: string): string {
   if (!name) return ""
-  return name.toLowerCase().replace(/[\s\-_.:,;]+/g, "").trim()
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\s\-_.:,;'"’“”\u00A0\u200B\uFEFF]+/g, "")
+    .trim()
 }
 
 export function formatEpisodeRangeNumbers(epsList: string[]): string {
