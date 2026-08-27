@@ -6,7 +6,7 @@ import type { Task } from "./kanban-board"
 import { CheckCircle2, Circle, Pencil, Loader2, ChevronDown, ChevronUp, ChevronRight, Trash2, ArrowRightLeft, FileSpreadsheet, FileText, Check } from "lucide-react"
 import { renderBlockNoteContent } from "./blocknote-note"
 import { ScriptWizardModal, type ScriptData, type ScriptLineStatus } from "./script-wizard-modal"
-import { ScriptSheetModal, STATUS_STYLE_MAP, formatEpisodeRanges } from "./script-sheet-modal"
+import { ScriptSheetModal, STATUS_STYLE_MAP, formatEpisodeRanges, normalizeCharKey } from "./script-sheet-modal"
 
 // Dynamic imports with SSR disabled to avoid "window is not defined" error
 const BlockNoteNote = dynamic(
@@ -114,7 +114,10 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
     if (localScriptData.masterArtists) {
       localScriptData.masterArtists.forEach((ma) => {
         if (ma.characterName) {
-          masterMap.set(ma.characterName.toLowerCase(), ma.finalArtist || "Unassigned")
+          const key = normalizeCharKey(ma.characterName)
+          if (key) {
+            masterMap.set(key, ma.finalArtist || "Unassigned")
+          }
         }
       })
     }
@@ -145,7 +148,8 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       const lineIssueStatus = line.previousStatus || line.status
       if (!lineIssueStatus || lineIssueStatus === "Inputted") return
 
-      const groupKey = `${targetChar.toLowerCase()}__${lineIssueStatus}`
+      const normKey = normalizeCharKey(targetChar)
+      const groupKey = `${normKey}__${lineIssueStatus}`
 
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
@@ -158,6 +162,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       }
 
       const entry = charStatusMap.get(groupKey)!
+      entry.character = targetChar
       entry.totalLines += 1
       if (line.status === "Inputted") {
         entry.inputtedLines += 1
@@ -177,7 +182,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
     }> = []
 
     charStatusMap.forEach(({ character, status, epsSet, totalLines, inputtedLines }, groupKey) => {
-      const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
+      const actor = masterMap.get(normalizeCharKey(character)) || "Unassigned"
       const sortedEps = Array.from(epsSet)
         .sort((a, b) => Number(a) - Number(b))
         .map((e) => e.padStart(3, "0"))

@@ -160,6 +160,11 @@ export function formatReportTitle(title: string): string {
   return title.trim().replace(/([a-zA-Z]+)\s+(\d+)/g, "$1_$2")
 }
 
+export function normalizeCharKey(name: string): string {
+  if (!name) return ""
+  return name.toLowerCase().replace(/[\s\-_.:,;]+/g, "").trim()
+}
+
 export function formatEpisodeRangeNumbers(epsList: string[]): string {
   if (!epsList || epsList.length === 0) return "000"
 
@@ -838,16 +843,19 @@ export function ScriptSheetModal({
 
     // Initialize map with all master artists
     data.masterArtists.forEach((ma) => {
-      summaryMap.set(ma.characterName.toLowerCase(), {
-        character: ma.characterName,
-        actor: ma.finalArtist,
-        ps: ma.pitchSpeed || "-",
-        linesCount: 0,
-        inputtedLinesCount: 0,
-        belumanLinesCount: 0,
-        brokenLinesCount: 0,
-        episodesSet: new Set<string>(),
-      })
+      const key = normalizeCharKey(ma.characterName)
+      if (key) {
+        summaryMap.set(key, {
+          character: ma.characterName,
+          actor: ma.finalArtist,
+          ps: ma.pitchSpeed || "-",
+          linesCount: 0,
+          inputtedLinesCount: 0,
+          belumanLinesCount: 0,
+          brokenLinesCount: 0,
+          episodesSet: new Set<string>(),
+        })
+      }
     })
 
     // Count line occurrences for all statuses
@@ -855,10 +863,13 @@ export function ScriptSheetModal({
       if (!line.character) return
       const status = line.status || "Beluman"
 
-      const charKey = line.character.trim().toLowerCase()
+      const lineChar = line.character.trim()
+      const charKey = normalizeCharKey(lineChar)
+      if (!charKey) return
+
       if (!summaryMap.has(charKey)) {
         summaryMap.set(charKey, {
-          character: line.character,
+          character: lineChar,
           actor: "Unassigned",
           ps: "-",
           linesCount: 0,
@@ -869,6 +880,7 @@ export function ScriptSheetModal({
         })
       }
       const entry = summaryMap.get(charKey)!
+      entry.character = lineChar
       entry.linesCount += 1
       if (status === "Inputted") {
         entry.inputtedLinesCount += 1
@@ -1016,7 +1028,10 @@ export function ScriptSheetModal({
   const missingReports = useMemo(() => {
     const masterMap = new Map<string, string>()
     data.masterArtists.forEach((ma) => {
-      masterMap.set(ma.characterName.toLowerCase(), ma.finalArtist)
+      const key = normalizeCharKey(ma.characterName)
+      if (key) {
+        masterMap.set(key, ma.finalArtist)
+      }
     })
 
     const formattedTitle = formatReportTitle(taskTitle)
@@ -1058,10 +1073,11 @@ export function ScriptSheetModal({
       if (!lineIssueStatus || lineIssueStatus === "Inputted") return
 
       const eps = (line.eps || "").trim()
+      const normKey = normalizeCharKey(targetChar)
       const groupKey =
         lineIssueStatus === "Beluman"
-          ? `${targetChar.toLowerCase()}__${lineIssueStatus}`
-          : `${targetChar.toLowerCase()}__${lineIssueStatus}__${eps}`
+          ? `${normKey}__${lineIssueStatus}`
+          : `${normKey}__${lineIssueStatus}__${eps}`
 
       const isResolved = line.status === "Inputted" || !!checkedVoReportKeys[groupKey]
 
@@ -1079,6 +1095,7 @@ export function ScriptSheetModal({
       }
 
       const entry = charStatusMap.get(groupKey)!
+      entry.character = targetChar
       if (eps) {
         entry.epsSet.add(eps)
       }
@@ -1110,7 +1127,7 @@ export function ScriptSheetModal({
     }> = []
 
     charStatusMap.forEach(({ character, status, epsSet, startTimeSet, endTimeSet, batchTimeSet, isResolved, firstLineId }, groupKey) => {
-      const actor = masterMap.get(character.toLowerCase()) || "Unassigned"
+      const actor = masterMap.get(normalizeCharKey(character)) || "Unassigned"
       let suffix = STATUS_REPORT_SUFFIX_MAP[status] || ""
 
       if (status === "Onomatopoeia" || status === "Missing Onomatopoeia") {
