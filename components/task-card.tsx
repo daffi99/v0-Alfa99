@@ -75,7 +75,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
   }, [task.quickNote, task.progress])
 
   const handleSaveQuickNote = async (text: string) => {
-    const trimmed = text.slice(0, 20)
+    const trimmed = text.slice(0, 50)
     setQuickNote(trimmed)
     const newProgress = { ...localProgress, quickNote: trimmed }
     setLocalProgress(newProgress)
@@ -720,7 +720,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                 <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="text"
-                    maxLength={20}
+                    maxLength={50}
                     value={quickNote}
                     autoFocus
                     onChange={(e) => setQuickNote(e.target.value)}
@@ -737,7 +737,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                       handleSaveQuickNote(quickNote)
                       setIsEditingQuickNote(false)
                     }}
-                    placeholder="Quick note (max 20 chars)..."
+                    placeholder="Quick note (max 50 chars)..."
                     className="w-full h-6 px-2 text-xs bg-background border border-primary/40 rounded text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
                   />
                   <button
@@ -760,7 +760,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                     setIsEditingQuickNote(true)
                   }}
                   className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer group/note py-0.5 max-w-full"
-                  title="Click to edit note (max 20 chars)"
+                  title="Click to edit note (max 50 chars)"
                 >
                   <span className="font-semibold truncate text-xs text-amber-800 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
                     {quickNote}
@@ -811,7 +811,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                     ? "bg-amber-500/15 text-amber-800 border-amber-500/30 hover:bg-amber-500/25"
                     : "opacity-0 group-hover/progress:opacity-100 bg-muted hover:bg-muted/80 text-muted-foreground border-border"
                 }`}
-                title={quickNote ? "Edit quick note" : "Add quick note (max 20 chars)"}
+                title={quickNote ? "Edit quick note" : "Add quick note (max 50 chars)"}
               >
                 +
               </button>
