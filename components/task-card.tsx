@@ -463,7 +463,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       return {
         bar: "bg-emerald-500",
         text: "text-emerald-600",
-        badge: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
+        badge: "bg-emerald-500/10 text-foreground border-emerald-500/30",
       }
     }
     switch (task.status) {
@@ -471,20 +471,20 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
         return {
           bar: "bg-blue-500",
           text: "text-blue-600",
-          badge: "bg-blue-500/10 text-blue-700 border-blue-500/30",
+          badge: "bg-blue-500/10 text-foreground border-blue-500/30",
         }
       case "Wait VO":
         return {
           bar: "bg-amber-500",
           text: "text-amber-600",
-          badge: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+          badge: "bg-amber-500/10 text-foreground border-amber-500/30",
         }
       case "Not started":
       default:
         return {
           bar: "bg-gray-400",
           text: "text-gray-600",
-          badge: "bg-slate-500/10 text-slate-700 border-slate-500/30",
+          badge: "bg-slate-500/10 text-foreground border-slate-500/30",
         }
     }
   })()
