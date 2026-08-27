@@ -460,16 +460,32 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
 
   const progressColor = (() => {
     if (percentComplete === 100 || isFinished) {
-      return { bar: "bg-emerald-500", text: "text-emerald-600" }
+      return {
+        bar: "bg-emerald-500",
+        text: "text-emerald-600",
+        badge: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
+      }
     }
     switch (task.status) {
       case "In progress":
-        return { bar: "bg-blue-500", text: "text-blue-600" }
+        return {
+          bar: "bg-blue-500",
+          text: "text-blue-600",
+          badge: "bg-blue-500/10 text-blue-700 border-blue-500/30",
+        }
       case "Wait VO":
-        return { bar: "bg-yellow-500", text: "text-yellow-600" }
+        return {
+          bar: "bg-amber-500",
+          text: "text-amber-600",
+          badge: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+        }
       case "Not started":
       default:
-        return { bar: "bg-gray-400", text: "text-gray-600" }
+        return {
+          bar: "bg-gray-400",
+          text: "text-gray-600",
+          badge: "bg-slate-500/10 text-slate-700 border-slate-500/30",
+        }
     }
   })()
 
@@ -716,7 +732,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
         <div className="group/progress relative mb-1.5">
           {/* Quick Note above progress bar (only for active stages, hidden if empty unless editing) */}
           {!isExcludedStage && (quickNote || isEditingQuickNote) && (
-            <div className="flex items-center justify-between mb-1 text-xs">
+            <div className="flex items-center justify-between mb-1 text-[10px]">
               {isEditingQuickNote ? (
                 <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
                   <input
@@ -739,7 +755,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                       setIsEditingQuickNote(false)
                     }}
                     placeholder="Quick note (max 50 chars)..."
-                    className="w-full h-6 px-2 text-xs bg-background border border-primary/40 rounded text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
+                    className="w-full h-5 px-1.5 text-[10px] bg-background border border-primary/40 rounded text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
                   />
                   <button
                     type="button"
@@ -748,10 +764,10 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                       handleRemoveQuickNote()
                       setIsEditingQuickNote(false)
                     }}
-                    className="p-1 text-muted-foreground hover:text-red-500 rounded hover:bg-red-50 transition-colors shrink-0 cursor-pointer"
+                    className="p-0.5 text-muted-foreground hover:text-red-500 rounded hover:bg-red-50 transition-colors shrink-0 cursor-pointer"
                     title="Remove quick note"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-3 h-3" />
                   </button>
                 </div>
               ) : (
@@ -760,13 +776,13 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                     e.stopPropagation()
                     setIsEditingQuickNote(true)
                   }}
-                  className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer group/note py-0.5 max-w-full"
+                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer group/note py-0.5 max-w-full"
                   title="Click to edit note (max 50 chars)"
                 >
-                  <span className="font-semibold truncate text-xs text-amber-800 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
+                  <span className={`font-semibold truncate text-[10px] px-1.5 py-0.5 rounded border ${progressColor.badge}`}>
                     {quickNote}
                   </span>
-                  <Pencil className="w-3 h-3 opacity-0 group-hover/note:opacity-100 transition-opacity text-muted-foreground shrink-0" />
+                  <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/note:opacity-100 transition-opacity text-muted-foreground shrink-0" />
                   <button
                     type="button"
                     onClick={(e) => {
@@ -776,7 +792,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
                     className="p-0.5 text-muted-foreground hover:text-red-500 rounded hover:bg-red-50 transition-colors opacity-0 group-hover/note:opacity-100 shrink-0 cursor-pointer"
                     title="Remove quick note"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-3 h-3" />
                   </button>
                 </div>
               )}
