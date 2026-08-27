@@ -798,20 +798,16 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
               />
             </div>
 
-            {/* '+' button: enabled for active stages, hidden if note empty unless hovered over progress area */}
-            {!isExcludedStage && (
+            {/* '+' button: only shown on hover if no quick note exists yet */}
+            {!isExcludedStage && !quickNote && (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation()
                   setIsEditingQuickNote(true)
                 }}
-                className={`h-4.5 w-4.5 rounded flex items-center justify-center text-xs font-bold transition-all cursor-pointer border shrink-0 ${
-                  quickNote
-                    ? "bg-amber-500/15 text-amber-800 border-amber-500/30 hover:bg-amber-500/25"
-                    : "opacity-0 group-hover/progress:opacity-100 bg-muted hover:bg-muted/80 text-muted-foreground border-border"
-                }`}
-                title={quickNote ? "Edit quick note" : "Add quick note (max 50 chars)"}
+                className="h-4.5 w-4.5 rounded flex items-center justify-center text-xs font-bold transition-all cursor-pointer border shrink-0 opacity-0 group-hover/progress:opacity-100 bg-muted hover:bg-muted/80 text-muted-foreground border-border"
+                title="Add quick note (max 50 chars)"
               >
                 +
               </button>
