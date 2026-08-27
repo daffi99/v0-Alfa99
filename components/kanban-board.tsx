@@ -60,7 +60,11 @@ export interface Task {
 
     // VO Report Summary checks
     voReportChecks?: Record<string, boolean>
+
+    // Quick Note above progress bar
+    quickNote?: string
   }
+  quickNote?: string
 }
 
 interface Column {

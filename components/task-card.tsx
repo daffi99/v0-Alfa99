@@ -64,6 +64,39 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
   const isCaptionTask =
     task.category === "Caption" || (!task.category && task.title ? task.title.toLowerCase().includes("caption") : true)
 
+  // Quick Note state (max 20 chars above progress bar)
+  const [quickNote, setQuickNote] = useState<string>(
+    task.quickNote || (localProgress as any)?.quickNote || ""
+  )
+  const [isEditingQuickNote, setIsEditingQuickNote] = useState(false)
+
+  useEffect(() => {
+    setQuickNote(task.quickNote || (task.progress as any)?.quickNote || "")
+  }, [task.quickNote, task.progress])
+
+  const handleSaveQuickNote = async (text: string) => {
+    const trimmed = text.slice(0, 20)
+    setQuickNote(trimmed)
+    const newProgress = { ...localProgress, quickNote: trimmed }
+    setLocalProgress(newProgress)
+
+    try {
+      await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ progress: newProgress, quickNote: trimmed }),
+      })
+    } catch (err) {
+      console.error("Failed to save quick note:", err)
+    }
+  }
+
+  const isExcludedStage =
+    columnId === "backlog" ||
+    columnId === "done" ||
+    columnId === "finished" ||
+    task.status === "Finished"
+
   const isStepCompleted = (key: string) => {
     switch (key) {
       case "prep":
@@ -642,18 +675,90 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
 
       {/* Progress indicator - at top only if not finished */}
       {!isFinished && !isTodayTask && task.episodes.length > 0 && (
-        <div className="mb-3">
+        <div className="group/progress relative mb-3">
+          {/* Quick Note above progress bar (only for active stages, hidden if empty unless editing) */}
+          {!isExcludedStage && (quickNote || isEditingQuickNote) && (
+            <div className="flex items-center justify-between mb-1 text-[10px]">
+              {isEditingQuickNote ? (
+                <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="text"
+                    maxLength={20}
+                    value={quickNote}
+                    autoFocus
+                    onChange={(e) => setQuickNote(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSaveQuickNote(quickNote)
+                        setIsEditingQuickNote(false)
+                      } else if (e.key === "Escape") {
+                        setQuickNote(task.quickNote || (task.progress as any)?.quickNote || "")
+                        setIsEditingQuickNote(false)
+                      }
+                    }}
+                    onBlur={() => {
+                      handleSaveQuickNote(quickNote)
+                      setIsEditingQuickNote(false)
+                    }}
+                    placeholder="Quick note (max 20 chars)..."
+                    className="w-full h-5 px-1.5 text-[10px] bg-background border border-primary/40 rounded text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <span className="text-[9px] text-muted-foreground font-mono shrink-0">
+                    {quickNote.length}/20
+                  </span>
+                </div>
+              ) : (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsEditingQuickNote(true)
+                  }}
+                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer group/note py-0.5 max-w-full"
+                  title="Click to edit note (max 20 chars)"
+                >
+                  <span className="font-semibold truncate text-[10px] text-amber-700 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                    {quickNote}
+                  </span>
+                  <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/note:opacity-100 transition-opacity text-muted-foreground shrink-0" />
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] font-medium text-muted-foreground">
               {completedEpisodes} of {task.episodes.length} episodes completed
             </span>
             <span className={`text-[10px] font-semibold ${progressColor.text}`}>{percentComplete}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-            <div
-              className={`${progressColor.bar} h-full rounded-full transition-all duration-300`}
-              style={{ width: `${percentComplete}%` }}
-            />
+
+          {/* Progress Bar line with '+' button on the same line */}
+          <div className="flex items-center gap-1.5">
+            <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+              <div
+                className={`${progressColor.bar} h-full rounded-full transition-all duration-300`}
+                style={{ width: `${percentComplete}%` }}
+              />
+            </div>
+
+            {/* '+' button: enabled for active stages, hidden if note empty unless hovered over progress area */}
+            {!isExcludedStage && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsEditingQuickNote(true)
+                }}
+                className={`h-4 w-4 rounded flex items-center justify-center text-[11px] font-bold transition-all cursor-pointer border shrink-0 ${
+                  quickNote
+                    ? "bg-amber-500/10 text-amber-700 border-amber-500/30 hover:bg-amber-500/20"
+                    : "opacity-0 group-hover/progress:opacity-100 bg-muted hover:bg-muted/80 text-muted-foreground border-border"
+                }`}
+                title={quickNote ? "Edit quick note" : "Add quick note (max 20 chars)"}
+              >
+                +
+              </button>
+            )}
           </div>
         </div>
       )}
