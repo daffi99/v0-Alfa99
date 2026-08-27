@@ -64,15 +64,16 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
   const isCaptionTask =
     task.category === "Caption" || (!task.category && task.title ? task.title.toLowerCase().includes("caption") : true)
 
-  // Quick Note state (max 20 chars above progress bar)
-  const [quickNote, setQuickNote] = useState<string>(
-    task.quickNote || (localProgress as any)?.quickNote || ""
-  )
+  // Quick Note state (max 50 chars above progress bar)
+  const [quickNote, setQuickNote] = useState<string>(() => {
+    return (localProgress as any)?.quickNote || task.quickNote || ""
+  })
   const [isEditingQuickNote, setIsEditingQuickNote] = useState(false)
 
   useEffect(() => {
-    setQuickNote(task.quickNote || (task.progress as any)?.quickNote || "")
-  }, [task.quickNote, task.progress])
+    const val = (localProgress as any)?.quickNote || task.quickNote || ""
+    setQuickNote(val)
+  }, [task.quickNote, localProgress])
 
   const handleSaveQuickNote = async (text: string) => {
     const trimmed = text.slice(0, 50)
@@ -799,7 +800,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
             </div>
 
             {/* '+' button: only shown on hover if no quick note exists yet */}
-            {!isExcludedStage && !quickNote && (
+            {!isExcludedStage && !quickNote && !isEditingQuickNote && (
               <button
                 type="button"
                 onClick={(e) => {
