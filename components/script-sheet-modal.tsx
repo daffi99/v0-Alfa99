@@ -2032,24 +2032,7 @@ export function ScriptSheetModal({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {/* Multi-Range Timeline Offset Widget */}
-                    {distinctRanges.length >= 2 && (
-                      <div className="flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-md px-2.5 h-8 text-xs">
-                        <span className="font-semibold text-purple-900 dark:text-purple-200 whitespace-nowrap flex items-center gap-1 text-[11px]">
-                          <Clock className="w-3 h-3 text-purple-600" />
-                          R1 (EP {distinctRanges[0]?.label}) Total:
-                        </span>
-                        <input
-                          type="text"
-                          placeholder="e.g. 10:11"
-                          value={range1Duration}
-                          onChange={(e) => handleUpdateRange1Duration(e.target.value)}
-                          className="w-16 px-1.5 py-0.5 text-[11px] font-mono bg-white dark:bg-background border border-purple-300 dark:border-purple-700 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
-                          title="Total video duration of Range 1 (offsets timeline batch time for Range 2+)"
-                        />
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2">
                     {isCaptionTask && (
                       <button
                         onClick={() => setIsVoErrorModalOpen(true)}

@@ -348,7 +348,7 @@ export function ScriptWizardModal({
   const episodeRangeText = Array.isArray(episodeRanges)
     ? episodeRanges.join(", ")
     : episodeRanges || ""
-  const [step, setStep] = useState<1 | 2>(1)
+  const [step, setStep] = useState<1 | 2 | 3>(1)
 
   // Step 1 Raw & Parsed
   const [masterText, setMasterText] = useState("")
@@ -369,6 +369,9 @@ export function ScriptWizardModal({
   const detectedRanges = useMemo(() => {
     return getDistinctEpisodeRanges(parsedLines.map((l) => l.eps))
   }, [parsedLines])
+
+  const hasMultiRange = detectedRanges.length >= 2
+  const totalSteps = hasMultiRange ? 3 : 2
 
   if (!isOpen) return null
 
@@ -568,8 +571,10 @@ export function ScriptWizardModal({
             </div>
             <p className="text-xs text-muted-foreground">
               {step === 1
-                ? "Step 1 of 2: Copy & Paste Master Artist Mapping from Google Sheets"
-                : "Step 2 of 2: Copy & Paste Script Lines from Google Sheets"}
+                ? `Step 1 of ${totalSteps}: Copy & Paste Master Artist Mapping from Google Sheets`
+                : step === 2
+                ? `Step 2 of ${totalSteps}: Copy & Paste Script Lines from Google Sheets`
+                : `Step 3 of 3: Multi-Range Timeline Offset Setup`}
             </p>
             {/* Step Progress bar */}
             <div className="flex items-center gap-2 pt-2">
@@ -583,6 +588,13 @@ export function ScriptWizardModal({
                   step >= 2 ? "bg-primary" : "bg-muted"
                 }`}
               />
+              {hasMultiRange && (
+                <div
+                  className={`flex-1 h-1.5 rounded-full transition-colors ${
+                    step >= 3 ? "bg-primary" : "bg-muted"
+                  }`}
+                />
+              )}
             </div>
           </div>
 
@@ -698,36 +710,51 @@ export function ScriptWizardModal({
                       </div>
                     )}
                   </div>
-
-                  {/* Multi-Range Detected Offset Setting */}
-                  {detectedRanges.length >= 2 && (
-                    <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-lg p-3 space-y-2">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-900 dark:text-purple-200">
-                        <Clock className="w-3.5 h-3.5 text-purple-600" />
-                        <span>Multi-Range Timeline Offset</span>
-                        <span className="text-[10px] bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-300 px-1.5 py-0.5 rounded font-mono">
-                          {detectedRanges.map((r) => r.label).join(", ")}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-purple-700 dark:text-purple-300">
-                        Masukkan total durasi video untuk Range 1 (EP {detectedRanges[0]?.label}) agar waktu batch time di Range 2 ke atas otomatis terhitung offset timeline-nya.
-                      </p>
-                      <div className="flex items-center gap-2 pt-0.5">
-                        <label className="text-xs font-medium text-purple-900 dark:text-purple-200">
-                          Total Durasi Range 1:
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Contoh: 10:11 atau 00:10:11"
-                          value={range1Duration}
-                          onChange={(e) => setRange1Duration(e.target.value)}
-                          className="w-40 px-2 py-1 text-xs font-mono bg-background border border-purple-300 dark:border-purple-700 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <div className="flex items-start gap-3 bg-purple-50 dark:bg-purple-950/40 p-3.5 rounded-lg border border-purple-200 dark:border-purple-800 text-xs">
+                <Clock className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-sm text-purple-950 dark:text-purple-100">
+                      Multi-Range Timeline Offset
+                    </p>
+                    <span className="text-[10px] bg-purple-200 dark:bg-purple-900 text-purple-900 dark:text-purple-200 px-2 py-0.5 rounded font-mono font-semibold">
+                      {detectedRanges.map((r) => r.label).join(", ")}
+                    </span>
+                  </div>
+                  <p className="text-purple-800 dark:text-purple-300 leading-relaxed">
+                    Terdeteksi lebih dari 1 range episode pada script ini. Masukkan <b>total durasi video asli untuk Range 1 (EP {detectedRanges[0]?.label})</b> agar waktu batch time di Range 2 ke atas otomatis terhitung offset timeline Premiere-nya.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-card border rounded-lg p-4 space-y-3">
+                <label className="block text-xs font-semibold text-foreground">
+                  Durasi Total Video Range 1 (EP {detectedRanges[0]?.label}):
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder="Contoh: 10:11 atau 00:10:11"
+                    value={range1Duration}
+                    onChange={(e) => setRange1Duration(e.target.value)}
+                    className="w-48 px-3 py-2 text-sm font-mono bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    autoFocus
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    Format: <b>MM:SS</b> atau <b>HH:MM:SS</b>
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  * Cukup diisi sekali di onboarding. Batch time original tetap terjaga, dan hasil offset akan otomatis tampil di bawahnya sebagai visual helper.
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -743,10 +770,10 @@ export function ScriptWizardModal({
             </button>
           ) : (
             <button
-              onClick={() => setStep(1)}
+              onClick={() => setStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3) : 1))}
               className="px-3 py-1.5 text-xs border border-border rounded-md hover:bg-muted transition-colors flex items-center gap-1"
             >
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to Step 1
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to Step {step - 1}
             </button>
           )}
 
@@ -756,6 +783,13 @@ export function ScriptWizardModal({
               className="px-4 py-1.5 text-xs bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors flex items-center gap-1"
             >
               Next: Import Script Lines <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          ) : step === 2 && hasMultiRange ? (
+            <button
+              onClick={() => setStep(3)}
+              className="px-4 py-1.5 text-xs bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors flex items-center gap-1"
+            >
+              Next: Multi-Range Setup <ArrowRight className="w-3.5 h-3.5" />
             </button>
           ) : (
             <button
