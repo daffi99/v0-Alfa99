@@ -141,6 +141,12 @@ export default function BillingPage() {
               parsedProgress.billingRateOverride ||
               null
 
+            const billingChecked =
+              task.billing_checked ??
+              task.billingChecked ??
+              parsedProgress.billingChecked ??
+              false
+
             return {
               id: task.id,
               title: task.title,
@@ -154,6 +160,7 @@ export default function BillingPage() {
               duration: task.duration || "00:10:00",
               billingMonth: task.billing_month || `December ${new Date().getFullYear()}`,
               billingRateOverride: billingRateOverride,
+              billingChecked: billingChecked,
               progress: parsedProgress,
               episodes: [],
               subtasks: [],
@@ -163,19 +170,22 @@ export default function BillingPage() {
 
         setTasks(mapped)
 
-        // Initialize editing durations, billing months, and rate overrides with current values
+        // Initialize editing durations, billing months, rate overrides, and checked state
         const initialEditingDuration: Record<string, string> = {}
         const initialEditingBillingMonth: Record<string, string> = {}
         const initialEditingRateOverride: Record<string, string | null> = {}
+        const initialChecked: Record<string, boolean> = {}
 
         mapped.forEach((task) => {
           initialEditingDuration[task.id] = task.duration || "00:10:00"
           initialEditingBillingMonth[task.id] = normalizeBillingMonth(task.billingMonth)
           initialEditingRateOverride[task.id] = task.billingRateOverride || null
+          initialChecked[task.id] = !!task.billingChecked
         })
         setEditingDuration(initialEditingDuration)
         setEditingBillingMonth(initialEditingBillingMonth)
         setEditingRateOverride(initialEditingRateOverride)
+        setChecked(initialChecked)
 
         const byMonth: BillingByMonth = {}
         mapped.forEach((task) => {
@@ -225,6 +235,43 @@ export default function BillingPage() {
     })
     setGrouped(updated)
   }, [tasks, editingBillingMonth, editingDuration, editingRateOverride])
+
+  const handleBillingCheckChange = async (taskId: string, isChecked: boolean) => {
+    setChecked((prev) => ({ ...prev, [taskId]: isChecked }))
+
+    const currentTask = tasks.find((t) => t.id === taskId)
+    const currentProgress = currentTask?.progress || {}
+    const updatedProgress = { ...currentProgress, billingChecked: isChecked }
+
+    try {
+      await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          progress: updatedProgress,
+          billing_checked: isChecked,
+        }),
+      })
+
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                billingChecked: isChecked,
+                progress: updatedProgress,
+              }
+            : t,
+        ),
+      )
+    } catch (error) {
+      console.error("Failed to update billing check state:", error)
+      setChecked((prev) => ({
+        ...prev,
+        [taskId]: currentTask?.billingChecked || false,
+      }))
+    }
+  }
 
   const handleDurationChange = useCallback(async (taskId: string, newDuration: string) => {
     // Don't update if duration hasn't changed
@@ -484,7 +531,7 @@ export default function BillingPage() {
             </div>
 
             {isExpanded && (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto pb-12">
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="border-b border-border text-left">
@@ -499,7 +546,7 @@ export default function BillingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map(({ task }) => {
+                    {rows.map(({ task }, rowIndex) => {
                       const currentDuration = editingDuration[task.id] ?? task.duration ?? "00:10:00"
                       const currentBillingMonth = normalizeBillingMonth(
                         editingBillingMonth[task.id] ?? task.billingMonth
@@ -507,19 +554,17 @@ export default function BillingPage() {
                       const currentOverride = editingRateOverride[task.id] ?? task.billingRateOverride ?? null
                       const displayAmount = calculateAmount(currentDuration, task.category, task.title, currentOverride)
                       const currentRate = getRate(task.category, task.title, currentOverride)
+                      const isNearBottom = rows.length > 1 && rowIndex >= rows.length - 2
 
                       return (
                         <tr key={task.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                           <td className="py-2 pr-4">
                             <input
                               type="checkbox"
-                              checked={!!checked[task.id]}
-                              onChange={(e) =>
-                                setChecked((prev) => ({
-                                  ...prev,
-                                  [task.id]: e.target.checked,
-                                }))
-                              }
+                              checked={!!(checked[task.id] ?? task.billingChecked)}
+                              onChange={(e) => handleBillingCheckChange(task.id, e.target.checked)}
+                              className="w-4 h-4 cursor-pointer accent-emerald-600 rounded border-border"
+                              title="Mark as billed / attendance"
                             />
                           </td>
                           <td className="py-2 pr-4">
@@ -579,7 +624,9 @@ export default function BillingPage() {
                             {activeMenuTaskId === task.id && (
                               <div
                                 onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-9 z-50 w-64 bg-white border border-border rounded-lg shadow-xl py-1 text-xs text-left"
+                                className={`absolute right-0 z-50 w-64 bg-white border border-border rounded-lg shadow-xl py-1 text-xs text-left ${
+                                  isNearBottom ? "bottom-full mb-1" : "top-full mt-1"
+                                }`}
                               >
                                 <div className="px-3 py-1.5 font-semibold border-b border-border text-muted-foreground bg-muted/30">
                                   Rate Adjustment
