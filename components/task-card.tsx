@@ -42,6 +42,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
   const [updatingStepKey, setUpdatingStepKey] = useState<string | null>(null)
   const [updatingEpisodeId, setUpdatingEpisodeId] = useState<string | null>(null)
   const [updatingSubtaskId, setUpdatingSubtaskId] = useState<string | null>(null)
+  const [isAutoCheckingCleanEps, setIsAutoCheckingCleanEps] = useState(false)
   const [isVoReportExpanded, setIsVoReportExpanded] = useState(true)
   const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -170,9 +171,9 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
     }
   }, [task.scriptData, task.script_data, task.id])
 
-  const { voReportSummaryItems, cleanEpsText, unresolvedEpsText } = useMemo(() => {
+  const { voReportSummaryItems, cleanEpsText, unresolvedEpsText, resolvedEpsList } = useMemo(() => {
     if (!localScriptData || !localScriptData.lines || localScriptData.lines.length === 0) {
-      return { voReportSummaryItems: [], cleanEpsText: "", unresolvedEpsText: "" }
+      return { voReportSummaryItems: [], cleanEpsText: "", unresolvedEpsText: "", resolvedEpsList: [] }
     }
 
     const checkedVoReportKeys =
@@ -311,6 +312,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       voReportSummaryItems: reports.sort((a, b) => a.minEps - b.minEps),
       cleanEpsText: cleanText,
       unresolvedEpsText: unresolvedText,
+      resolvedEpsList: resolvedEps,
     }
   }, [localScriptData, localProgress.voReportChecks, task.episodes])
 
@@ -379,6 +381,30 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
     } catch (err) {
       console.error("Failed to toggle VO report item check:", err)
       setLocalProgress(localProgress)
+    }
+  }
+
+  const handleAutoCheckResolvedEpisodes = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isAutoCheckingCleanEps || !resolvedEpsList || resolvedEpsList.length === 0 || !task.episodes) return
+    setIsAutoCheckingCleanEps(true)
+    try {
+      const resolvedSet = new Set(resolvedEpsList)
+      const matchingEpisodes = task.episodes.filter((ep) =>
+        resolvedSet.has(ep.number.toString().padStart(3, "0"))
+      )
+      const allCompleted = matchingEpisodes.length > 0 && matchingEpisodes.every((ep) => ep.completed)
+      const targetEpisodes = allCompleted
+        ? matchingEpisodes.filter((ep) => ep.completed)
+        : matchingEpisodes.filter((ep) => !ep.completed)
+
+      for (const ep of targetEpisodes) {
+        await onToggleEpisode(columnId, task.id, ep.id)
+      }
+    } catch (err) {
+      console.error("Failed to auto-toggle resolved episodes:", err)
+    } finally {
+      setIsAutoCheckingCleanEps(false)
     }
   }
 
@@ -1258,8 +1284,24 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
             <div className="flex flex-col gap-1 min-w-0 flex-1">
               {cleanEpsText && (
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-mono text-[9px] font-bold border border-emerald-300 dark:border-emerald-800 break-words leading-tight">
+                  <button
+                    type="button"
+                    onClick={handleAutoCheckResolvedEpisodes}
+                    disabled={isAutoCheckingCleanEps}
+                    title="Click to auto-check mark these episodes in the checklist"
+                    className="p-0.5 rounded hover:bg-emerald-200/70 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                  >
+                    {isAutoCheckingCleanEps ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5 hover:scale-110 transition-transform" />
+                    )}
+                  </button>
+                  <span
+                    onClick={handleAutoCheckResolvedEpisodes}
+                    title="Click to auto-check mark these episodes in the checklist"
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-mono text-[9px] font-bold border border-emerald-300 dark:border-emerald-800 break-words leading-tight cursor-pointer hover:bg-emerald-200/80 transition-colors"
+                  >
                     {cleanEpsText}
                   </span>
                 </div>
