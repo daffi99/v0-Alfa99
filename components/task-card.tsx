@@ -170,9 +170,9 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
     }
   }, [task.scriptData, task.script_data, task.id])
 
-  const { voReportSummaryItems, cleanEpsText } = useMemo(() => {
+  const { voReportSummaryItems, cleanEpsText, unresolvedEpsText } = useMemo(() => {
     if (!localScriptData || !localScriptData.lines || localScriptData.lines.length === 0) {
-      return { voReportSummaryItems: [], cleanEpsText: "" }
+      return { voReportSummaryItems: [], cleanEpsText: "", unresolvedEpsText: "" }
     }
 
     const checkedVoReportKeys =
@@ -303,9 +303,14 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       ? formatEpisodeRanges(resolvedEps)
       : ""
 
+    // Episodes that still have UNRESOLVED issues
+    const unresolvedEps = Array.from(unresolvedIssueEpsSet).sort((a, b) => Number(a) - Number(b))
+    const unresolvedText = unresolvedEps.length > 0 ? formatEpisodeRanges(unresolvedEps) : ""
+
     return {
       voReportSummaryItems: reports.sort((a, b) => a.minEps - b.minEps),
       cleanEpsText: cleanText,
+      unresolvedEpsText: unresolvedText,
     }
   }, [localScriptData, localProgress.voReportChecks, task.episodes])
 
@@ -1257,6 +1262,11 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
               {cleanEpsText && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-mono text-[9px] font-bold border border-emerald-300 dark:border-emerald-800 break-words leading-tight">
                   {cleanEpsText}
+                </span>
+              )}
+              {unresolvedEpsText && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 font-mono text-[9px] font-bold border border-rose-300 dark:border-rose-800 break-words leading-tight">
+                  {unresolvedEpsText}
                 </span>
               )}
             </div>
