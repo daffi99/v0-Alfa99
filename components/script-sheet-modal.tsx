@@ -28,7 +28,7 @@ import {
   Link,
   Unlink,
 } from "lucide-react"
-import { normalizeMultilinesInQuotes, type ScriptData, type ScriptLine, type MasterArtistMapping, type ScriptLineStatus } from "./script-wizard-modal"
+import { normalizeMultilinesInQuotes, getDistinctEpisodeRanges, type ScriptData, type ScriptLine, type MasterArtistMapping, type ScriptLineStatus } from "./script-wizard-modal"
 
 interface ScriptSheetModalProps {
   isOpen: boolean
@@ -570,6 +570,35 @@ export function ScriptSheetModal({
       lastScrollTopRef.current = targetTop
     }
   }, [isOpen, activeTab, data.lines, scrollStorageKey])
+
+  // Multi-Range Episode Offset State
+  const distinctRanges = useMemo(() => {
+    return getDistinctEpisodeRanges(data.lines.map((l) => l.eps))
+  }, [data.lines])
+
+  const [range1Duration, setRange1Duration] = useState<string>(() => {
+    return data.rangeDurations?.["0"] || ""
+  })
+
+  useEffect(() => {
+    if (data.rangeDurations?.["0"] !== undefined) {
+      setRange1Duration(data.rangeDurations["0"])
+    }
+  }, [data.rangeDurations])
+
+  const handleUpdateRange1Duration = (val: string) => {
+    setRange1Duration(val)
+    const newRangeDurations = {
+      ...(data.rangeDurations || {}),
+      "0": val.trim(),
+    }
+    const updatedData = {
+      ...data,
+      rangeDurations: newRangeDurations,
+    }
+    setData(updatedData)
+    onSave(updatedData)
+  }
 
   // Interactive UI checkboxes for Character Summary rows
   const [uiCheckedRows, setUiCheckedRows] = useState<Record<string, boolean>>({})
@@ -2003,7 +2032,24 @@ export function ScriptSheetModal({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Multi-Range Timeline Offset Widget */}
+                    {distinctRanges.length >= 2 && (
+                      <div className="flex items-center gap-1.5 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-md px-2.5 h-8 text-xs">
+                        <span className="font-semibold text-purple-900 dark:text-purple-200 whitespace-nowrap flex items-center gap-1 text-[11px]">
+                          <Clock className="w-3 h-3 text-purple-600" />
+                          R1 (EP {distinctRanges[0]?.label}) Total:
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="e.g. 10:11"
+                          value={range1Duration}
+                          onChange={(e) => handleUpdateRange1Duration(e.target.value)}
+                          className="w-16 px-1.5 py-0.5 text-[11px] font-mono bg-white dark:bg-background border border-purple-300 dark:border-purple-700 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          title="Total video duration of Range 1 (offsets timeline batch time for Range 2+)"
+                        />
+                      </div>
+                    )}
                     {isCaptionTask && (
                       <button
                         onClick={() => setIsVoErrorModalOpen(true)}
@@ -2122,6 +2168,14 @@ export function ScriptSheetModal({
                       const isOverlap = currStartSec !== null && prevEndSec !== null && currStartSec <= prevEndSec
                       const isSpecialTimingMark = line.status === "Onomatopoeia" || line.status === "Missing Onomatopoeia"
 
+                      const lineEpNum = parseInt(line.eps.replace(/\D/g, ""), 10)
+                      const rangeIndex = distinctRanges.findIndex((r) => lineEpNum >= r.start && lineEpNum <= r.end)
+                      const offsetSec = rangeIndex > 0 ? timeToSeconds(range1Duration) || 0 : 0
+                      const timelineBatchTime =
+                        offsetSec > 0 && line.batchTime && line.batchTime !== "-"
+                          ? shiftTimingValue(line.batchTime, offsetSec)
+                          : null
+
                       return (
                         <React.Fragment key={line.id}>
                           {showDivider && (
@@ -2184,6 +2238,11 @@ export function ScriptSheetModal({
                                     </span>
                                   ) : (
                                     line.batchTime || "-"
+                                  )}
+                                  {timelineBatchTime && (
+                                    <div className="text-[9px] text-purple-700 dark:text-purple-400 font-mono font-medium leading-tight mt-0.5" title={`Timeline offset (+${range1Duration}): ${timelineBatchTime}`}>
+                                      {timelineBatchTime}
+                                    </div>
                                   )}
                                 </td>
                                 <td

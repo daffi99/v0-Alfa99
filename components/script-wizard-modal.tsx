@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState } from "react"
-import { ArrowRight, ArrowLeft, CheckCircle2, Sparkles, FileText, UserCheck, X } from "lucide-react"
+import React, { useState, useMemo } from "react"
+import { ArrowRight, ArrowLeft, CheckCircle2, Sparkles, FileText, UserCheck, X, Clock } from "lucide-react"
 
 export type ScriptLineStatus =
   | "Beluman"
@@ -41,6 +41,46 @@ export interface ScriptData {
   lines: ScriptLine[]
   checkedCharacters?: Record<string, boolean>
   isConfigured?: boolean
+  rangeDurations?: Record<string, string>
+}
+
+export function getDistinctEpisodeRanges(epsList: string[]): { start: number; end: number; label: string }[] {
+  const epNumbers = Array.from(
+    new Set(
+      epsList
+        .map((e) => parseInt(e.replace(/\D/g, ""), 10))
+        .filter((num) => !isNaN(num))
+    )
+  ).sort((a, b) => a - b)
+
+  if (epNumbers.length === 0) return []
+
+  const ranges: { start: number; end: number; label: string }[] = []
+  let rangeStart = epNumbers[0]
+  let rangeEnd = epNumbers[0]
+
+  for (let i = 1; i < epNumbers.length; i++) {
+    const current = epNumbers[i]
+    if (current === rangeEnd + 1) {
+      rangeEnd = current
+    } else {
+      ranges.push({
+        start: rangeStart,
+        end: rangeEnd,
+        label: rangeStart === rangeEnd ? rangeStart.toString().padStart(3, "0") : `${rangeStart.toString().padStart(3, "0")}-${rangeEnd.toString().padStart(3, "0")}`,
+      })
+      rangeStart = current
+      rangeEnd = current
+    }
+  }
+
+  ranges.push({
+    start: rangeStart,
+    end: rangeEnd,
+    label: rangeStart === rangeEnd ? rangeStart.toString().padStart(3, "0") : `${rangeStart.toString().padStart(3, "0")}-${rangeEnd.toString().padStart(3, "0")}`,
+  })
+
+  return ranges
 }
 
 interface ScriptWizardModalProps {
@@ -321,6 +361,14 @@ export function ScriptWizardModal({
   const [parsedLines, setParsedLines] = useState<ScriptLine[]>(
     initialData?.lines || []
   )
+
+  const [range1Duration, setRange1Duration] = useState<string>(
+    initialData?.rangeDurations?.["0"] || ""
+  )
+
+  const detectedRanges = useMemo(() => {
+    return getDistinctEpisodeRanges(parsedLines.map((l) => l.eps))
+  }, [parsedLines])
 
   if (!isOpen) return null
 
@@ -650,6 +698,34 @@ export function ScriptWizardModal({
                       </div>
                     )}
                   </div>
+
+                  {/* Multi-Range Detected Offset Setting */}
+                  {detectedRanges.length >= 2 && (
+                    <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-900 dark:text-purple-200">
+                        <Clock className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Multi-Range Timeline Offset</span>
+                        <span className="text-[10px] bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-300 px-1.5 py-0.5 rounded font-mono">
+                          {detectedRanges.map((r) => r.label).join(", ")}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-purple-700 dark:text-purple-300">
+                        Masukkan total durasi video untuk Range 1 (EP {detectedRanges[0]?.label}) agar waktu batch time di Range 2 ke atas otomatis terhitung offset timeline-nya.
+                      </p>
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <label className="text-xs font-medium text-purple-900 dark:text-purple-200">
+                          Total Durasi Range 1:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Contoh: 10:11 atau 00:10:11"
+                          value={range1Duration}
+                          onChange={(e) => setRange1Duration(e.target.value)}
+                          className="w-40 px-2 py-1 text-xs font-mono bg-background border border-purple-300 dark:border-purple-700 rounded text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -683,7 +759,20 @@ export function ScriptWizardModal({
             </button>
           ) : (
             <button
-              onClick={handleFinish}
+              onClick={() => {
+                const rangeDurations: Record<string, string> = {
+                  ...(initialData?.rangeDurations || {}),
+                }
+                if (range1Duration.trim()) {
+                  rangeDurations["0"] = range1Duration.trim()
+                }
+                onComplete({
+                  masterArtists: parsedMaster,
+                  lines: parsedLines,
+                  rangeDurations: Object.keys(rangeDurations).length > 0 ? rangeDurations : undefined,
+                  isConfigured: true,
+                })
+              }}
               className="px-4 py-1.5 text-xs bg-emerald-600 text-white font-medium rounded-md hover:bg-emerald-700 transition-colors flex items-center gap-1"
             >
               Finish Setup & Open Sheet <CheckCircle2 className="w-3.5 h-3.5" />
