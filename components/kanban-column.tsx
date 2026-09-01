@@ -18,6 +18,7 @@ interface KanbanColumnProps {
   onDragEnd?: () => void
   onToggleEpisode: (columnId: string, taskId: string, episodeId: string) => void
   onToggleAllEpisodes?: (columnId: string, taskId: string, completed: boolean) => void
+  onToggleSpecificEpisodes?: (columnId: string, taskId: string, episodeIds: string[], completed: boolean) => void
   onToggleSubtask: (columnId: string, taskId: string, subtaskId: string) => void
   onEditTask: (task: Task, columnId: string) => void
   onUpdateNote: (columnId: string, taskId: string, notes: string) => void
@@ -35,6 +36,7 @@ export function KanbanColumn({
   onDragEnd,
   onToggleEpisode,
   onToggleAllEpisodes,
+  onToggleSpecificEpisodes,
   onToggleSubtask,
   onEditTask,
   onUpdateNote,
@@ -153,6 +155,7 @@ export function KanbanColumn({
                 columnId={column.id}
                 onToggleEpisode={onToggleEpisode}
                 onToggleAllEpisodes={onToggleAllEpisodes}
+                onToggleSpecificEpisodes={onToggleSpecificEpisodes}
                 onToggleSubtask={onToggleSubtask}
                 onEditTask={onEditTask}
                 onUpdateNote={onUpdateNote}

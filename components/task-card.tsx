@@ -23,6 +23,7 @@ interface TaskCardProps {
   columnId: string
   onToggleEpisode: (columnId: string, taskId: string, episodeId: string) => void
   onToggleAllEpisodes?: (columnId: string, taskId: string, completed: boolean) => void
+  onToggleSpecificEpisodes?: (columnId: string, taskId: string, episodeIds: string[], completed: boolean) => void
   onToggleSubtask: (columnId: string, taskId: string, subtaskId: string) => void
   onEditTask: (task: Task, columnId: string) => void
   onUpdateNote: (columnId: string, taskId: string, notes: string) => void
@@ -31,7 +32,7 @@ interface TaskCardProps {
   onUpdateScriptData?: (columnId: string, taskId: string, scriptData: ScriptData) => void
 }
 
-export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes, onToggleSubtask, onEditTask, onUpdateNote, onUpdateStatus, onMoveTask, onUpdateScriptData }: TaskCardProps) {
+export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes, onToggleSpecificEpisodes, onToggleSubtask, onEditTask, onUpdateNote, onUpdateStatus, onMoveTask, onUpdateScriptData }: TaskCardProps) {
   const completedEpisodes = task.episodes.filter((ep) => ep.completed).length
   const percentComplete = Math.round((completedEpisodes / task.episodes.length) * 100) || 0
   const [localNotes, setLocalNotes] = useState(task.notes || "")
@@ -393,13 +394,20 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       const matchingEpisodes = task.episodes.filter((ep) =>
         resolvedSet.has(ep.number.toString().padStart(3, "0"))
       )
-      const allCompleted = matchingEpisodes.length > 0 && matchingEpisodes.every((ep) => ep.completed)
-      const targetEpisodes = allCompleted
-        ? matchingEpisodes.filter((ep) => ep.completed)
-        : matchingEpisodes.filter((ep) => !ep.completed)
+      if (matchingEpisodes.length === 0) return
 
-      for (const ep of targetEpisodes) {
-        await onToggleEpisode(columnId, task.id, ep.id)
+      const allCompleted = matchingEpisodes.every((ep) => ep.completed)
+      const targetCompleted = !allCompleted
+      const targetEpIds = matchingEpisodes.map((ep) => ep.id)
+
+      if (onToggleSpecificEpisodes) {
+        await onToggleSpecificEpisodes(columnId, task.id, targetEpIds, targetCompleted)
+      } else {
+        for (const ep of matchingEpisodes) {
+          if (ep.completed !== targetCompleted) {
+            await onToggleEpisode(columnId, task.id, ep.id)
+          }
+        }
       }
     } catch (err) {
       console.error("Failed to auto-toggle resolved episodes:", err)
