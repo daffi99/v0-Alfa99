@@ -249,7 +249,6 @@ export default function BillingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           progress: updatedProgress,
-          billing_checked: isChecked,
         }),
       })
 
@@ -371,7 +370,6 @@ export default function BillingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           progress: updatedProgress,
-          billing_rate_override: newOverride,
         }),
       })
 

@@ -62,10 +62,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     let { data: task, error } = await query.select().single()
 
-    // If error is due to missing script_data column in Supabase schema, retry without script_data
-    if (error && (error.code === "PGRST204" || error.message.includes("script_data"))) {
-      console.warn("[v0] script_data column not found in database, retrying update without script_data")
+    // If error is due to missing columns in Supabase schema, retry without non-standard top-level columns
+    if (error && (error.code === "PGRST204" || error.message.includes("column") || error.message.includes("schema"))) {
+      console.warn("[v0] Retrying update without missing top-level columns:", error.message)
       delete updateData.script_data
+      delete updateData.billing_rate_override
+      delete updateData.billing_checked
+      delete updateData.billingRateOverride
+      delete updateData.billingChecked
       let retryQuery = supabase.from("tasks").update(updateData).eq("id", id)
       if (user) {
         retryQuery = retryQuery.eq("user_id", user.id)
