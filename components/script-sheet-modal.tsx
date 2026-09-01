@@ -600,6 +600,27 @@ export function ScriptSheetModal({
     onSave(updatedData)
   }
 
+  // Base batch time offset per range for continuous timeline mapping
+  const rangeBaseOffsets = useMemo(() => {
+    const baseMap: Record<number, number> = {}
+    distinctRanges.forEach((range, rIdx) => {
+      if (rIdx === 0) return
+      const linesInRange = data.lines.filter((l) => {
+        const ep = parseInt(l.eps.replace(/\D/g, ""), 10)
+        return ep >= range.start && ep <= range.end
+      })
+      const firstLineWithTiming = linesInRange.find(
+        (l) => l.batchTime && l.batchTime !== "-" && timeToSeconds(l.batchTime) !== null
+      )
+      if (firstLineWithTiming && firstLineWithTiming.batchTime) {
+        const bSec = timeToSeconds(firstLineWithTiming.batchTime) || 0
+        const sSec = (firstLineWithTiming.startTime && timeToSeconds(firstLineWithTiming.startTime)) || 0
+        baseMap[rIdx] = Math.max(0, bSec - sSec)
+      }
+    })
+    return baseMap
+  }, [distinctRanges, data.lines])
+
   // Interactive UI checkboxes for Character Summary rows
   const [uiCheckedRows, setUiCheckedRows] = useState<Record<string, boolean>>({})
 
@@ -2154,10 +2175,18 @@ export function ScriptSheetModal({
                       const lineEpNum = parseInt(line.eps.replace(/\D/g, ""), 10)
                       const rangeIndex = distinctRanges.findIndex((r) => lineEpNum >= r.start && lineEpNum <= r.end)
                       const offsetSec = rangeIndex > 0 ? timeToSeconds(range1Duration) || 0 : 0
-                      const timelineBatchTime =
-                        offsetSec > 0 && line.startTime && line.startTime !== "-"
-                          ? shiftTimingValue(line.startTime, offsetSec)
-                          : null
+
+                      let timelineBatchTime: string | null = null
+                      if (offsetSec > 0 && line.batchTime && line.batchTime !== "-") {
+                        const lineBatchSec = timeToSeconds(line.batchTime)
+                        const baseSec = rangeBaseOffsets[rangeIndex] ?? 0
+                        if (lineBatchSec !== null) {
+                          const elapsedSec = Math.max(0, lineBatchSec - baseSec)
+                          const finalTimelineSec = offsetSec + elapsedSec
+                          const hasHours = line.batchTime.includes(":") && line.batchTime.split(":").length === 3
+                          timelineBatchTime = secondsToTimeString(finalTimelineSec, hasHours || finalTimelineSec >= 3600)
+                        }
+                      }
 
                       return (
                         <React.Fragment key={line.id}>
