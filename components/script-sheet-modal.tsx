@@ -2155,8 +2155,8 @@ export function ScriptSheetModal({
                       const rangeIndex = distinctRanges.findIndex((r) => lineEpNum >= r.start && lineEpNum <= r.end)
                       const offsetSec = rangeIndex > 0 ? timeToSeconds(range1Duration) || 0 : 0
                       const timelineBatchTime =
-                        offsetSec > 0 && line.batchTime && line.batchTime !== "-"
-                          ? shiftTimingValue(line.batchTime, offsetSec)
+                        offsetSec > 0 && line.startTime && line.startTime !== "-"
+                          ? shiftTimingValue(line.startTime, offsetSec)
                           : null
 
                       return (
