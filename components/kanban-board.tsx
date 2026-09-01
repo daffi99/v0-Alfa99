@@ -63,8 +63,12 @@ export interface Task {
 
     // Quick Note above progress bar
     quickNote?: string
+
+    // Billing Rate Adjustment Override ("no_caption" | "caption" | null)
+    billingRateOverride?: string | null
   }
   quickNote?: string
+  billingRateOverride?: string | null
 }
 
 interface Column {

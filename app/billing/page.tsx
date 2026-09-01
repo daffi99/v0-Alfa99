@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import type { Task } from "@/components/kanban-board"
 import { DurationInput } from "@/components/duration-input"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, MoreVertical, Check, RotateCcw } from "lucide-react"
 import { BillingMonthPicker } from "@/components/billing-month-picker"
 
 type BillingRow = {
@@ -33,7 +33,7 @@ function parseDurationToSeconds(time?: string | null): number {
   return 0
 }
 
-function getRate(category: string | null, title?: string): number {
+function getRate(category: string | null, title?: string, override?: string | null): number {
   // Default rates
   const defaultCaptionRate = 1_400_000
   const defaultNonCaptionRate = 1_000_000
@@ -41,54 +41,32 @@ function getRate(category: string | null, title?: string): number {
   // Special rates only apply to titles starting with "Bahasa"
   const isBahasa = title && title.trim().toLowerCase().startsWith("bahasa")
 
+  let effectiveCategory = category
+  if (override === "no_caption") {
+    effectiveCategory = "No caption"
+  } else if (override === "caption") {
+    effectiveCategory = "Caption"
+  }
+
   if (isBahasa) {
     // If title starts with "Bahasa": Caption = 1.300.000, non-Caption = 750.000
-    return category === "Caption" ? 1_300_000 : 750_000
+    return effectiveCategory === "Caption" ? 1_300_000 : 750_000
   }
 
   // For non-Bahasa tasks, use default rates
-  return category === "Caption" ? defaultCaptionRate : defaultNonCaptionRate
+  return effectiveCategory === "Caption" ? defaultCaptionRate : defaultNonCaptionRate
 }
 
-function calculateAmount(duration: string | undefined, category: string | null, title?: string): number {
+function calculateAmount(duration: string | undefined, category: string | null, title?: string, override?: string | null): number {
   const seconds = parseDurationToSeconds(duration)
   const hours = seconds / 3600
-  const rate = getRate(category, title)
+  const rate = getRate(category, title, override)
 
   return Math.round(hours * rate)
 }
 
 function formatRupiah(amount: number): string {
   return "Rp" + amount.toLocaleString("id-ID")
-}
-
-// Generate month + year options for dropdown
-function getMonthYearOptions(): string[] {
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ]
-  const currentYear = new Date().getFullYear()
-  const years = [currentYear - 1, currentYear, currentYear + 1]
-  const options: string[] = []
-
-  years.forEach((year) => {
-    months.forEach((month) => {
-      options.push(`${month} ${year}`)
-    })
-  })
-
-  return options
 }
 
 // Normalize billing month format (convert old "December" to "December YYYY")
@@ -112,6 +90,8 @@ export default function BillingPage() {
   const [checked, setChecked] = useState<Record<string, boolean>>({})
   const [editingDuration, setEditingDuration] = useState<Record<string, string>>({})
   const [editingBillingMonth, setEditingBillingMonth] = useState<Record<string, string>>({})
+  const [editingRateOverride, setEditingRateOverride] = useState<Record<string, string | null>>({})
+  const [activeMenuTaskId, setActiveMenuTaskId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({})
 
@@ -130,6 +110,13 @@ export default function BillingPage() {
     return `${monthNames[now.getMonth()]} ${currentYear}`
   }
 
+  // Close 3-dots dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setActiveMenuTaskId(null)
+    window.addEventListener("click", handleClickOutside)
+    return () => window.removeEventListener("click", handleClickOutside)
+  }, [])
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -141,39 +128,59 @@ export default function BillingPage() {
         const raw = await res.json()
         const mapped: Task[] = raw
           .filter((t: any) => t.title?.toLowerCase() !== "today task")
-          .map((task: any) => ({
-            id: task.id,
-            title: task.title,
-            description: task.description,
-            episodeRanges: task.episode_ranges ? task.episode_ranges.split(",") : [],
-            category: task.category,
-            status: task.status,
-            stage: task.stage || "Backlog",
-            notes: task.notes || "",
-            created_at: task.created_at || task.createdAt || null,
-            duration: task.duration || "00:10:00",
-            billingMonth: task.billing_month || `December ${new Date().getFullYear()}`,
-            episodes: [],
-            subtasks: [],
-            attachments: [],
-          }))
+          .map((task: any) => {
+            const parsedProgress = task.progress
+              ? typeof task.progress === "string"
+                ? JSON.parse(task.progress)
+                : task.progress
+              : {}
+
+            const billingRateOverride =
+              task.billing_rate_override ||
+              task.billingRateOverride ||
+              parsedProgress.billingRateOverride ||
+              null
+
+            return {
+              id: task.id,
+              title: task.title,
+              description: task.description,
+              episodeRanges: task.episode_ranges ? task.episode_ranges.split(",") : [],
+              category: task.category,
+              status: task.status,
+              stage: task.stage || "Backlog",
+              notes: task.notes || "",
+              created_at: task.created_at || task.createdAt || null,
+              duration: task.duration || "00:10:00",
+              billingMonth: task.billing_month || `December ${new Date().getFullYear()}`,
+              billingRateOverride: billingRateOverride,
+              progress: parsedProgress,
+              episodes: [],
+              subtasks: [],
+              attachments: [],
+            }
+          })
 
         setTasks(mapped)
 
-        // Initialize editing durations and billing months with current values
+        // Initialize editing durations, billing months, and rate overrides with current values
         const initialEditingDuration: Record<string, string> = {}
         const initialEditingBillingMonth: Record<string, string> = {}
+        const initialEditingRateOverride: Record<string, string | null> = {}
+
         mapped.forEach((task) => {
           initialEditingDuration[task.id] = task.duration || "00:10:00"
           initialEditingBillingMonth[task.id] = normalizeBillingMonth(task.billingMonth)
+          initialEditingRateOverride[task.id] = task.billingRateOverride || null
         })
         setEditingDuration(initialEditingDuration)
         setEditingBillingMonth(initialEditingBillingMonth)
+        setEditingRateOverride(initialEditingRateOverride)
 
         const byMonth: BillingByMonth = {}
         mapped.forEach((task) => {
           const month = normalizeBillingMonth(task.billingMonth)
-          const amount = calculateAmount(task.duration, task.category, task.title)
+          const amount = calculateAmount(task.duration, task.category, task.title, task.billingRateOverride)
           if (!byMonth[month]) byMonth[month] = []
           byMonth[month].push({ task, amount })
         })
@@ -210,13 +217,14 @@ export default function BillingPage() {
     tasks.forEach((task) => {
       const month = normalizeBillingMonth(editingBillingMonth[task.id] ?? task.billingMonth)
       const duration = editingDuration[task.id] ?? task.duration ?? "00:10:00"
-      const amount = calculateAmount(duration, task.category, task.title)
+      const override = editingRateOverride[task.id] ?? task.billingRateOverride ?? null
+      const amount = calculateAmount(duration, task.category, task.title, override)
 
       if (!updated[month]) updated[month] = []
       updated[month].push({ task, amount })
     })
     setGrouped(updated)
-  }, [tasks, editingBillingMonth, editingDuration])
+  }, [tasks, editingBillingMonth, editingDuration, editingRateOverride])
 
   const handleDurationChange = useCallback(async (taskId: string, newDuration: string) => {
     // Don't update if duration hasn't changed
@@ -299,6 +307,49 @@ export default function BillingPage() {
       })
       const errorMessage = error instanceof Error ? error.message : "Failed to save billing month. Please try again."
       alert(errorMessage)
+    }
+  }
+
+  const handleRateOverrideChange = async (taskId: string, newOverride: string | null) => {
+    setActiveMenuTaskId(null)
+    setEditingRateOverride((prev) => ({ ...prev, [taskId]: newOverride }))
+
+    const currentTask = tasks.find((t) => t.id === taskId)
+    const currentProgress = currentTask?.progress || {}
+    const updatedProgress = { ...currentProgress, billingRateOverride: newOverride }
+
+    try {
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          progress: updatedProgress,
+          billing_rate_override: newOverride,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to save rate adjustment")
+      }
+
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                billingRateOverride: newOverride,
+                progress: updatedProgress,
+              }
+            : t,
+        ),
+      )
+    } catch (error) {
+      console.error("Failed to update rate adjustment:", error)
+      setEditingRateOverride((prev) => ({
+        ...prev,
+        [taskId]: currentTask?.billingRateOverride || null,
+      }))
+      alert("Failed to save rate adjustment. Please try again.")
     }
   }
 
@@ -400,7 +451,8 @@ export default function BillingPage() {
         const rows = grouped[month] || []
         const total = rows.reduce((sum, r) => {
           const currentDuration = editingDuration[r.task.id] ?? r.task.duration ?? "00:10:00"
-          return sum + calculateAmount(currentDuration, r.task.category, r.task.title)
+          const currentOverride = editingRateOverride[r.task.id] ?? r.task.billingRateOverride ?? null
+          return sum + calculateAmount(currentDuration, r.task.category, r.task.title, currentOverride)
         }, 0)
 
         const currentMonthYear = getCurrentMonthYear()
@@ -443,19 +495,21 @@ export default function BillingPage() {
                       <th className="py-2 pr-4">Category</th>
                       <th className="py-2 pr-4">Rate</th>
                       <th className="py-2 pr-4">Amount</th>
+                      <th className="py-2 pr-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map(({ task, amount }) => {
+                    {rows.map(({ task }) => {
                       const currentDuration = editingDuration[task.id] ?? task.duration ?? "00:10:00"
                       const currentBillingMonth = normalizeBillingMonth(
                         editingBillingMonth[task.id] ?? task.billingMonth
                       )
-                      const displayAmount = calculateAmount(currentDuration, task.category, task.title)
-                      const monthYearOptions = getMonthYearOptions()
+                      const currentOverride = editingRateOverride[task.id] ?? task.billingRateOverride ?? null
+                      const displayAmount = calculateAmount(currentDuration, task.category, task.title, currentOverride)
+                      const currentRate = getRate(task.category, task.title, currentOverride)
 
                       return (
-                        <tr key={task.id} className="border-b border-border last:border-0">
+                        <tr key={task.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                           <td className="py-2 pr-4">
                             <input
                               type="checkbox"
@@ -493,16 +547,84 @@ export default function BillingPage() {
                               }}
                               onBlur={(value) => {
                                 const newDuration = value || "00:10:00"
-                                // Always save on blur to ensure changes are persisted
                                 handleDurationChange(task.id, newDuration)
                               }}
                             />
                           </td>
                           <td className="py-2 pr-4">{task.category || "-"}</td>
                           <td className="py-2 pr-4 text-muted-foreground">
-                            {formatRupiah(getRate(task.category, task.title))}/hour
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span>{formatRupiah(currentRate)}/hour</span>
+                              {currentOverride && (
+                                <span className="text-[10px] bg-amber-500/15 text-amber-800 border border-amber-500/30 px-1.5 py-0.5 rounded font-medium">
+                                  {currentOverride === "no_caption" ? "No Caption Rate" : "Caption Rate"}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-2 pr-4 font-medium">{formatRupiah(displayAmount)}</td>
+                          <td className="py-2 pr-4 text-right relative">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setActiveMenuTaskId((prev) => (prev === task.id ? null : task.id))
+                              }}
+                              className="p-1.5 hover:bg-muted rounded-md transition-colors text-muted-foreground hover:text-foreground cursor-pointer"
+                              title="Rate Adjustment Menu"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+
+                            {activeMenuTaskId === task.id && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute right-0 top-9 z-50 w-64 bg-white border border-border rounded-lg shadow-xl py-1 text-xs text-left"
+                              >
+                                <div className="px-3 py-1.5 font-semibold border-b border-border text-muted-foreground bg-muted/30">
+                                  Rate Adjustment
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleRateOverrideChange(
+                                      task.id,
+                                      currentOverride === "no_caption" ? null : "no_caption"
+                                    )
+                                  }
+                                  className="w-full px-3 py-2 hover:bg-muted flex items-center justify-between transition-colors cursor-pointer"
+                                >
+                                  <span>Mark as No Caption Rate</span>
+                                  {currentOverride === "no_caption" && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleRateOverrideChange(
+                                      task.id,
+                                      currentOverride === "caption" ? null : "caption"
+                                    )
+                                  }
+                                  className="w-full px-3 py-2 hover:bg-muted flex items-center justify-between transition-colors cursor-pointer"
+                                >
+                                  <span>Mark as Caption Rate</span>
+                                  {currentOverride === "caption" && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                                </button>
+                                {currentOverride && (
+                                  <div className="border-t border-border mt-1 pt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRateOverrideChange(task.id, null)}
+                                      className="w-full px-3 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 transition-colors cursor-pointer"
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                      <span>Reset to Default Rate</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
                         </tr>
                       )
                     })}
@@ -516,5 +638,3 @@ export default function BillingPage() {
     </div>
   )
 }
-
-
