@@ -1255,19 +1255,22 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       {!shouldCollapse && !isTodayTask && voReportSummaryItems.length > 0 && (
         <div className="mb-3 bg-muted/20 p-2 rounded-lg border border-border/50">
           <div className="flex items-start justify-between border-b pb-1 gap-1">
-            <div className="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
-              <span className="text-[10px] font-bold text-foreground tracking-wide flex items-center gap-1 flex-shrink-0">
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> Summary
-              </span>
+            <div className="flex flex-col gap-1 min-w-0 flex-1">
               {cleanEpsText && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-mono text-[9px] font-bold border border-emerald-300 dark:border-emerald-800 break-words leading-tight">
-                  {cleanEpsText}
-                </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-mono text-[9px] font-bold border border-emerald-300 dark:border-emerald-800 break-words leading-tight">
+                    {cleanEpsText}
+                  </span>
+                </div>
               )}
               {unresolvedEpsText && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 font-mono text-[9px] font-bold border border-rose-300 dark:border-rose-800 break-words leading-tight">
-                  {unresolvedEpsText}
-                </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <X className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 font-mono text-[9px] font-bold border border-rose-300 dark:border-rose-800 break-words leading-tight">
+                    {unresolvedEpsText}
+                  </span>
+                </div>
               )}
             </div>
             {voReportSummaryItems.length > 0 && (
