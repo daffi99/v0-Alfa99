@@ -27,6 +27,7 @@ import {
   Volume2,
   Link,
   Unlink,
+  Pencil,
 } from "lucide-react"
 import { normalizeMultilinesInQuotes, getDistinctEpisodeRanges, type ScriptData, type ScriptLine, type MasterArtistMapping, type ScriptLineStatus } from "./script-wizard-modal"
 
