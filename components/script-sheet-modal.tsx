@@ -42,6 +42,8 @@ interface ScriptSheetModalProps {
   onSave: (updatedData: ScriptData) => void
   onReRunWizard: () => void
   taskId?: string
+  episodeRanges?: string[] | string
+  episodes?: any[]
 }
 
 export const SCRIPT_LINE_STATUSES: ScriptLineStatus[] = [
@@ -87,6 +89,27 @@ export function formatCompactTimeToken(timeStr: string): string {
       return trimmed
     })
     .join(", ")
+}
+
+export function formatMmSs(timeStr?: string): string {
+  if (!timeStr || timeStr === "-" || !timeStr.trim()) return "-"
+  const clean = timeStr.trim().split(".")[0]
+  const parts = clean.split(":").map((p) => parseInt(p, 10))
+  if (parts.some((p) => isNaN(p))) return timeStr.trim()
+  const pad = (n: number) => n.toString().padStart(2, "0")
+
+  if (parts.length === 3) {
+    const [h, m, s] = parts
+    if (h > 0) {
+      return `${pad(h)}:${pad(m)}:${pad(s)}`
+    }
+    return `${pad(m)}:${pad(s)}`
+  }
+  if (parts.length === 2) {
+    const [m, s] = parts
+    return `${pad(m)}:${pad(s)}`
+  }
+  return timeStr.trim()
 }
 
 export function timeToSeconds(timeStr?: string): number | null {
@@ -338,12 +361,40 @@ export function ScriptSheetModal({
   onSave,
   onReRunWizard,
   taskId,
+  episodeRanges,
+  episodes,
 }: ScriptSheetModalProps) {
   const [activeTab, setActiveTab] = useState<"lines" | "master" | "summary" | "episodes" | "report">("lines")
   const [data, setData] = useState<ScriptData>(scriptData)
   const [localProgress, setLocalProgress] = useState<Record<string, any>>(taskProgress || {})
   const [isProgressExpanded, setIsProgressExpanded] = useState(true)
   const [isCheckVoMode, setIsCheckVoMode] = useState(false)
+
+  const isSingleEpisodeCard = useMemo(() => {
+    // 1. Check explicit episodeRanges
+    if (episodeRanges) {
+      const ranges = Array.isArray(episodeRanges) ? episodeRanges : [episodeRanges]
+      if (ranges.length === 1) {
+        const r = ranges[0].trim()
+        if (r.includes("-")) {
+          const [start, end] = r.split("-").map((s) => s.trim())
+          if (start && end && Number(start) === Number(end)) return true
+        } else if (r) {
+          return true
+        }
+      }
+    }
+    // 2. Check episodes array
+    if (episodes && episodes.length === 1) return true
+
+    // 3. Check distinct episodes in lines
+    if (data.lines && data.lines.length > 0) {
+      const distinctEps = new Set(data.lines.map((l) => (l.eps || "").trim()).filter(Boolean))
+      if (distinctEps.size === 1) return true
+    }
+
+    return false
+  }, [episodeRanges, episodes, data.lines])
 
   React.useEffect(() => {
     setLocalProgress(taskProgress || {})
@@ -913,6 +964,8 @@ export function ScriptSheetModal({
         belumanLinesCount: number
         brokenLinesCount: number
         episodesSet: Set<string>
+        firstTiming?: string
+        firstLineId?: string
       }
     >()
 
@@ -929,6 +982,8 @@ export function ScriptSheetModal({
           belumanLinesCount: 0,
           brokenLinesCount: 0,
           episodesSet: new Set<string>(),
+          firstTiming: undefined,
+          firstLineId: undefined,
         })
       }
     })
@@ -952,6 +1007,8 @@ export function ScriptSheetModal({
           belumanLinesCount: 0,
           brokenLinesCount: 0,
           episodesSet: new Set<string>(),
+          firstTiming: undefined,
+          firstLineId: undefined,
         })
       }
       const entry = summaryMap.get(charKey)!
@@ -966,6 +1023,20 @@ export function ScriptSheetModal({
       }
       if (line.eps) {
         entry.episodesSet.add(line.eps.trim())
+      }
+
+      if (line.startTime && line.startTime.trim() && line.startTime.trim() !== "-") {
+        const lineTimeSec = timeToSeconds(line.startTime.trim())
+        if (lineTimeSec !== null) {
+          const currentFirstSec = entry.firstTiming ? timeToSeconds(entry.firstTiming) : null
+          if (currentFirstSec === null || lineTimeSec < currentFirstSec) {
+            entry.firstTiming = line.startTime.trim()
+            entry.firstLineId = line.id
+          }
+        } else if (!entry.firstTiming) {
+          entry.firstTiming = line.startTime.trim()
+          entry.firstLineId = line.id
+        }
       }
     })
 
@@ -986,6 +1057,8 @@ export function ScriptSheetModal({
         belumanLinesCount: entry.belumanLinesCount,
         brokenLinesCount: entry.brokenLinesCount,
         episodesList: sortedEps.join(", "),
+        firstTiming: entry.firstTiming ? formatMmSs(entry.firstTiming) : "-",
+        firstLineId: entry.firstLineId,
         isChecked,
       }
     })
@@ -2821,6 +2894,9 @@ export function ScriptSheetModal({
                       <th className="p-2.5 w-20 text-center">Count</th>
                       <th className="p-2.5 w-28">Actor</th>
                       <th className="p-2.5">Appear in</th>
+                      {isSingleEpisodeCard && (
+                        <th className="p-2.5 w-28 whitespace-nowrap">First Timing</th>
+                      )}
                       <th className="p-2.5 w-64 text-right pr-3">Status Action</th>
                     </tr>
                   </thead>
@@ -2892,6 +2968,29 @@ export function ScriptSheetModal({
                           <td className="p-2.5 font-mono text-[11px] text-muted-foreground">
                             {cs.episodesList || "None"}
                           </td>
+                          {isSingleEpisodeCard && (
+                            <td className="p-2.5 whitespace-nowrap font-mono text-xs">
+                              {cs.firstTiming && cs.firstTiming !== "-" ? (
+                                cs.firstLineId ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleNavigateToScriptLine(cs.firstLineId!)}
+                                    className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1"
+                                    title="Click to view first dialogue in Script tab"
+                                  >
+                                    <Clock className="w-3 h-3 text-muted-foreground" />
+                                    <span>{cs.firstTiming}</span>
+                                  </button>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold inline-block">
+                                    {cs.firstTiming}
+                                  </span>
+                                )
+                              ) : (
+                                <span className="text-muted-foreground/50 italic">-</span>
+                              )}
+                            </td>
+                          )}
                           <td className="p-2.5 text-right pr-3">
                             <div className="flex items-center justify-end gap-2">
                               <span
@@ -2972,7 +3071,7 @@ export function ScriptSheetModal({
                     )})}
                     {activeCharacterSummaries.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={isSingleEpisodeCard ? 9 : 8} className="p-8 text-center text-muted-foreground">
                           No active characters with lines.
                         </td>
                       </tr>
@@ -3030,6 +3129,9 @@ export function ScriptSheetModal({
                               <th className="p-2.5 w-28 text-center">Count</th>
                               <th className="p-2.5">Actor</th>
                               <th className="p-2.5">Appear in</th>
+                              {isSingleEpisodeCard && (
+                                <th className="p-2.5 w-28 whitespace-nowrap">First Timing</th>
+                              )}
                               <th className="p-2.5 w-64 text-right pr-3">Status Action</th>
                             </tr>
                           </thead>
@@ -3080,6 +3182,9 @@ export function ScriptSheetModal({
                                 <td className="p-2.5 text-center font-mono text-muted-foreground">0</td>
                                 <td className="p-2.5 text-muted-foreground">{cs.actor}</td>
                                 <td className="p-2.5 font-mono text-muted-foreground">-</td>
+                                {isSingleEpisodeCard && (
+                                  <td className="p-2.5 font-mono text-muted-foreground italic text-xs">-</td>
+                                )}
                                 <td className="p-2.5 font-mono text-muted-foreground text-right pr-3">-</td>
                               </tr>
                             ))}

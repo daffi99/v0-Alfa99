@@ -1582,6 +1582,14 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
           taskTitle={task.title}
           taskCategory={task.category}
           taskProgress={localProgress}
+          episodeRanges={
+            task.episodeRanges && task.episodeRanges.length > 0
+              ? task.episodeRanges
+              : task.episode_ranges
+              ? task.episode_ranges
+              : undefined
+          }
+          episodes={task.episodes}
           onUpdateProgress={async (newProgress) => {
             const isCap = task.category === "Caption" || (!task.category && task.title.toLowerCase().includes("caption"))
             const wasDone = !!(localProgress.completed || (
