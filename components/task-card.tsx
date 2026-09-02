@@ -1578,6 +1578,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
         <ScriptSheetModal
           isOpen={isSheetOpen}
           onClose={() => setIsSheetOpen(false)}
+          taskId={task.id}
           taskTitle={task.title}
           taskCategory={task.category}
           taskProgress={localProgress}

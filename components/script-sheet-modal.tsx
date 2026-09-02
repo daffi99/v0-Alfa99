@@ -40,6 +40,7 @@ interface ScriptSheetModalProps {
   scriptData: ScriptData
   onSave: (updatedData: ScriptData) => void
   onReRunWizard: () => void
+  taskId?: string
 }
 
 export const SCRIPT_LINE_STATUSES: ScriptLineStatus[] = [
@@ -335,6 +336,7 @@ export function ScriptSheetModal({
   scriptData,
   onSave,
   onReRunWizard,
+  taskId,
 }: ScriptSheetModalProps) {
   const [activeTab, setActiveTab] = useState<"lines" | "master" | "summary" | "episodes" | "report">("lines")
   const [data, setData] = useState<ScriptData>(scriptData)
@@ -492,6 +494,22 @@ export function ScriptSheetModal({
 
   // 3-Dots Row Action Custom Dropdown Menu State
   const [openRowActionDropdown, setOpenRowActionDropdown] = useState<string | null>(null)
+
+  // 3-Dots Master Artist Custom Dropdown Menu State
+  const [openMasterActionDropdown, setOpenMasterActionDropdown] = useState<number | null>(null)
+
+  // Edit VO Artist Modal State
+  const [editArtistModal, setEditArtistModal] = useState<{
+    isOpen: boolean
+    characterName: string
+    currentArtist: string
+    newArtist: string
+  }>({
+    isOpen: false,
+    characterName: "",
+    currentArtist: "",
+    newArtist: "",
+  })
 
   // Scroll Container Ref & Persistent Scroll Position Memory State
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -1316,6 +1334,40 @@ export function ScriptSheetModal({
     updateData({ ...data, masterArtists: updatedMasters })
     setIsPsModalOpen(false)
     setPsPasteText("")
+  }
+
+  // Edit Single Character VO Artist in Master Artist Tab
+  const handleSaveVoArtist = async () => {
+    const trimmedArtist = editArtistModal.newArtist.trim()
+    if (!trimmedArtist || !editArtistModal.characterName) return
+
+    const normTarget = normalizeCharKey(editArtistModal.characterName)
+    const updatedMasters = data.masterArtists.map((ma) => {
+      if (normalizeCharKey(ma.characterName) === normTarget) {
+        return {
+          ...ma,
+          finalArtist: trimmedArtist,
+        }
+      }
+      return ma
+    })
+
+    const updatedData = { ...data, masterArtists: updatedMasters }
+    updateData(updatedData)
+
+    if (taskId) {
+      try {
+        await fetch(`/api/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scriptData: updatedData }),
+        })
+      } catch (e) {
+        console.error("Failed to persist updated VO artist to DB:", e)
+      }
+    }
+
+    setEditArtistModal({ isOpen: false, characterName: "", currentArtist: "", newArtist: "" })
   }
 
   // Single Column VO Error Data Update - preserving line index mapping
@@ -2556,6 +2608,7 @@ export function ScriptSheetModal({
                       <th className="p-2.5">Character name</th>
                       <th className="p-2.5">Final artist</th>
                       <th className="p-2.5 w-36">PS</th>
+                      <th className="p-2.5 w-12 text-center"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -2590,6 +2643,53 @@ export function ScriptSheetModal({
                             <span className="text-muted-foreground italic text-[11px]">
                               Not set
                             </span>
+                          )}
+                        </td>
+                        <td className="p-2.5 text-center relative">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenMasterActionDropdown(
+                                openMasterActionDropdown === idx ? null : idx
+                              )
+                            }
+                            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                            title="Actions"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+
+                          {openMasterActionDropdown === idx && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-40"
+                                onClick={() => setOpenMasterActionDropdown(null)}
+                              />
+                              <div
+                                className={`absolute right-2 ${
+                                  idx >= data.masterArtists.length - 3 && idx >= 3
+                                    ? "bottom-full mb-1"
+                                    : "top-full mt-1"
+                                } z-50 w-44 bg-card border border-border rounded-lg shadow-xl p-1 animate-in fade-in zoom-in-95 duration-100 text-left`}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditArtistModal({
+                                      isOpen: true,
+                                      characterName: ma.characterName,
+                                      currentArtist: ma.finalArtist || "",
+                                      newArtist: ma.finalArtist || "",
+                                    })
+                                    setOpenMasterActionDropdown(null)
+                                  }}
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+                                >
+                                  <Pencil className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                                  <span>Change VO Artist</span>
+                                </button>
+                              </div>
+                            </>
                           )}
                         </td>
                       </tr>
@@ -3819,6 +3919,101 @@ export function ScriptSheetModal({
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Line</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal for Editing Master VO Artist */}
+        {editArtistModal.isOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-sm p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b pb-3">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-primary" />
+                  <h3 className="font-bold text-sm text-foreground">Change VO Artist</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditArtistModal({
+                      isOpen: false,
+                      characterName: "",
+                      currentArtist: "",
+                      newArtist: "",
+                    })
+                  }
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                    Character Name
+                  </label>
+                  <div className="font-bold text-xs text-foreground bg-muted/50 px-3 py-2 rounded-md border border-border/60">
+                    {editArtistModal.characterName}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
+                    VO Artist Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editArtistModal.newArtist}
+                    onChange={(e) =>
+                      setEditArtistModal((prev) => ({ ...prev, newArtist: e.target.value }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        handleSaveVoArtist()
+                      }
+                      if (e.key === "Escape") {
+                        setEditArtistModal({
+                          isOpen: false,
+                          characterName: "",
+                          currentArtist: "",
+                          newArtist: "",
+                        })
+                      }
+                    }}
+                    placeholder="Enter artist name..."
+                    autoFocus
+                    className="w-full text-xs font-medium px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditArtistModal({
+                      isOpen: false,
+                      characterName: "",
+                      currentArtist: "",
+                      newArtist: "",
+                    })
+                  }
+                  className="px-3 py-1.5 text-xs font-semibold rounded-md border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveVoArtist}
+                  disabled={!editArtistModal.newArtist.trim()}
+                  className="px-4 py-1.5 text-xs font-bold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Save</span>
                 </button>
               </div>
             </div>
