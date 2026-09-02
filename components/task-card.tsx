@@ -221,8 +221,12 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       const lineIssueStatus = line.previousStatus || line.status
       if (!lineIssueStatus || lineIssueStatus === "Inputted") return
 
+      const eps = (line.eps || "").trim()
       const normKey = normalizeCharKey(targetChar)
-      const groupKey = `${normKey}__${lineIssueStatus}`
+      const groupKey =
+        lineIssueStatus === "Beluman"
+          ? `${normKey}__${lineIssueStatus}`
+          : `${normKey}__${lineIssueStatus}__${eps}`
 
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
@@ -328,31 +332,38 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
 
     let updatedScriptData = localScriptData
     if (localScriptData && localScriptData.lines) {
-      const [charNameLower, originalStatus] = itemId.split("__")
+      const parts = itemId.split("__")
+      const charNormKey = parts[0]?.toLowerCase() || ""
+      const originalStatus = parts[1] || ""
+      const itemEps = parts[2]?.trim() || ""
       const isBeluman = originalStatus === "Beluman"
 
       const updatedLines = localScriptData.lines.map((line) => {
-        const lineChar = (line.character || "").trim().toLowerCase()
-        const correctChar = (line.correctCharacter || "").trim().toLowerCase()
-        const matchesChar = lineChar === charNameLower || (correctChar !== "" && correctChar === charNameLower)
+        const lineChar = (line.character || "").trim()
+        const correctChar = (line.correctCharacter || "").trim()
+        const targetChar = line.status === "Wrong Cast" && correctChar !== "" ? correctChar : lineChar
+        const normChar = normalizeCharKey(targetChar)
+        const lineIssueStatus = (line.previousStatus || line.status).trim()
+        const lineEps = (line.eps || "").trim()
 
-        if (!matchesChar) return line
+        if (normChar !== charNormKey) return line
+        if (lineIssueStatus.toLowerCase() !== originalStatus.toLowerCase()) return line
+        if (!isBeluman && itemEps) {
+          if (lineEps !== itemEps && Number(lineEps) !== Number(itemEps)) return line
+        }
 
         if (willBeChecked) {
           // Store previousStatus when checking line to Inputted
-          if (line.status === originalStatus) {
+          if (line.status !== "Inputted") {
             return {
               ...line,
               status: "Inputted" as ScriptLineStatus,
-              previousStatus: originalStatus as ScriptLineStatus,
+              previousStatus: (line.previousStatus || line.status) as ScriptLineStatus,
             }
           }
         } else {
           // Restore exact previousStatus when unchecking
-          if (
-            line.status === "Inputted" &&
-            (line.previousStatus === originalStatus || (!line.previousStatus && isBeluman))
-          ) {
+          if (line.status === "Inputted") {
             return {
               ...line,
               status: (line.previousStatus || originalStatus) as ScriptLineStatus,
@@ -428,7 +439,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
     }
   }
 
-  const handleSaveScriptData = (newData: ScriptData) => {
+  const handleSaveScriptData = async (newData: ScriptData) => {
     setLocalScriptData(newData)
     if (typeof window !== "undefined" && task.id) {
       try {
@@ -437,6 +448,15 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
     }
     if (onUpdateScriptData) {
       onUpdateScriptData(columnId, task.id, newData)
+    }
+    try {
+      await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scriptData: newData }),
+      })
+    } catch (e) {
+      console.error("Failed to persist scriptData:", e)
     }
   }
   const noteTextareaRef = useRef<HTMLTextAreaElement>(null)

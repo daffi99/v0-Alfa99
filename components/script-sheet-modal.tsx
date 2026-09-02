@@ -812,10 +812,11 @@ export function ScriptSheetModal({
         if (!origStatus || origStatus === "Inputted") return
 
         const eps = (line.eps || "").trim()
+        const normKey = normalizeCharKey(targetChar)
         const groupKey =
           origStatus === "Beluman"
-            ? `${targetChar.toLowerCase()}__${origStatus}`
-            : `${targetChar.toLowerCase()}__${origStatus}__${eps}`
+            ? `${normKey}__${origStatus}`
+            : `${normKey}__${origStatus}__${eps}`
 
         groupTotalMap.set(groupKey, (groupTotalMap.get(groupKey) || 0) + 1)
         if (line.status === "Inputted") {
@@ -1134,8 +1135,6 @@ export function ScriptSheetModal({
           ? `${normKey}__${lineIssueStatus}`
           : `${normKey}__${lineIssueStatus}__${eps}`
 
-      const isResolved = line.status === "Inputted" || !!checkedVoReportKeys[groupKey]
-
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
           character: targetChar,
@@ -1144,13 +1143,18 @@ export function ScriptSheetModal({
           startTimeSet: new Set<string>(),
           endTimeSet: new Set<string>(),
           batchTimeSet: new Set<string>(),
-          isResolved,
+          totalLines: 0,
+          inputtedLines: 0,
           firstLineId: line.id,
         })
       }
 
       const entry = charStatusMap.get(groupKey)!
       entry.character = targetChar
+      entry.totalLines += 1
+      if (line.status === "Inputted") {
+        entry.inputtedLines += 1
+      }
       if (eps) {
         entry.epsSet.add(eps)
       }
@@ -1181,7 +1185,8 @@ export function ScriptSheetModal({
       firstLineId?: string
     }> = []
 
-    charStatusMap.forEach(({ character, status, epsSet, startTimeSet, endTimeSet, batchTimeSet, isResolved, firstLineId }, groupKey) => {
+    charStatusMap.forEach(({ character, status, epsSet, startTimeSet, endTimeSet, batchTimeSet, totalLines, inputtedLines, firstLineId }, groupKey) => {
+      const isResolved = !!checkedVoReportKeys[groupKey] || (totalLines > 0 && inputtedLines === totalLines)
       const actor = masterMap.get(normalizeCharKey(character)) || "Unassigned"
       let suffix = STATUS_REPORT_SUFFIX_MAP[status] || ""
 
@@ -1456,18 +1461,19 @@ export function ScriptSheetModal({
 
     const parts = groupKey.split("__")
     const groupChar = parts[0]?.toLowerCase() || ""
-    const groupStatus = parts[1]?.toLowerCase() || ""
-    const groupEps = parts[2]?.toLowerCase() || ""
+    const originalStatus = parts[1] || ""
+    const groupEps = parts[2]?.trim() || ""
 
     const matchesGroup = (line: ScriptLine) => {
-      const lineChar = (line.character || "").trim().toLowerCase()
-      const correctChar = (line.correctCharacter || "").trim().toLowerCase()
+      const lineChar = (line.character || "").trim()
+      const correctChar = (line.correctCharacter || "").trim()
       const targetChar = line.status === "Wrong Cast" && correctChar ? correctChar : lineChar
-      const issueStatus = (line.previousStatus || line.status).trim().toLowerCase()
-      const eps = (line.eps || "").trim().toLowerCase()
+      const normChar = normalizeCharKey(targetChar)
+      const issueStatus = (line.previousStatus || line.status).trim()
+      const eps = (line.eps || "").trim()
 
-      if (targetChar !== groupChar) return false
-      if (issueStatus !== groupStatus) return false
+      if (normChar !== groupChar) return false
+      if (issueStatus.toLowerCase() !== originalStatus.toLowerCase()) return false
 
       if (groupEps) {
         return eps === groupEps || Number(eps) === Number(groupEps)
@@ -1486,12 +1492,20 @@ export function ScriptSheetModal({
         } else {
           return {
             ...line,
-            status: (line.previousStatus || groupStatus) as ScriptLineStatus,
+            status: (line.previousStatus || originalStatus) as ScriptLineStatus,
+            previousStatus: undefined,
           }
         }
       }
       return line
     })
+
+    voChecks[groupKey] = nextState
+    const updatedProgress = { ...currentProgress, voReportChecks: voChecks }
+    setLocalProgress(updatedProgress)
+    if (onUpdateProgress) {
+      onUpdateProgress(updatedProgress)
+    }
 
     updateData({ ...data, lines: updatedLines })
   }
