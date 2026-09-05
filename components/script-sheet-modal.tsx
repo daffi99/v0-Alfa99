@@ -1845,8 +1845,8 @@ export function ScriptSheetModal({
   const issueCount = totalLines - inputtedCount
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-5xl w-[95vw] h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-background border border-border rounded-xl shadow-2xl w-[96vw] max-w-[1580px] h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="p-3 px-4 border-b flex items-center justify-between bg-card">
           <div className="flex items-center gap-3 flex-wrap">
@@ -2348,7 +2348,7 @@ export function ScriptSheetModal({
                 onScroll={handleTableScroll}
                 className="flex-1 overflow-auto border rounded-lg"
               >
-                <table className="w-full text-xs text-left border-collapse table-fixed">
+                <table className="w-full text-xs text-left border-collapse table-fixed min-w-[1050px]">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
                       <th className="p-2 w-12 text-center border-r shrink-0">Eps</th>
