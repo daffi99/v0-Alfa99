@@ -563,17 +563,34 @@ export function ScriptSheetModal({
     newArtist: "",
   })
 
-  // Scroll Container Ref & Persistent Scroll Position Memory State
+  // Scroll Container Ref & Persistent Scroll Position Memory State (Tab 1: Script Lines)
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const lastScrollTopRef = useRef<number>(0)
   const scrollStorageKey = useMemo(() => `script_scroll_${taskTitle.replace(/\s+/g, "_")}`, [taskTitle])
 
-  // Save scroll position to sessionStorage
+  // Save scroll position for Tab 1 to sessionStorage
   const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const top = e.currentTarget.scrollTop
     lastScrollTopRef.current = top
     try {
       sessionStorage.setItem(scrollStorageKey, top.toString())
+    } catch (err) {}
+  }
+
+  // Summary Tab Scroll Container Ref & Persistent Scroll Position Memory State (Tab 3: Character Summary)
+  const summaryScrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const lastSummaryScrollTopRef = useRef<number>(0)
+  const summaryScrollStorageKey = useMemo(
+    () => `script_summary_scroll_${taskTitle.replace(/\s+/g, "_")}`,
+    [taskTitle]
+  )
+
+  // Save scroll position for Tab 3 to sessionStorage
+  const handleSummaryTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const top = e.currentTarget.scrollTop
+    lastSummaryScrollTopRef.current = top
+    try {
+      sessionStorage.setItem(summaryScrollStorageKey, top.toString())
     } catch (err) {}
   }
 
@@ -624,22 +641,48 @@ export function ScriptSheetModal({
   const [summaryVoaFilter, setSummaryVoaFilter] = useState("ALL")
   const [summaryStatusFilter, setSummaryStatusFilter] = useState("ALL")
 
-  // Restore scroll position upon render / modal open / tab switch / data update
+  // Restore scroll positions upon render / modal open / tab switch / data update
   useEffect(() => {
     if (!isOpen) return
-    let targetTop = lastScrollTopRef.current
-    try {
-      const saved = sessionStorage.getItem(scrollStorageKey)
-      if (saved) {
-        targetTop = parseInt(saved, 10)
-      }
-    } catch (err) {}
 
-    if (scrollContainerRef.current && targetTop > 0) {
-      scrollContainerRef.current.scrollTop = targetTop
-      lastScrollTopRef.current = targetTop
+    if (activeTab === "lines") {
+      let targetTop = lastScrollTopRef.current
+      try {
+        const saved = sessionStorage.getItem(scrollStorageKey)
+        if (saved) {
+          targetTop = parseInt(saved, 10)
+        }
+      } catch (err) {}
+
+      const applyScroll = () => {
+        if (scrollContainerRef.current && targetTop > 0) {
+          scrollContainerRef.current.scrollTop = targetTop
+          lastScrollTopRef.current = targetTop
+        }
+      }
+      applyScroll()
+      const t = setTimeout(applyScroll, 50)
+      return () => clearTimeout(t)
+    } else if (activeTab === "summary") {
+      let targetTop = lastSummaryScrollTopRef.current
+      try {
+        const saved = sessionStorage.getItem(summaryScrollStorageKey)
+        if (saved) {
+          targetTop = parseInt(saved, 10)
+        }
+      } catch (err) {}
+
+      const applyScroll = () => {
+        if (summaryScrollContainerRef.current && targetTop > 0) {
+          summaryScrollContainerRef.current.scrollTop = targetTop
+          lastSummaryScrollTopRef.current = targetTop
+        }
+      }
+      applyScroll()
+      const t = setTimeout(applyScroll, 50)
+      return () => clearTimeout(t)
     }
-  }, [isOpen, activeTab, data.lines, scrollStorageKey])
+  }, [isOpen, activeTab, data.lines, scrollStorageKey, summaryScrollStorageKey])
 
   // Multi-Range Episode Offset State
   const distinctRanges = useMemo(() => {
@@ -1666,6 +1709,14 @@ export function ScriptSheetModal({
       return line
     })
     updateData({ ...data, lines: updatedLines })
+  }
+
+  // Click PS / Pitch in Tab 3 Character Summary to switch to Script tab and filter by that character
+  const handlePitchClick = (charName: string) => {
+    setSelectedCharacterFilter(charName)
+    setSelectedStatusFilter("all")
+    setSearchQuery("")
+    setActiveTab("lines")
   }
 
   // Handle wrong cast character selection from popup modal
@@ -2863,7 +2914,7 @@ export function ScriptSheetModal({
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto border rounded-lg space-y-4 p-1">
+              <div ref={summaryScrollContainerRef} onScroll={handleSummaryTableScroll} className="flex-1 overflow-auto border rounded-lg space-y-4 p-1">
                 {/* Active Characters Table */}
                 <table className="w-full text-xs text-left border-collapse border rounded-md">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
@@ -2934,9 +2985,14 @@ export function ScriptSheetModal({
                                 />
                               ) : null}
                               {cs.ps !== "-" ? (
-                                <span className="text-xs px-2 py-0.5 rounded bg-secondary font-mono">
-                                  {cs.ps}
-                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handlePitchClick(cs.character)}
+                                  className="text-xs px-2 py-0.5 rounded bg-secondary font-mono font-bold hover:bg-primary/20 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1"
+                                  title={`Click to view script and filter by "${cs.character}"`}
+                                >
+                                  <span>{cs.ps}</span>
+                                </button>
                               ) : (
                                 <span className="text-gray-300">-</span>
                               )}
@@ -3159,7 +3215,18 @@ export function ScriptSheetModal({
                                         className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
                                       />
                                     ) : null}
-                                    <span>{cs.ps}</span>
+                                    {cs.ps !== "-" ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePitchClick(cs.character)}
+                                        className="text-xs px-2 py-0.5 rounded bg-secondary font-mono font-bold hover:bg-primary/20 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-2xs"
+                                        title={`Click to view script and filter by "${cs.character}"`}
+                                      >
+                                        {cs.ps}
+                                      </button>
+                                    ) : (
+                                      <span className="text-gray-300">-</span>
+                                    )}
                                   </div>
                                 </td>
                                 <td className="p-2.5 font-medium text-muted-foreground">
