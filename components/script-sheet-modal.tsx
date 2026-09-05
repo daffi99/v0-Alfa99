@@ -112,6 +112,46 @@ export function formatMmSs(timeStr?: string): string {
   return timeStr.trim()
 }
 
+export function formatToFullTimecode(timeStr?: string): string {
+  if (!timeStr || timeStr === "-" || !timeStr.trim()) return ""
+  const raw = timeStr.trim()
+  const hasMsOrFrame = /[.,]/.test(raw)
+
+  let clean = raw.replace(/[,.](\d+)/g, (_, ms) => {
+    const frame = ms.length >= 2 ? ms.slice(0, 2) : ms.padStart(2, "0")
+    return `:${frame}`
+  })
+
+  const parts = clean.split(":").map((p) => p.trim())
+  const pad = (s: string) => s.padStart(2, "0").slice(-2)
+
+  if (parts.length >= 4) {
+    // HH:MM:SS:FF (e.g. "00:20:36:05")
+    return `${pad(parts[0])}:${pad(parts[1])}:${pad(parts[2])}:${pad(parts[3])}`
+  }
+  if (parts.length === 3) {
+    if (hasMsOrFrame) {
+      // Was MM:SS.FF (e.g. "20:36.05") -> "00:20:36:05"
+      return `00:${pad(parts[0])}:${pad(parts[1])}:${pad(parts[2])}`
+    }
+    // Was HH:MM:SS (e.g. "00:20:36") -> "00:20:36:00"
+    return `${pad(parts[0])}:${pad(parts[1])}:${pad(parts[2])}:00`
+  }
+  if (parts.length === 2) {
+    // MM:SS (e.g. "20:36", "09:21") -> "00:20:36:00"
+    return `00:${pad(parts[0])}:${pad(parts[1])}:00`
+  }
+  if (parts.length === 1 && !isNaN(Number(parts[0]))) {
+    const sec = parseInt(parts[0], 10)
+    const h = Math.floor(sec / 3600)
+    const m = Math.floor((sec % 3600) / 60)
+    const s = sec % 60
+    return `${pad(h.toString())}:${pad(m.toString())}:${pad(s.toString())}:00`
+  }
+
+  return clean
+}
+
 export function timeToSeconds(timeStr?: string): number | null {
   if (!timeStr || timeStr === "-") return null
   const clean = timeStr.trim()
@@ -481,6 +521,18 @@ export function ScriptSheetModal({
     navigator.clipboard.writeText(text)
     setCopiedScriptLineId(lineId)
     setTimeout(() => setCopiedScriptLineId(null), 2000)
+  }
+
+  // Copy start time to clipboard formatted as full timecode (HH:MM:SS:FF e.g. 00:20:36:05)
+  const [copiedTimingLineId, setCopiedTimingLineId] = useState<string | null>(null)
+  const handleCopyStartTime = (lineId: string, rawStartTime?: string) => {
+    if (!rawStartTime || rawStartTime === "-" || !rawStartTime.trim()) return
+    const tc = formatToFullTimecode(rawStartTime)
+    if (tc && typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(tc)
+      setCopiedTimingLineId(lineId)
+      setTimeout(() => setCopiedTimingLineId(null), 1500)
+    }
   }
 
   // Column Widths for Script Lines Table
@@ -1103,6 +1155,7 @@ export function ScriptSheetModal({
         brokenLinesCount: entry.brokenLinesCount,
         episodesList: sortedEps.join(", "),
         firstTiming: entry.firstTiming ? formatMmSs(entry.firstTiming) : "-",
+        firstTimingRaw: entry.firstTiming,
         firstLineId: entry.firstLineId,
         isChecked,
       }
@@ -1713,8 +1766,14 @@ export function ScriptSheetModal({
     updateData({ ...data, lines: updatedLines })
   }
 
-  // Click PS / Pitch in Tab 3 Character Summary to switch to Script tab and filter by that character
-  const handlePitchClick = (charName: string) => {
+  // Click PS / Pitch in Tab 3 Character Summary to switch to Script tab, filter by that character, and copy first timing
+  const handlePitchClick = (charName: string, firstTimingRaw?: string) => {
+    if (firstTimingRaw && firstTimingRaw !== "-" && firstTimingRaw.trim()) {
+      const tc = formatToFullTimecode(firstTimingRaw)
+      if (tc && typeof navigator !== "undefined" && navigator.clipboard) {
+        navigator.clipboard.writeText(tc)
+      }
+    }
     setSelectedCharacterFilter(charName)
     setSelectedStatusFilter("all")
     setSearchQuery("")
@@ -2413,18 +2472,43 @@ export function ScriptSheetModal({
                                     : isBeluman
                                     ? "bg-red-500/10 hover:bg-red-500/15"
                                     : "hover:brightness-95 dark:hover:brightness-125"
-                                } ${openLineStatusDropdown === line.id || openRowActionDropdown === line.id ? "relative z-40" : ""}`}
+                                  } ${openLineStatusDropdown === line.id || openRowActionDropdown === line.id ? "relative z-40" : ""}`}
                               >
                                 <td className="p-2 text-center border-r font-mono text-[11px] font-bold">
                                   {line.eps ? line.eps.trim().padStart(3, "0") : "-"}
                                 </td>
                                 <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
-                                  {isSpecialTimingMark && line.startTime && line.startTime !== "-" ? (
-                                    <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]" title={isOverlap ? "Overlapping start time" : isNoRange ? "No range timing" : "Missing Onomatopoeia timing"}>
-                                      {line.startTime}
-                                    </span>
+                                  {line.startTime && line.startTime !== "-" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyStartTime(line.id, line.startTime)}
+                                      className="group/timing px-1.5 py-0.5 rounded hover:bg-muted/80 hover:text-foreground active:scale-95 transition-all cursor-pointer inline-flex items-center gap-1"
+                                      title={`Click to copy timecode (${formatToFullTimecode(line.startTime)})`}
+                                    >
+                                      {isSpecialTimingMark ? (
+                                        <span
+                                          className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]"
+                                          title={
+                                            isOverlap
+                                              ? "Overlapping start time"
+                                              : isNoRange
+                                              ? "No range timing"
+                                              : "Missing Onomatopoeia timing"
+                                          }
+                                        >
+                                          {line.startTime}
+                                        </span>
+                                      ) : (
+                                        <span className="font-mono">{line.startTime}</span>
+                                      )}
+                                      {copiedTimingLineId === line.id ? (
+                                        <Check className="w-3 h-3 text-emerald-600 flex-shrink-0 animate-in zoom-in-50" />
+                                      ) : (
+                                        <Copy className="w-2.5 h-2.5 text-muted-foreground/40 group-hover/timing:text-muted-foreground opacity-0 group-hover/timing:opacity-100 transition-opacity flex-shrink-0" />
+                                      )}
+                                    </button>
                                   ) : (
-                                    line.startTime || "-"
+                                    "-"
                                   )}
                                 </td>
                                 <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
@@ -2989,9 +3073,9 @@ export function ScriptSheetModal({
                               {cs.ps !== "-" ? (
                                 <button
                                   type="button"
-                                  onClick={() => handlePitchClick(cs.character)}
+                                  onClick={() => handlePitchClick(cs.character, cs.firstTimingRaw || cs.firstTiming)}
                                   className="text-xs px-2 py-0.5 rounded bg-secondary font-mono font-bold hover:bg-primary/20 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1"
-                                  title={`Click to view script and filter by "${cs.character}"`}
+                                  title={`Click to view script, filter by "${cs.character}", and copy first timing (${cs.firstTimingRaw ? formatToFullTimecode(cs.firstTimingRaw) : "00:00:00:00"})`}
                                 >
                                   <span>{cs.ps}</span>
                                 </button>
@@ -3220,9 +3304,9 @@ export function ScriptSheetModal({
                                     {cs.ps !== "-" ? (
                                       <button
                                         type="button"
-                                        onClick={() => handlePitchClick(cs.character)}
+                                        onClick={() => handlePitchClick(cs.character, cs.firstTimingRaw || cs.firstTiming)}
                                         className="text-xs px-2 py-0.5 rounded bg-secondary font-mono font-bold hover:bg-primary/20 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-2xs"
-                                        title={`Click to view script and filter by "${cs.character}"`}
+                                        title={`Click to view script, filter by "${cs.character}", and copy first timing (${cs.firstTimingRaw ? formatToFullTimecode(cs.firstTimingRaw) : "00:00:00:00"})`}
                                       >
                                         {cs.ps}
                                       </button>
