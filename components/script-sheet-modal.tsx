@@ -952,7 +952,7 @@ export function ScriptSheetModal({
     }
   }
 
-  // Dynamically compute characters matching the selected Status Filter for Tab 1 Character Filter dropdown
+  // Dynamically compute characters matching the selected Status Filter for Tab 1 Character Filter dropdown (Sorted A-Z)
   const availableCharacterFilterOptions = useMemo(() => {
     const linesToUse =
       selectedStatusFilter === "all"
@@ -962,7 +962,9 @@ export function ScriptSheetModal({
             return line.status === selectedStatusFilter || lineIssueStatus === selectedStatusFilter
           })
 
-    return Array.from(new Set(linesToUse.map((l) => l.character))).filter(Boolean)
+    return Array.from(new Set(linesToUse.map((l) => l.character)))
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
   }, [data.lines, selectedStatusFilter])
 
   // Reset selected character filter if selected character is not present in the status-filtered characters
