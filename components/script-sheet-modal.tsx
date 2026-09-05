@@ -152,6 +152,17 @@ export function formatToFullTimecode(timeStr?: string): string {
   return clean
 }
 
+export function formatDisplayTiming(timeStr?: string): string {
+  if (!timeStr || timeStr === "-" || !timeStr.trim()) return "-"
+  let clean = timeStr.trim()
+  if (clean.endsWith(":00")) {
+    clean = clean.slice(0, -3)
+  } else if (clean.endsWith(".00") || clean.endsWith(",00") || clean.endsWith(",000") || clean.endsWith(".000")) {
+    clean = clean.split(/[.,]/)[0]
+  }
+  return clean
+}
+
 export function timeToSeconds(timeStr?: string): number | null {
   if (!timeStr || timeStr === "-") return null
   const clean = timeStr.trim()
@@ -2340,10 +2351,10 @@ export function ScriptSheetModal({
                 <table className="w-full text-xs text-left border-collapse table-fixed">
                   <thead className="sticky top-0 bg-muted font-semibold text-muted-foreground border-b z-10">
                     <tr>
-                      <th className="p-2 w-10 text-center border-r shrink-0">Eps</th>
-                      <th className="p-2 w-14 text-center border-r shrink-0">Start</th>
-                      <th className="p-2 w-14 text-center border-r shrink-0">End</th>
-                      <th className="p-2 w-14 text-center border-r shrink-0">Batch</th>
+                      <th className="p-2 w-12 text-center border-r shrink-0">Eps</th>
+                      <th className="p-2 w-24 text-center border-r shrink-0">Start</th>
+                      <th className="p-2 w-24 text-center border-r shrink-0">End</th>
+                      <th className="p-2 w-24 text-center border-r shrink-0">Batch</th>
                       <th
                         style={{ width: `${colWidths.character}px` }}
                         className="p-2 relative select-none group border-r shrink-0"
@@ -2477,63 +2488,61 @@ export function ScriptSheetModal({
                                 <td className="p-2 text-center border-r font-mono text-[11px] font-bold">
                                   {line.eps ? line.eps.trim().padStart(3, "0") : "-"}
                                 </td>
-                                <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
-                                  {line.startTime && line.startTime !== "-" ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCopyStartTime(line.id, line.startTime)}
-                                      className="group/timing px-1.5 py-0.5 rounded hover:bg-muted/80 hover:text-foreground active:scale-95 transition-all cursor-pointer inline-flex items-center gap-1"
-                                      title={`Click to copy timecode (${formatToFullTimecode(line.startTime)})`}
-                                    >
-                                      {isSpecialTimingMark ? (
-                                        <span
-                                          className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]"
-                                          title={
-                                            isOverlap
-                                              ? "Overlapping start time"
-                                              : isNoRange
-                                              ? "No range timing"
-                                              : "Missing Onomatopoeia timing"
-                                          }
-                                        >
-                                          {line.startTime}
-                                        </span>
-                                      ) : (
-                                        <span className="font-mono">{line.startTime}</span>
-                                      )}
-                                      {copiedTimingLineId === line.id ? (
-                                        <Check className="w-3 h-3 text-emerald-600 flex-shrink-0 animate-in zoom-in-50" />
-                                      ) : (
-                                        <Copy className="w-2.5 h-2.5 text-muted-foreground/40 group-hover/timing:text-muted-foreground opacity-0 group-hover/timing:opacity-100 transition-opacity flex-shrink-0" />
-                                      )}
-                                    </button>
-                                  ) : (
-                                    "-"
-                                  )}
-                                </td>
-                                <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
-                                  {isSpecialTimingMark && line.endTime && line.endTime !== "-" ? (
-                                    <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]">
-                                      {line.endTime}
-                                    </span>
-                                  ) : (
-                                    line.endTime || "-"
-                                  )}
-                                </td>
-                                <td className="p-2 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap">
-                                  {isSpecialTimingMark && line.batchTime && line.batchTime !== "-" ? (
-                                    <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]">
-                                      {line.batchTime}
-                                    </span>
-                                  ) : (
-                                    line.batchTime || "-"
-                                  )}
-                                  {timelineBatchTime && (
-                                    <div className="text-[9px] text-purple-700 dark:text-purple-400 font-mono font-medium leading-tight mt-0.5" title={`Timeline offset (+${range1Duration}): ${timelineBatchTime}`}>
-                                      {timelineBatchTime}
-                                    </div>
-                                  )}
-                                </td>
+                                 <td className="p-1.5 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden">
+                                   {line.startTime && line.startTime !== "-" ? (
+                                     <button
+                                       type="button"
+                                       onClick={() => handleCopyStartTime(line.id, line.startTime)}
+                                       className="w-full px-1 py-0.5 rounded hover:bg-muted/80 hover:text-foreground active:scale-95 transition-all cursor-pointer inline-flex items-center justify-center gap-1 font-mono text-[10px]"
+                                       title={`Click to copy timecode (${formatToFullTimecode(line.startTime)})`}
+                                     >
+                                       {isSpecialTimingMark ? (
+                                         <span
+                                           className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold border border-amber-400/40 text-[10px]"
+                                           title={
+                                             isOverlap
+                                               ? "Overlapping start time"
+                                               : isNoRange
+                                               ? "No range timing"
+                                               : "Missing Onomatopoeia timing"
+                                           }
+                                         >
+                                           {formatDisplayTiming(line.startTime)}
+                                         </span>
+                                       ) : (
+                                         <span>{formatDisplayTiming(line.startTime)}</span>
+                                       )}
+                                       {copiedTimingLineId === line.id && (
+                                         <Check className="w-3 h-3 text-emerald-600 flex-shrink-0 animate-in zoom-in-50" />
+                                       )}
+                                     </button>
+                                   ) : (
+                                     "-"
+                                   )}
+                                 </td>
+                                 <td className="p-1.5 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden">
+                                   {isSpecialTimingMark && line.endTime && line.endTime !== "-" ? (
+                                     <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]">
+                                       {formatDisplayTiming(line.endTime)}
+                                     </span>
+                                   ) : (
+                                     formatDisplayTiming(line.endTime)
+                                   )}
+                                 </td>
+                                 <td className="p-1.5 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden">
+                                   {isSpecialTimingMark && line.batchTime && line.batchTime !== "-" ? (
+                                     <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]">
+                                       {formatDisplayTiming(line.batchTime)}
+                                     </span>
+                                   ) : (
+                                     formatDisplayTiming(line.batchTime)
+                                   )}
+                                   {timelineBatchTime && (
+                                     <div className="text-[9px] text-purple-700 dark:text-purple-400 font-mono font-medium leading-tight mt-0.5 truncate" title={`Timeline offset (+${range1Duration}): ${timelineBatchTime}`}>
+                                       {timelineBatchTime}
+                                     </div>
+                                   )}
+                                 </td>
                                 <td
                                   style={{ width: `${colWidths.character}px`, minWidth: `${colWidths.character}px`, maxWidth: `${colWidths.character}px` }}
                                   className="p-2 border-r font-semibold text-[10px] whitespace-nowrap truncate overflow-hidden"
