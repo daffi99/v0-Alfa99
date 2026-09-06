@@ -2926,7 +2926,7 @@ export function ScriptSheetModal({
                           )}
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>
