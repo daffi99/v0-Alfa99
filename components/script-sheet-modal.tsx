@@ -2832,25 +2832,38 @@ export function ScriptSheetModal({
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {data.masterArtists.map((ma, idx) => (
-                      <tr key={idx} className="hover:bg-muted/40 transition-colors">
-                        <td className="p-2.5 font-semibold text-foreground">
-                          <div className="flex items-center gap-1.5 group">
-                            <span>{ma.characterName}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleCopyCharName(ma.characterName)}
-                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors cursor-pointer opacity-70 group-hover:opacity-100"
-                              title={`Copy "${ma.characterName}"`}
-                            >
-                              {copiedCharName === ma.characterName ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                          </div>
-                        </td>
+                    {data.masterArtists.map((ma, idx) => {
+                      const matchedSummary = characterSummaries.find(
+                        (cs) => normalizeCharKey(cs.character) === normalizeCharKey(ma.characterName)
+                      )
+                      const firstTiming = matchedSummary?.firstTimingRaw || matchedSummary?.firstTiming
+
+                      return (
+                        <tr key={idx} className="hover:bg-muted/40 transition-colors">
+                          <td className="p-2.5 font-semibold text-foreground">
+                            <div className="flex items-center gap-1.5 group">
+                              <button
+                                type="button"
+                                onClick={() => handlePitchClick(ma.characterName, firstTiming)}
+                                className="text-left font-semibold text-foreground hover:text-primary hover:underline cursor-pointer transition-colors"
+                                title={`Click to view script, filter by "${ma.characterName}", and copy first timing (${firstTiming ? formatToFullTimecode(firstTiming) : "00:00:00:00"})`}
+                              >
+                                {ma.characterName}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCharName(ma.characterName)}
+                                className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors cursor-pointer opacity-70 group-hover:opacity-100"
+                                title={`Copy "${ma.characterName}"`}
+                              >
+                                {copiedCharName === ma.characterName ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
                         <td className="p-2.5 font-medium text-emerald-700">
                           {ma.finalArtist}
                         </td>
@@ -3095,7 +3108,14 @@ export function ScriptSheetModal({
                           </td>
                           <td className="p-2.5 font-bold text-foreground">
                             <div className="flex items-center gap-1.5 group">
-                              <span>{cs.character}</span>
+                              <button
+                                type="button"
+                                onClick={() => handlePitchClick(cs.character, cs.firstTimingRaw || cs.firstTiming)}
+                                className="text-left font-bold text-foreground hover:text-primary hover:underline cursor-pointer transition-colors"
+                                title={`Click to view script, filter by "${cs.character}", and copy first timing (${cs.firstTimingRaw ? formatToFullTimecode(cs.firstTimingRaw) : "00:00:00:00"})`}
+                              >
+                                {cs.character}
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleCopyCharName(cs.character)}
@@ -3324,9 +3344,16 @@ export function ScriptSheetModal({
                                     )}
                                   </div>
                                 </td>
-                                <td className="p-2.5 font-medium text-muted-foreground">
+                                 <td className="p-2.5 font-medium text-muted-foreground">
                                   <div className="flex items-center gap-1.5 group">
-                                    <span>{cs.character}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handlePitchClick(cs.character, cs.firstTimingRaw || cs.firstTiming)}
+                                      className="text-left font-medium text-muted-foreground hover:text-primary hover:underline cursor-pointer transition-colors"
+                                      title={`Click to view script, filter by "${cs.character}", and copy first timing (${cs.firstTimingRaw ? formatToFullTimecode(cs.firstTimingRaw) : "00:00:00:00"})`}
+                                    >
+                                      {cs.character}
+                                    </button>
                                     <button
                                       type="button"
                                       onClick={() => handleCopyCharName(cs.character)}
