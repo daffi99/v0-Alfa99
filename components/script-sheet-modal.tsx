@@ -2177,21 +2177,40 @@ export function ScriptSheetModal({
 
                     {/* Custom Character Filter Dropdown */}
                     <div className={`relative inline-block text-left ${isCharFilterOpen ? "z-40" : ""}`}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsCharFilterOpen(!isCharFilterOpen)
-                          setIsStatusFilterOpen(false)
-                        }}
-                        className="h-8 px-3 text-xs font-semibold bg-background hover:bg-muted/80 text-foreground border border-input rounded-md shadow-2xs flex items-center gap-2 cursor-pointer transition-colors active:scale-95 whitespace-nowrap"
-                      >
-                        <span>
-                          {selectedCharacterFilter === "all"
-                            ? "All Characters"
-                            : selectedCharacterFilter}
-                        </span>
-                        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                      </button>
+                      <div className="flex items-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCharFilterOpen(!isCharFilterOpen)
+                            setIsStatusFilterOpen(false)
+                          }}
+                          className={`h-8 px-3 text-xs font-semibold bg-background hover:bg-muted/80 text-foreground border border-input ${
+                            selectedCharacterFilter !== "all"
+                              ? "rounded-l-md border-r-0 bg-primary/5 text-primary border-primary/40"
+                              : "rounded-md"
+                          } shadow-2xs flex items-center gap-2 cursor-pointer transition-colors active:scale-95 whitespace-nowrap`}
+                        >
+                          <span>
+                            {selectedCharacterFilter === "all"
+                              ? "All Characters"
+                              : selectedCharacterFilter}
+                          </span>
+                          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
+                        {selectedCharacterFilter !== "all" && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedCharacterFilter("all")
+                            }}
+                            className="h-8 px-2 bg-background hover:bg-red-500/15 text-muted-foreground hover:text-red-600 border border-input border-l-0 rounded-r-md transition-colors cursor-pointer border-primary/40"
+                            title="Clear character filter"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
 
                       {isCharFilterOpen && (
                         <>
@@ -2243,21 +2262,40 @@ export function ScriptSheetModal({
 
                     {/* Custom Status Filter Dropdown */}
                     <div className={`relative inline-block text-left ${isStatusFilterOpen ? "z-40" : ""}`}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsStatusFilterOpen(!isStatusFilterOpen)
-                          setIsCharFilterOpen(false)
-                        }}
-                        className="h-8 px-3 text-xs font-semibold bg-background hover:bg-muted/80 text-foreground border border-input rounded-md shadow-2xs flex items-center gap-2 cursor-pointer transition-colors active:scale-95 whitespace-nowrap"
-                      >
-                        <span>
-                          {selectedStatusFilter === "all"
-                            ? `All Statuses (${totalLines})`
-                            : `${selectedStatusFilter} (${data.lines.filter((l) => l.status === selectedStatusFilter).length})`}
-                        </span>
-                        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                      </button>
+                      <div className="flex items-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsStatusFilterOpen(!isStatusFilterOpen)
+                            setIsCharFilterOpen(false)
+                          }}
+                          className={`h-8 px-3 text-xs font-semibold bg-background hover:bg-muted/80 text-foreground border border-input ${
+                            selectedStatusFilter !== "all"
+                              ? "rounded-l-md border-r-0 bg-primary/5 text-primary border-primary/40"
+                              : "rounded-md"
+                          } shadow-2xs flex items-center gap-2 cursor-pointer transition-colors active:scale-95 whitespace-nowrap`}
+                        >
+                          <span>
+                            {selectedStatusFilter === "all"
+                              ? `All Statuses (${totalLines})`
+                              : `${selectedStatusFilter} (${data.lines.filter((l) => l.status === selectedStatusFilter).length})`}
+                          </span>
+                          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
+                        {selectedStatusFilter !== "all" && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedStatusFilter("all")
+                            }}
+                            className="h-8 px-2 bg-background hover:bg-red-500/15 text-muted-foreground hover:text-red-600 border border-input border-l-0 rounded-r-md transition-colors cursor-pointer border-primary/40"
+                            title="Clear status filter"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
 
                       {isStatusFilterOpen && (
                         <>
@@ -2314,6 +2352,23 @@ export function ScriptSheetModal({
                         </>
                       )}
                     </div>
+
+                    {/* Clear Filters Button */}
+                    {(Boolean(searchQuery) || selectedCharacterFilter !== "all" || selectedStatusFilter !== "all") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery("")
+                          setSelectedCharacterFilter("all")
+                          setSelectedStatusFilter("all")
+                        }}
+                        className="h-8 px-2.5 text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-md transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95 animate-in fade-in zoom-in-95 duration-150 whitespace-nowrap"
+                        title="Clear all active filters"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Clear Filter</span>
+                      </button>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
