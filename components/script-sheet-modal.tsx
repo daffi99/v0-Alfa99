@@ -618,6 +618,22 @@ export function ScriptSheetModal({
   // 3-Dots Master Artist Custom Dropdown Menu State
   const [openMasterActionDropdown, setOpenMasterActionDropdown] = useState<number | null>(null)
 
+  // 3-Dots Character Summary Action Custom Dropdown Menu State
+  const [openCharMoreDropdown, setOpenCharMoreDropdown] = useState<string | null>(null)
+
+  // Edit Single Character PS Modal State
+  const [editPsModal, setEditPsModal] = useState<{
+    isOpen: boolean
+    characterName: string
+    currentPs: string
+    newPs: string
+  }>({
+    isOpen: false,
+    characterName: "",
+    currentPs: "",
+    newPs: "",
+  })
+
   // Edit VO Artist Modal State
   const [editArtistModal, setEditArtistModal] = useState<{
     isOpen: boolean
@@ -1568,6 +1584,115 @@ export function ScriptSheetModal({
     }
 
     setEditArtistModal({ isOpen: false, characterName: "", currentArtist: "", newArtist: "" })
+  }
+
+  // Save Single Character PS (Pitch / Speed)
+  const handleSaveSinglePs = async () => {
+    const trimmedPs = editPsModal.newPs.trim()
+    if (!trimmedPs || !editPsModal.characterName) return
+
+    const normTarget = normalizeCharKey(editPsModal.characterName)
+    let found = false
+
+    const updatedMasters = data.masterArtists.map((ma) => {
+      if (normalizeCharKey(ma.characterName) === normTarget) {
+        found = true
+        return {
+          ...ma,
+          pitchSpeed: trimmedPs,
+        }
+      }
+      return ma
+    })
+
+    if (!found) {
+      const charSummary = characterSummaries.find(
+        (cs) => normalizeCharKey(cs.character) === normTarget
+      )
+      updatedMasters.push({
+        characterName: editPsModal.characterName,
+        finalArtist: charSummary?.actor || "Unassigned",
+        pitchSpeed: trimmedPs,
+      })
+    }
+
+    const updatedChecks = {
+      ...(data.checkedCharacters || {}),
+      [editPsModal.characterName]: true,
+    }
+
+    const updatedData = {
+      ...data,
+      masterArtists: updatedMasters,
+      checkedCharacters: updatedChecks,
+    }
+
+    updateData(updatedData)
+
+    if (taskId) {
+      try {
+        await fetch(`/api/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scriptData: updatedData }),
+        })
+      } catch (e) {
+        console.error("Failed to persist updated PS to DB:", e)
+      }
+    }
+
+    setEditPsModal({
+      isOpen: false,
+      characterName: "",
+      currentPs: "",
+      newPs: "",
+    })
+  }
+
+  // Remove Single Character PS (Pitch / Speed)
+  const handleRemoveSinglePs = async (characterName: string) => {
+    if (!characterName) return
+    const normTarget = normalizeCharKey(characterName)
+
+    const updatedMasters = data.masterArtists.map((ma) => {
+      if (normalizeCharKey(ma.characterName) === normTarget) {
+        return {
+          ...ma,
+          pitchSpeed: undefined,
+        }
+      }
+      return ma
+    })
+
+    const updatedChecks = { ...(data.checkedCharacters || {}) }
+    delete updatedChecks[characterName]
+
+    const updatedData = {
+      ...data,
+      masterArtists: updatedMasters,
+      checkedCharacters: updatedChecks,
+    }
+
+    updateData(updatedData)
+
+    if (taskId) {
+      try {
+        await fetch(`/api/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scriptData: updatedData }),
+        })
+      } catch (e) {
+        console.error("Failed to remove PS from DB:", e)
+      }
+    }
+
+    setEditPsModal({
+      isOpen: false,
+      characterName: "",
+      currentPs: "",
+      newPs: "",
+    })
   }
 
   // Single Column VO Error Data Update - preserving line index mapping
@@ -3039,6 +3164,22 @@ export function ScriptSheetModal({
                                   <Pencil className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                                   <span>Change VO Artist</span>
                                 </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditPsModal({
+                                      isOpen: true,
+                                      characterName: ma.characterName,
+                                      currentPs: ma.pitchSpeed || "",
+                                      newPs: ma.pitchSpeed || "",
+                                    })
+                                    setOpenMasterActionDropdown(null)
+                                  }}
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+                                >
+                                  <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                                  <span>{ma.pitchSpeed ? "Edit PS" : "Add New PS"}</span>
+                                </button>
                               </div>
                             </>
                           )}
@@ -3246,7 +3387,7 @@ export function ScriptSheetModal({
                               : isBeluman
                               ? "bg-red-500/10 hover:bg-red-500/15"
                               : "bg-emerald-500/10 hover:bg-emerald-500/15"
-                          } ${openActionDropdown === cs.character ? "relative z-40" : ""}`}
+                          } ${openActionDropdown === cs.character || openCharMoreDropdown === cs.character ? "relative z-40" : ""}`}
                         >
                           <td className="p-2.5 text-center font-mono text-xs text-muted-foreground font-semibold whitespace-nowrap">
                             <div className="flex items-center justify-center gap-1.5">
@@ -3433,6 +3574,41 @@ export function ScriptSheetModal({
                                     >
                                       <span className="w-2 h-2 rounded-full bg-slate-400 flex-shrink-0" />
                                       Not used
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            {/* 3-dots More Options (Add/Edit PS) */}
+                            <div className={`relative inline-block text-left ${openCharMoreDropdown === cs.character ? "z-40" : ""}`}>
+                              <button
+                                type="button"
+                                onClick={() => setOpenCharMoreDropdown(openCharMoreDropdown === cs.character ? null : cs.character)}
+                                className="h-7 w-7 rounded-md border border-border bg-background hover:bg-muted/80 text-muted-foreground hover:text-foreground flex items-center justify-center cursor-pointer transition-colors shadow-2xs active:scale-95"
+                                title="More options"
+                              >
+                                <MoreVertical className="w-3.5 h-3.5" />
+                              </button>
+                              {openCharMoreDropdown === cs.character && (
+                                <>
+                                  <div className="fixed inset-0 z-40" onClick={() => setOpenCharMoreDropdown(null)} />
+                                  <div className={`absolute right-0 ${idx >= activeCharacterSummaries.length - 3 && idx >= 3 ? "bottom-full mb-1" : "top-full mt-1"} z-50 w-36 bg-popover border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenCharMoreDropdown(null)
+                                        setEditPsModal({
+                                          isOpen: true,
+                                          characterName: cs.character,
+                                          currentPs: cs.ps !== "-" ? cs.ps : "",
+                                          newPs: cs.ps !== "-" ? cs.ps : "",
+                                        })
+                                      }}
+                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
+                                    >
+                                      <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                                      <span>{cs.ps && cs.ps !== "-" ? "Edit PS" : "Add New PS"}</span>
                                     </button>
                                   </div>
                                 </>
@@ -4528,6 +4704,119 @@ export function ScriptSheetModal({
                   <Check className="w-3.5 h-3.5" />
                   <span>Save</span>
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit / Add Single PS Modal */}
+        {editPsModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-sm bg-card border rounded-xl shadow-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between border-b pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-500">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {editPsModal.currentPs ? "Edit Pitch/Speed (PS)" : "Add New Pitch/Speed (PS)"}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditPsModal({
+                      isOpen: false,
+                      characterName: "",
+                      currentPs: "",
+                      newPs: "",
+                    })
+                  }
+                  className="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground block mb-1">
+                    Character
+                  </label>
+                  <div className="text-xs font-bold px-3 py-2 bg-muted/50 rounded-md text-foreground font-mono">
+                    {editPsModal.characterName}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground block mb-1">
+                    Pitch / Speed Value (e.g. +2/+10 or 0/-5)
+                  </label>
+                  <input
+                    type="text"
+                    value={editPsModal.newPs}
+                    onChange={(e) =>
+                      setEditPsModal((prev) => ({
+                        ...prev,
+                        newPs: e.target.value,
+                      }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && editPsModal.newPs.trim()) {
+                        handleSaveSinglePs()
+                      } else if (e.key === "Escape") {
+                        setEditPsModal({
+                          isOpen: false,
+                          characterName: "",
+                          currentPs: "",
+                          newPs: "",
+                        })
+                      }
+                    }}
+                    placeholder="Enter PS (e.g. +2/+5)..."
+                    autoFocus
+                    className="w-full text-xs font-mono font-medium px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t">
+                {editPsModal.currentPs ? (
+                  <button
+                    type="button"
+                    onClick={handleRemoveSinglePs}
+                    className="px-2.5 py-1.5 text-xs font-semibold rounded-md text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                  >
+                    Clear PS
+                  </button>
+                ) : (
+                  <div />
+                )}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditPsModal({
+                        isOpen: false,
+                        characterName: "",
+                        currentPs: "",
+                        newPs: "",
+                      })
+                    }
+                    className="px-3 py-1.5 text-xs font-semibold rounded-md border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveSinglePs}
+                    disabled={!editPsModal.newPs.trim()}
+                    className="px-4 py-1.5 text-xs font-bold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Save</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
