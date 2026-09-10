@@ -487,6 +487,7 @@ export function ScriptSheetModal({
 
   // Copy indicator state
   const [copiedReport, setCopiedReport] = useState(false)
+  const [copiedUnresolvedReport, setCopiedUnresolvedReport] = useState(false)
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null)
   const [copiedCharName, setCopiedCharName] = useState<string | null>(null)
   const [copiedScriptLineId, setCopiedScriptLineId] = useState<string | null>(null)
@@ -1676,12 +1677,23 @@ export function ScriptSheetModal({
     updateData({ ...data, lines: [newLine, ...data.lines] })
   }
 
-  // Copy VOA Report
+  // Copy All VOA Report Lines
   const handleCopyReport = () => {
     const allText = missingReports.map((r) => r.reportString).join("\n")
     navigator.clipboard.writeText(allText)
     setCopiedReport(true)
     setTimeout(() => setCopiedReport(false), 2000)
+  }
+
+  // Copy Unresolved VOA Report Lines Only
+  const handleCopyUnresolvedReport = () => {
+    const unresolvedReports = missingReports.filter((r) => !r.isResolved)
+    const text = unresolvedReports.map((r) => r.reportString).join("\n")
+    if (text) {
+      navigator.clipboard.writeText(text)
+      setCopiedUnresolvedReport(true)
+      setTimeout(() => setCopiedUnresolvedReport(false), 2000)
+    }
   }
 
   // Toggle VOA Report checklist checkbox for a specific individual report line item
@@ -3524,9 +3536,25 @@ export function ScriptSheetModal({
                     <RotateCcw className="w-3.5 h-3.5" /> Reset All VOA Report
                   </button>
                   <button
+                    onClick={handleCopyUnresolvedReport}
+                    disabled={missingReports.filter((r) => !r.isResolved).length === 0}
+                    className="h-8 px-3 text-xs bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-2xs active:scale-95"
+                    title="Copy only unresolved report lines to clipboard"
+                  >
+                    {copiedUnresolvedReport ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" /> Copied Unresolved!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" /> Copy Unresolved Only ({missingReports.filter((r) => !r.isResolved).length})
+                      </>
+                    )}
+                  </button>
+                  <button
                     onClick={handleCopyReport}
                     disabled={missingReports.length === 0}
-                    className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                    className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-2xs active:scale-95"
                   >
                     {copiedReport ? (
                       <>
