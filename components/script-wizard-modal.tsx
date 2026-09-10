@@ -15,6 +15,7 @@ export type ScriptLineStatus =
   | "Too Long"
   | "Missing Onomatopoeia"
   | "Onomatopoeia"
+  | "Not used"
 
 export interface ScriptLine {
   id: string

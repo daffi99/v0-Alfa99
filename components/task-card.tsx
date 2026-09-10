@@ -219,7 +219,7 @@ export function TaskCard({ task, columnId, onToggleEpisode, onToggleAllEpisodes,
       if (!targetChar) return
 
       const lineIssueStatus = line.previousStatus || line.status
-      if (!lineIssueStatus || lineIssueStatus === "Inputted") return
+      if (!lineIssueStatus || lineIssueStatus === "Inputted" || lineIssueStatus === "Not used") return
 
       const eps = (line.eps || "").trim()
       const normKey = normalizeCharKey(targetChar)

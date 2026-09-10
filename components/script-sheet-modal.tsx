@@ -49,6 +49,7 @@ interface ScriptSheetModalProps {
 export const SCRIPT_LINE_STATUSES: ScriptLineStatus[] = [
   "Beluman",
   "Inputted",
+  "Not used",
   "Missing",
   "Broken",
   "VO Error",
@@ -66,6 +67,8 @@ export const STATUS_STYLE_MAP: Record<
   Beluman: { label: "Beluman", bg: "bg-red-100", text: "text-red-700", border: "border-red-200" },
   Inputted: { label: "Inputted", bg: "bg-emerald-100", text: "text-emerald-800", border: "border-emerald-200" },
   "No Revision": { label: "No Revision", bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-800 dark:text-emerald-300", border: "border-emerald-300 dark:border-emerald-800" },
+  "Not used": { label: "Not used", bg: "bg-slate-200 dark:bg-slate-700", text: "text-slate-700 dark:text-slate-200", border: "border-slate-300 dark:border-slate-600" },
+  "Not Used": { label: "Not used", bg: "bg-slate-200 dark:bg-slate-700", text: "text-slate-700 dark:text-slate-200", border: "border-slate-300 dark:border-slate-600" },
   Missing: { label: "Missing", bg: "bg-red-700", text: "text-white", border: "border-red-800" },
   Broken: { label: "Broken", bg: "bg-purple-700", text: "text-white", border: "border-purple-800" },
   "VO Error": { label: "VO Error", bg: "bg-amber-200", text: "text-amber-900", border: "border-amber-300" },
@@ -229,6 +232,7 @@ export const STATUS_REPORT_SUFFIX_MAP: Record<ScriptLineStatus, string | null> =
   Onomatopoeia: "_Missing onomatopoeia",
   "Missing Onomatopoeia": "_Missing onomatopoeia",
   Inputted: null, // Inputted lines do not create VOA report lines
+  "Not used": null, // Not used lines do not create VOA report lines
 }
 
 export function formatReportTitle(title: string): string {
@@ -800,6 +804,7 @@ export function ScriptSheetModal({
 
   // Interactive UI checkboxes for Character Summary rows
   const [uiCheckedRows, setUiCheckedRows] = useState<Record<string, boolean>>({})
+  const [isBatchCharStatusDropdownOpen, setIsBatchCharStatusDropdownOpen] = useState(false)
 
   const toggleUiRowCheck = (key: string) => {
     setUiCheckedRows((prev) => ({
@@ -892,6 +897,9 @@ export function ScriptSheetModal({
   const handleConfirmResetVoaReport = () => {
     // Convert all lines to Inputted
     const updatedLines = data.lines.map((line) => {
+      if (line.status === "Not used") {
+        return line
+      }
       return {
         ...line,
         status: "Inputted" as ScriptLineStatus,
@@ -986,7 +994,7 @@ export function ScriptSheetModal({
 
         if (!targetChar) return
         const origStatus = line.previousStatus || line.status
-        if (!origStatus || origStatus === "Inputted") return
+        if (!origStatus || origStatus === "Inputted" || origStatus === "Not used") return
 
         const eps = (line.eps || "").trim()
         const normKey = normalizeCharKey(targetChar)
@@ -1071,6 +1079,7 @@ export function ScriptSheetModal({
         linesCount: number
         inputtedLinesCount: number
         belumanLinesCount: number
+        notUsedLinesCount: number
         brokenLinesCount: number
         episodesSet: Set<string>
         firstTiming?: string
@@ -1089,6 +1098,7 @@ export function ScriptSheetModal({
           linesCount: 0,
           inputtedLinesCount: 0,
           belumanLinesCount: 0,
+          notUsedLinesCount: 0,
           brokenLinesCount: 0,
           episodesSet: new Set<string>(),
           firstTiming: undefined,
@@ -1114,6 +1124,7 @@ export function ScriptSheetModal({
           linesCount: 0,
           inputtedLinesCount: 0,
           belumanLinesCount: 0,
+          notUsedLinesCount: 0,
           brokenLinesCount: 0,
           episodesSet: new Set<string>(),
           firstTiming: undefined,
@@ -1127,6 +1138,8 @@ export function ScriptSheetModal({
         entry.inputtedLinesCount += 1
       } else if (status === "Beluman") {
         entry.belumanLinesCount += 1
+      } else if (status === "Not used") {
+        entry.notUsedLinesCount += 1
       } else {
         entry.brokenLinesCount += 1
       }
@@ -1164,6 +1177,7 @@ export function ScriptSheetModal({
         linesCount: entry.linesCount,
         inputtedLinesCount: entry.inputtedLinesCount,
         belumanLinesCount: entry.belumanLinesCount,
+        notUsedLinesCount: entry.notUsedLinesCount,
         brokenLinesCount: entry.brokenLinesCount,
         episodesList: sortedEps.join(", "),
         firstTiming: entry.firstTiming ? formatMmSs(entry.firstTiming) : "-",
@@ -1217,6 +1231,8 @@ export function ScriptSheetModal({
         matchesStatus = cs.inputtedLinesCount > 0
       } else if (summaryStatusFilter === "BROKEN") {
         matchesStatus = cs.brokenLinesCount > 0
+      } else if (summaryStatusFilter === "NOT_USED") {
+        matchesStatus = cs.notUsedLinesCount > 0
       }
 
       return matchesQuery && matchesVoa && matchesStatus
@@ -1328,7 +1344,7 @@ export function ScriptSheetModal({
       if (!targetChar) return
 
       const lineIssueStatus = line.previousStatus || line.status
-      if (!lineIssueStatus || lineIssueStatus === "Inputted") return
+      if (!lineIssueStatus || lineIssueStatus === "Inputted" || lineIssueStatus === "Not used") return
 
       const eps = (line.eps || "").trim()
       const normKey = normalizeCharKey(targetChar)
@@ -1789,6 +1805,29 @@ export function ScriptSheetModal({
     updateData({ ...data, lines: updatedLines })
   }
 
+  // Batch update line status for multiple checked characters
+  const handleBatchUpdateMultipleCharactersStatus = (newStatus: ScriptLineStatus) => {
+    const selectedCharNames = new Set(
+      Object.keys(uiCheckedRows)
+        .filter((k) => uiCheckedRows[k] && !k.startsWith("unused_"))
+        .map((k) => k.trim().toLowerCase())
+    )
+    if (selectedCharNames.size === 0) return
+
+    const updatedLines = data.lines.map((line) => {
+      if (line.character && selectedCharNames.has(line.character.trim().toLowerCase())) {
+        return {
+          ...line,
+          status: newStatus,
+          previousStatus: newStatus === "Inputted" ? line.status : undefined,
+        }
+      }
+      return line
+    })
+    updateData({ ...data, lines: updatedLines })
+    setIsBatchCharStatusDropdownOpen(false)
+  }
+
   // Click PS / Pitch in Tab 3 Character Summary to switch to Script tab, filter by that character, and copy first timing
   const handlePitchClick = (charName: string, firstTimingRaw?: string) => {
     if (firstTimingRaw && firstTimingRaw !== "-" && firstTimingRaw.trim()) {
@@ -1854,6 +1893,7 @@ export function ScriptSheetModal({
   const totalLines = data.lines.length
   const inputtedCount = data.lines.filter((l) => l.status === "Inputted").length
   const belumanCount = data.lines.filter((l) => l.status === "Beluman").length
+  const notUsedCount = data.lines.filter((l) => l.status === "Not used").length
   const issueCount = totalLines - inputtedCount
 
   return (
@@ -1884,6 +1924,14 @@ export function ScriptSheetModal({
               <span className="text-red-600 font-medium">
                 Beluman: <b>{belumanCount}</b>
               </span>
+              {notUsedCount > 0 && (
+                <>
+                  <span>•</span>
+                  <span className="text-slate-500 font-medium">
+                    Not used: <b>{notUsedCount}</b>
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -2537,11 +2585,12 @@ export function ScriptSheetModal({
                           {(() => {
                             const isVoError = line.status === "VO Error" || Boolean(line.voErrorNote)
                             const isBeluman = line.status === "Beluman"
+                            const isNotUsed = line.status === "Not used"
                             const charStyle = characterColors[line.character]
                             return (
                               <tr
                                 id={`script-line-${line.id}`}
-                                style={!isVoError && !isBeluman ? charStyle : undefined}
+                                style={!isVoError && !isBeluman && !isNotUsed ? charStyle : undefined}
                                 className={`transition-all duration-300 ${
                                   highlightedLineId === line.id
                                     ? "bg-amber-300/80 dark:bg-amber-500/50 ring-2 ring-amber-500 z-30 shadow-md animate-pulse"
@@ -2549,8 +2598,10 @@ export function ScriptSheetModal({
                                     ? "bg-amber-500/15 hover:bg-amber-500/20"
                                     : isBeluman
                                     ? "bg-red-500/10 hover:bg-red-500/15"
+                                    : isNotUsed
+                                    ? "bg-slate-100/80 dark:bg-slate-900/40 text-muted-foreground hover:bg-slate-200/60 dark:hover:bg-slate-800/50"
                                     : "hover:brightness-95 dark:hover:brightness-125"
-                                  } ${openLineStatusDropdown === line.id || openRowActionDropdown === line.id ? "relative z-40" : ""}`}
+                                } ${openLineStatusDropdown === line.id || openRowActionDropdown === line.id ? "relative z-40" : ""}`}
                               >
                                 <td className="p-2 text-center border-r font-mono text-[11px] font-bold">
                                   {line.eps ? line.eps.trim().padStart(3, "0") : "-"}
@@ -3050,6 +3101,7 @@ export function ScriptSheetModal({
                     <option value="BELUMAN">Beluman</option>
                     <option value="INPUTTED">Inputted</option>
                     <option value="BROKEN">Broken / Issues</option>
+                    <option value="NOT_USED">Not used</option>
                   </select>
 
                   {(summarySearchQuery || summaryVoaFilter !== "ALL" || summaryStatusFilter !== "ALL") && (
@@ -3080,6 +3132,61 @@ export function ScriptSheetModal({
                   >
                     Uncheck All
                   </button>
+                  {Object.keys(uiCheckedRows).filter((k) => uiCheckedRows[k] && !k.startsWith("unused_")).length > 0 && (
+                    <div className="relative inline-block text-left">
+                      <button
+                        type="button"
+                        onClick={() => setIsBatchCharStatusDropdownOpen(!isBatchCharStatusDropdownOpen)}
+                        className="h-8 px-2.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                      >
+                        <span>Set Status ({Object.keys(uiCheckedRows).filter((k) => uiCheckedRows[k] && !k.startsWith("unused_")).length})</span>
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+
+                      {isBatchCharStatusDropdownOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setIsBatchCharStatusDropdownOpen(false)}
+                          />
+                          <div className="absolute left-0 top-full mt-1 z-50 w-36 bg-popover border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left">
+                            <button
+                              type="button"
+                              onClick={() => handleBatchUpdateMultipleCharactersStatus("Inputted")}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-md transition-colors cursor-pointer"
+                            >
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                              Inputted
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleBatchUpdateMultipleCharactersStatus("Beluman")}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-colors cursor-pointer"
+                            >
+                              <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                              Beluman
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleBatchUpdateMultipleCharactersStatus("Broken")}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-md transition-colors cursor-pointer"
+                            >
+                              <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
+                              Broken
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleBatchUpdateMultipleCharactersStatus("Not used")}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
+                            >
+                              <span className="w-2 h-2 rounded-full bg-slate-400 flex-shrink-0" />
+                              Not used
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                   <button
                     onClick={() => setIsPsModalOpen(true)}
                     className="h-8 px-3 text-xs border border-border rounded-md hover:bg-muted font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
@@ -3128,12 +3235,15 @@ export function ScriptSheetModal({
                   </thead>
                   <tbody className="divide-y">
                     {filteredCharacterSummaries.map((cs, idx) => {
-                      const isBeluman = cs.belumanLinesCount > 0
+                      const isNotUsed = cs.linesCount > 0 && cs.notUsedLinesCount === cs.linesCount
+                      const isBeluman = !isNotUsed && cs.belumanLinesCount > 0
                       return (
                         <tr
                           key={idx}
                           className={`transition-colors ${
-                            isBeluman
+                            isNotUsed
+                              ? "bg-slate-100/90 dark:bg-slate-900/50 text-muted-foreground hover:bg-slate-200/70 dark:hover:bg-slate-800/60"
+                              : isBeluman
                               ? "bg-red-500/10 hover:bg-red-500/15"
                               : "bg-emerald-500/10 hover:bg-emerald-500/15"
                           } ${openActionDropdown === cs.character ? "relative z-40" : ""}`}
@@ -3178,7 +3288,11 @@ export function ScriptSheetModal({
                               <button
                                 type="button"
                                 onClick={() => handlePitchClick(cs.character, cs.firstTimingRaw || cs.firstTiming)}
-                                className="text-left font-bold text-foreground hover:text-primary hover:underline cursor-pointer transition-colors"
+                                className={`text-left font-bold cursor-pointer transition-colors ${
+                                  isNotUsed
+                                    ? "text-muted-foreground hover:text-foreground"
+                                    : "text-foreground hover:text-primary hover:underline"
+                                }`}
                                 title={`Click to view script, filter by "${cs.character}", and copy first timing (${cs.firstTimingRaw ? formatToFullTimecode(cs.firstTimingRaw) : "00:00:00:00"})`}
                               >
                                 {cs.character}
@@ -3197,10 +3311,14 @@ export function ScriptSheetModal({
                               </button>
                             </div>
                           </td>
-                          <td className="p-2.5 text-center font-bold font-mono text-xs text-primary bg-primary/5">
+                          <td className={`p-2.5 text-center font-bold font-mono text-xs ${
+                            isNotUsed ? "text-muted-foreground bg-muted/40" : "text-primary bg-primary/5"
+                          }`}>
                             {cs.linesCount}
                           </td>
-                          <td className="p-2.5 font-medium text-emerald-700">
+                          <td className={`p-2.5 font-medium ${
+                            isNotUsed ? "text-muted-foreground" : "text-emerald-700 dark:text-emerald-400"
+                          }`}>
                             {cs.actor}
                           </td>
                           <td className="p-2.5 font-mono text-[11px] text-muted-foreground">
@@ -3233,17 +3351,23 @@ export function ScriptSheetModal({
                             <div className="flex items-center justify-end gap-2">
                               <span
                                 className={`text-[10px] font-mono flex items-center gap-1.5 px-2 py-1 rounded border font-medium ${
-                                  isBeluman
+                                  isNotUsed
+                                    ? "bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700"
+                                    : isBeluman
                                     ? "bg-red-50/60 text-red-700 border-red-200"
                                     : "bg-emerald-50/60 text-emerald-700 border-emerald-200"
                                 }`}
                               >
                                 <span
                                   className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                    isBeluman ? "bg-red-500" : "bg-emerald-500"
+                                    isNotUsed ? "bg-slate-400 dark:bg-slate-500" : isBeluman ? "bg-red-500" : "bg-emerald-500"
                                   }`}
                                 />
-                                <b>{cs.inputtedLinesCount}</b>/<b>{cs.linesCount}</b> In
+                                {isNotUsed ? (
+                                  <span>Not used</span>
+                                ) : (
+                                  <><b>{cs.inputtedLinesCount}</b>/<b>{cs.linesCount}</b> In</>
+                                )}
                               </span>
                             <div className={`relative inline-block text-left ${openActionDropdown === cs.character ? "z-40" : ""}`}>
                               <button
@@ -3298,6 +3422,17 @@ export function ScriptSheetModal({
                                     >
                                       <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
                                       Broken
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleBatchUpdateCharacterStatus(cs.character, "Not used")
+                                        setOpenActionDropdown(null)
+                                      }}
+                                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
+                                    >
+                                      <span className="w-2 h-2 rounded-full bg-slate-400 flex-shrink-0" />
+                                      Not used
                                     </button>
                                   </div>
                                 </>
