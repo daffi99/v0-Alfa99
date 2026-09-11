@@ -6,6 +6,7 @@ import { KanbanColumn } from "./kanban-column"
 import { EditTaskModal } from "./edit-task-modal"
 import { CreateTaskModal } from "./create-task-modal"
 import { TaskCard } from "./task-card"
+import { KanbanSkeletonLoader } from "./kanban-skeleton-loader"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import type { ScriptData } from "./script-wizard-modal"
 
@@ -1135,7 +1136,7 @@ export function KanbanBoard({ onCreateTaskTrigger, onCreateTaskHandled, searchQu
   }
 
   if (isLoading) {
-    return <div className="p-8 text-center">Loading tasks...</div>
+    return <KanbanSkeletonLoader />
   }
 
   // Separate columns into rows
