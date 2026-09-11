@@ -33,6 +33,14 @@ import {
   Loader2,
 } from "lucide-react"
 import { normalizeMultilinesInQuotes, getDistinctEpisodeRanges, type ScriptData, type ScriptLine, type MasterArtistMapping, type ScriptLineStatus } from "./script-wizard-modal"
+import { EditPsModal } from "./script-sheet/modals/edit-ps-modal"
+import { EditArtistModal } from "./script-sheet/modals/edit-artist-modal"
+import { ResetVoaModal } from "./script-sheet/modals/reset-voa-modal"
+import { WrongCastModal } from "./script-sheet/modals/wrong-cast-modal"
+import { EditTimingModal } from "./script-sheet/modals/edit-timing-modal"
+import { AddLineModal } from "./script-sheet/modals/add-line-modal"
+import { PasteVoErrorModal } from "./script-sheet/modals/paste-vo-error-modal"
+import { PastePsModal } from "./script-sheet/modals/paste-ps-modal"
 
 interface ScriptSheetModalProps {
   isOpen: boolean
@@ -49,354 +57,26 @@ interface ScriptSheetModalProps {
   episodes?: any[]
 }
 
-export const SCRIPT_LINE_STATUSES: ScriptLineStatus[] = [
-  "Beluman",
-  "Inputted",
-  "Not used",
-  "Missing",
-  "Broken",
-  "VO Error",
-  "Need Pauses",
-  "Wrong Cast",
-  "Too Short",
-  "Too Long",
-  "Onomatopoeia",
-]
-
-export const STATUS_STYLE_MAP: Record<
-  string,
-  { label: string; bg: string; text: string; border: string }
-> = {
-  Beluman: { label: "Beluman", bg: "bg-red-100", text: "text-red-700", border: "border-red-200" },
-  Inputted: { label: "Inputted", bg: "bg-emerald-100", text: "text-emerald-800", border: "border-emerald-200" },
-  "No Revision": { label: "No Revision", bg: "bg-emerald-100 dark:bg-emerald-950/60", text: "text-emerald-800 dark:text-emerald-300", border: "border-emerald-300 dark:border-emerald-800" },
-  "Not used": { label: "Not used", bg: "bg-slate-200 dark:bg-slate-700", text: "text-slate-700 dark:text-slate-200", border: "border-slate-300 dark:border-slate-600" },
-  "Not Used": { label: "Not used", bg: "bg-slate-200 dark:bg-slate-700", text: "text-slate-700 dark:text-slate-200", border: "border-slate-300 dark:border-slate-600" },
-  Missing: { label: "Missing", bg: "bg-red-700", text: "text-white", border: "border-red-800" },
-  Broken: { label: "Broken", bg: "bg-purple-700", text: "text-white", border: "border-purple-800" },
-  "VO Error": { label: "VO Error", bg: "bg-amber-200", text: "text-amber-900", border: "border-amber-300" },
-  "Need Pauses": { label: "Need Pauses", bg: "bg-sky-200", text: "text-sky-900", border: "border-sky-300" },
-  "Wrong Cast": { label: "Wrong Cast", bg: "bg-amber-900", text: "text-amber-100", border: "border-amber-950" },
-  "Too Short": { label: "Too Short", bg: "bg-teal-800", text: "text-white", border: "border-teal-900" },
-  "Too Long": { label: "Too Long", bg: "bg-indigo-900", text: "text-white", border: "border-indigo-950" },
-  Onomatopoeia: { label: "Onomatopoeia", bg: "bg-fuchsia-100 dark:bg-fuchsia-950/60", text: "text-fuchsia-800 dark:text-fuchsia-300", border: "border-fuchsia-300 dark:border-fuchsia-800" },
-  "Missing Onomatopoeia": { label: "Onomatopoeia", bg: "bg-fuchsia-100 dark:bg-fuchsia-950/60", text: "text-fuchsia-800 dark:text-fuchsia-300", border: "border-fuchsia-300 dark:border-fuchsia-800" },
-}
-
-export function formatCompactTimeToken(timeStr: string): string {
-  if (!timeStr || timeStr === "-") return "-"
-  return timeStr
-    .split(",")
-    .map((t) => {
-      const trimmed = t.trim()
-      if (trimmed.startsWith("00:")) {
-        return trimmed.slice(3)
-      }
-      return trimmed
-    })
-    .join(", ")
-}
-
-export function formatMmSs(timeStr?: string): string {
-  if (!timeStr || timeStr === "-" || !timeStr.trim()) return "-"
-  const clean = timeStr.trim().split(".")[0]
-  const parts = clean.split(":").map((p) => parseInt(p, 10))
-  if (parts.some((p) => isNaN(p))) return timeStr.trim()
-  const pad = (n: number) => n.toString().padStart(2, "0")
-
-  if (parts.length === 3) {
-    const [h, m, s] = parts
-    if (h > 0) {
-      return `${pad(h)}:${pad(m)}:${pad(s)}`
-    }
-    return `${pad(m)}:${pad(s)}`
-  }
-  if (parts.length === 2) {
-    const [m, s] = parts
-    return `${pad(m)}:${pad(s)}`
-  }
-  return timeStr.trim()
-}
-
-export function formatToFullTimecode(timeStr?: string): string {
-  if (!timeStr || timeStr === "-" || !timeStr.trim()) return ""
-  const raw = timeStr.trim()
-  const hasMsOrFrame = /[.,]/.test(raw)
-
-  let clean = raw.replace(/[,.](\d+)/g, (_, ms) => {
-    const frame = ms.length >= 2 ? ms.slice(0, 2) : ms.padStart(2, "0")
-    return `:${frame}`
-  })
-
-  const parts = clean.split(":").map((p) => p.trim())
-  const pad = (s: string) => s.padStart(2, "0").slice(-2)
-
-  if (parts.length >= 4) {
-    // HH:MM:SS:FF (e.g. "00:20:36:05")
-    return `${pad(parts[0])}:${pad(parts[1])}:${pad(parts[2])}:${pad(parts[3])}`
-  }
-  if (parts.length === 3) {
-    if (hasMsOrFrame) {
-      // Was MM:SS.FF (e.g. "20:36.05") -> "00:20:36:05"
-      return `00:${pad(parts[0])}:${pad(parts[1])}:${pad(parts[2])}`
-    }
-    // Was HH:MM:SS (e.g. "00:20:36") -> "00:20:36:00"
-    return `${pad(parts[0])}:${pad(parts[1])}:${pad(parts[2])}:00`
-  }
-  if (parts.length === 2) {
-    // MM:SS (e.g. "20:36", "09:21") -> "00:20:36:00"
-    return `00:${pad(parts[0])}:${pad(parts[1])}:00`
-  }
-  if (parts.length === 1 && !isNaN(Number(parts[0]))) {
-    const sec = parseInt(parts[0], 10)
-    const h = Math.floor(sec / 3600)
-    const m = Math.floor((sec % 3600) / 60)
-    const s = sec % 60
-    return `${pad(h.toString())}:${pad(m.toString())}:${pad(s.toString())}:00`
-  }
-
-  return clean
-}
-
-export function formatDisplayTiming(timeStr?: string): string {
-  if (!timeStr || timeStr === "-" || !timeStr.trim()) return "-"
-  let clean = timeStr.trim()
-  if (clean.endsWith(":00")) {
-    clean = clean.slice(0, -3)
-  } else if (clean.endsWith(".00") || clean.endsWith(",00") || clean.endsWith(",000") || clean.endsWith(".000")) {
-    clean = clean.split(/[.,]/)[0]
-  }
-  return clean
-}
-
-export function timeToSeconds(timeStr?: string): number | null {
-  if (!timeStr || timeStr === "-") return null
-  const clean = timeStr.trim()
-  const parts = clean.split(":").map((p) => parseFloat(p))
-  if (parts.some((p) => isNaN(p))) return null
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2]
-  if (parts.length === 2) return parts[0] * 60 + parts[1]
-  if (parts.length === 1) return parts[0]
-  return null
-}
-
-export function secondsToTimeString(sec: number, hasHours = false): string {
-  if (sec < 0) sec = 0
-  const h = Math.floor(sec / 3600)
-  const m = Math.floor((sec % 3600) / 60)
-  const s = Math.floor(sec % 60)
-  const pad = (n: number) => n.toString().padStart(2, "0")
-  if (hasHours || h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`
-  return `${pad(m)}:${pad(s)}`
-}
-
-export function computeDefaultTiming(refLine?: ScriptLine): { startTime: string; endTime: string } {
-  if (!refLine) return { startTime: "", endTime: "" }
-  const refTime = refLine.endTime || refLine.startTime
-  const sec = timeToSeconds(refTime)
-  if (sec === null) return { startTime: "", endTime: "" }
-  const newStartSec = sec + 2
-  const newEndSec = newStartSec + 2
-  const hasHours = !!refTime && refTime.includes(":") && refTime.split(":").length === 3
-  return {
-    startTime: secondsToTimeString(newStartSec, hasHours),
-    endTime: secondsToTimeString(newEndSec, hasHours),
-  }
-}
-
-export function getBatchTimeRange(startTimeStr?: string, endTimeStr?: string, batchTimeStr?: string): string {
-  if (!batchTimeStr || batchTimeStr === "-") return ""
-  const compactBatch = formatCompactTimeToken(batchTimeStr)
-  if (compactBatch.includes("-")) return compactBatch
-
-  const startSec = timeToSeconds(startTimeStr)
-  const endSec = timeToSeconds(endTimeStr)
-  const batchStartSec = timeToSeconds(batchTimeStr)
-
-  if (startSec !== null && endSec !== null && endSec > startSec && batchStartSec !== null) {
-    const duration = endSec - startSec
-    const batchEndSec = batchStartSec + duration
-    const hasHours = batchTimeStr.includes(":") && batchTimeStr.split(":").length === 3
-    const batchEndStr = secondsToTimeString(batchEndSec, hasHours)
-    return `${compactBatch}-${formatCompactTimeToken(batchEndStr)}`
-  }
-  return compactBatch
-}
-
-export const STATUS_REPORT_SUFFIX_MAP: Record<ScriptLineStatus, string | null> = {
-  Beluman: "_Missing audio file",
-  Missing: "_Missing Sentence.",
-  Broken: "_Still Contain original Audio",
-  "VO Error": "_Need to retake, mispronunciation.",
-  "Need Pauses": "_Need a pause, can't sync with actor lips.",
-  "Wrong Cast": "_Missing Sentence, Wrong cast assigned.",
-  "Too Short": "_Too short, can't sync with actor lips.",
-  "Too Long": "_Too long, can't sync with actor lips.",
-  Onomatopoeia: "_Missing onomatopoeia",
-  "Missing Onomatopoeia": "_Missing onomatopoeia",
-  Inputted: null, // Inputted lines do not create VOA report lines
-  "Not used": null, // Not used lines do not create VOA report lines
-}
-
-export function formatReportTitle(title: string): string {
-  // Format title: add "_" between Name and Number, e.g. "Germany 090 (120)" -> "Germany_090 (120)"
-  return title.trim().replace(/([a-zA-Z]+)\s+(\d+)/g, "$1_$2")
-}
-
-export function normalizeCharKey(name: string): string {
-  if (!name) return ""
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[\s\-_.:,;'"’“”\u00A0\u200B\uFEFF]+/g, "")
-    .trim()
-}
-
-export function formatEpisodeRangeNumbers(epsList: string[]): string {
-  if (!epsList || epsList.length === 0) return "000"
-
-  const epNumbers = Array.from(
-    new Set(
-      epsList
-        .map((e) => parseInt(e.trim(), 10))
-        .filter((num) => !isNaN(num))
-    )
-  ).sort((a, b) => a - b)
-
-  if (epNumbers.length === 0) return epsList.join(", ")
-
-  const ranges: string[] = []
-  let rangeStart = epNumbers[0]
-  let rangeEnd = epNumbers[0]
-
-  for (let i = 1; i < epNumbers.length; i++) {
-    const current = epNumbers[i]
-    if (current === rangeEnd + 1) {
-      rangeEnd = current
-    } else {
-      if (rangeStart === rangeEnd) {
-        ranges.push(rangeStart.toString().padStart(3, "0"))
-      } else {
-        ranges.push(`${rangeStart.toString().padStart(3, "0")}-${rangeEnd.toString().padStart(3, "0")}`)
-      }
-      rangeStart = current
-      rangeEnd = current
-    }
-  }
-
-  if (rangeStart === rangeEnd) {
-    ranges.push(rangeStart.toString().padStart(3, "0"))
-  } else {
-    ranges.push(`${rangeStart.toString().padStart(3, "0")}-${rangeEnd.toString().padStart(3, "0")}`)
-  }
-
-  return ranges.join(", ")
-}
-
-export function formatEpisodeRanges(epsList: string[]): string {
-  const rangeStr = formatEpisodeRangeNumbers(epsList)
-  return rangeStr ? `EP${rangeStr}` : "EP000"
-}
-
-export function shiftTimingValue(timeStr: string, deltaSeconds: number): string {
-  if (!timeStr || timeStr === "-") return timeStr
-  if (timeStr.includes("-") && timeStr.split("-").length === 2 && !timeStr.startsWith("-")) {
-    const [start, end] = timeStr.split("-").map((s) => s.trim())
-    const startSec = timeToSeconds(start)
-    const endSec = timeToSeconds(end)
-    if (startSec !== null && endSec !== null) {
-      const newStartSec = Math.max(0, startSec + deltaSeconds)
-      const newEndSec = Math.max(0, endSec + deltaSeconds)
-      const hasHours = start.includes(":") && start.split(":").length === 3
-      return `${secondsToTimeString(newStartSec, hasHours)}-${secondsToTimeString(newEndSec, hasHours)}`
-    }
-  }
-  const currentSec = timeToSeconds(timeStr)
-  if (currentSec === null) return timeStr
-  const newSec = Math.max(0, currentSec + deltaSeconds)
-  const hasHours = timeStr.includes(":") && timeStr.split(":").length === 3
-  return secondsToTimeString(newSec, hasHours)
-}
-
-export function TimeStepperInput({
-  label,
-  value,
-  onChange,
-  onStep,
-  placeholder,
-}: {
-  label: string
-  value: string
-  onChange: (val: string) => void
-  onStep?: (deltaSeconds: number) => void
-  placeholder?: string
-}) {
-  const handleStep = (deltaSeconds: number) => {
-    if (onStep) {
-      onStep(deltaSeconds)
-    } else {
-      let currentSec = timeToSeconds(value)
-      if (currentSec === null) currentSec = 0
-      const newSec = Math.max(0, currentSec + deltaSeconds)
-      const hasHours = value.includes(":") && value.split(":").length === 3
-      onChange(secondsToTimeString(newSec, hasHours))
-    }
-  }
-
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <label className="block font-semibold text-foreground text-xs">{label}</label>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => handleStep(-1)}
-            className="px-1.5 py-0.5 text-[10px] font-bold bg-muted hover:bg-muted/80 text-foreground border border-input rounded flex items-center gap-0.5 cursor-pointer transition-colors active:scale-95"
-            title="Subtract 1 second"
-          >
-            -1s
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStep(1)}
-            className="px-1.5 py-0.5 text-[10px] font-bold bg-muted hover:bg-muted/80 text-foreground border border-input rounded flex items-center gap-0.5 cursor-pointer transition-colors active:scale-95"
-            title="Add 1 second"
-          >
-            +1s
-          </button>
-        </div>
-      </div>
-      <div className="relative flex items-center">
-        <input
-          type="text"
-          placeholder={placeholder || "00:00:00"}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full h-8 pl-2.5 pr-7 text-xs font-mono rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
-        />
-        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col -space-y-0.5">
-          <button
-            type="button"
-            onClick={() => handleStep(1)}
-            className="p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded cursor-pointer transition-colors"
-            title="Increase 1 second"
-          >
-            <ChevronUp className="w-3 h-3" />
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStep(-1)}
-            className="p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded cursor-pointer transition-colors"
-            title="Decrease 1 second"
-          >
-            <ChevronDown className="w-3 h-3" />
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
+export * from "./script-sheet/utils"
+import {
+  SCRIPT_LINE_STATUSES,
+  STATUS_STYLE_MAP,
+  STATUS_REPORT_SUFFIX_MAP,
+  formatCompactTimeToken,
+  formatMmSs,
+  formatToFullTimecode,
+  formatDisplayTiming,
+  timeToSeconds,
+  secondsToTimeString,
+  computeDefaultTiming,
+  getBatchTimeRange,
+  formatReportTitle,
+  normalizeCharKey,
+  formatEpisodeRangeNumbers,
+  formatEpisodeRanges,
+  shiftTimingValue,
+  TimeStepperInput,
+} from "./script-sheet/utils"
 
 const CHARACTER_COLOR_PALETTE = [
   "bg-amber-50 text-amber-900 border-amber-200",
@@ -894,12 +574,8 @@ export function ScriptSheetModal({
     }))
   }
 
-  // Custom Character Select Popover State in Add Line Modal
-  const [isAddLineCharSelectOpen, setIsAddLineCharSelectOpen] = useState(false)
-  const [addLineCharSearchQuery, setAddLineCharSearchQuery] = useState("")
-
-  const filteredAddLineCharacters = useMemo(() => {
-    const allChars = Array.from(
+  const allAddLineCharacters = useMemo(() => {
+    return Array.from(
       new Set(
         [
           ...data.masterArtists.map((ma) => ma.characterName),
@@ -907,10 +583,7 @@ export function ScriptSheetModal({
         ].sort()
       )
     )
-    if (!addLineCharSearchQuery.trim()) return allChars
-    const q = addLineCharSearchQuery.toLowerCase()
-    return allChars.filter((c) => c.toLowerCase().includes(q))
-  }, [data.masterArtists, data.lines, addLineCharSearchQuery])
+  }, [data.masterArtists, data.lines])
 
   // Save New Line
   const handleSaveAddLine = () => {
@@ -4118,839 +3791,97 @@ export function ScriptSheetModal({
           )}
         </div>
 
-        {/* Modal for Single Column PS Paste */}
-        {isPsModalOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-border rounded-xl shadow-2xl max-w-md w-full p-5 space-y-3">
-              <div className="flex items-center justify-between border-b pb-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  <h3 className="text-sm font-bold text-foreground">
-                    Paste Pitch Shifter (PS) Column
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setIsPsModalOpen(false)}
-                  className="p-1 rounded text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        {/* Modals extracted to components/script-sheet/modals/ */}
+        <PastePsModal
+          isOpen={isPsModalOpen}
+          pasteText={psPasteText}
+          onChangePasteText={setPsPasteText}
+          onClose={() => setIsPsModalOpen(false)}
+          onApply={handleApplySingleColumnPs}
+        />
 
-              <p className="text-xs text-muted-foreground">
-                Copy a single column of PS numbers from Google Sheets (e.g. 0.97, 1.04, 0.98) and paste below to update characters row by row.
-              </p>
+        <PasteVoErrorModal
+          isOpen={isVoErrorModalOpen}
+          pasteText={voErrorPasteText}
+          onChangePasteText={setVoErrorPasteText}
+          onClose={() => setIsVoErrorModalOpen(false)}
+          onApply={handleApplySingleColumnVoError}
+        />
 
-              <textarea
-                placeholder={`0.97\n1.04\n0.98\n0.92`}
-                value={psPasteText}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPsPasteText(e.target.value)}
-                className="w-full font-mono text-xs h-36 p-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+        <WrongCastModal
+          modal={wrongCastModal}
+          options={wrongCastCharacterOptions}
+          onClose={() => setWrongCastModal({ isOpen: false, currentCharacter: "", targetLineId: "" })}
+          onSelectCharacter={handleSelectWrongCastCharacter}
+        />
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <button
-                  onClick={() => setIsPsModalOpen(false)}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted rounded-md"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleApplySingleColumnPs}
-                  className="px-4 py-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-md transition-colors"
-                >
-                  Apply PS Values
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ResetVoaModal
+          isOpen={isResetVoaModalOpen}
+          onClose={() => setIsResetVoaModalOpen(false)}
+          onConfirm={handleConfirmResetVoaReport}
+        />
 
-        {/* Modal for Single Column VO Error Notes Paste */}
-        {isVoErrorModalOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-border rounded-xl shadow-2xl max-w-md w-full p-5 space-y-3">
-              <div className="flex items-center justify-between border-b pb-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-red-600" />
-                  <h3 className="text-sm font-bold text-foreground">
-                    Paste VO Error Notes Column
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setIsVoErrorModalOpen(false)}
-                  className="p-1 rounded text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+        <EditTimingModal
+          modal={editTimingModal}
+          isEditBatchOverride={isEditBatchOverride}
+          setIsEditBatchOverride={setIsEditBatchOverride}
+          setEditTimingModal={setEditTimingModal}
+          onClose={() => setEditTimingModal({ isOpen: false, lineId: "", startTime: "", endTime: "", batchTime: "" })}
+          onSave={handleSaveEditTiming}
+        />
 
-              <p className="text-xs text-muted-foreground">
-                Copy a single column of VO Error notes from Google Sheets (e.g. wrong pronunciation / ewig) and paste below to update lines in order. Non-empty notes will automatically set line status to VO Error.
-              </p>
+        <AddLineModal
+          modal={addLineModal}
+          allCharacters={allAddLineCharacters}
+          isAddLineBatchOverride={isAddLineBatchOverride}
+          setIsAddLineBatchOverride={setIsAddLineBatchOverride}
+          setAddLineModal={setAddLineModal}
+          onClose={() =>
+            setAddLineModal({
+              isOpen: false,
+              position: "after",
+              refLineId: "",
+              afterEps: "",
+              character: "",
+              lineText: "",
+              status: "Inputted",
+              startTime: "",
+              endTime: "",
+              batchTime: "",
+            })
+          }
+          onSave={handleSaveAddLine}
+        />
 
-              <textarea
-                placeholder={`wrong pronunciation / ewig\nwrong pronunciation / fleisch`}
-                value={voErrorPasteText}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setVoErrorPasteText(e.target.value)}
-                className="w-full font-mono text-xs h-36 p-3 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-red-500/50"
-              />
+        <EditArtistModal
+          modal={editArtistModal}
+          onClose={() =>
+            setEditArtistModal({
+              isOpen: false,
+              characterName: "",
+              currentArtist: "",
+              newArtist: "",
+            })
+          }
+          onSave={handleSaveVoArtist}
+          onChangeNewArtist={(val) => setEditArtistModal((prev) => ({ ...prev, newArtist: val }))}
+        />
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <button
-                  onClick={() => setIsVoErrorModalOpen(false)}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted rounded-md"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleApplySingleColumnVoError}
-                  className="px-4 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors"
-                >
-                  Apply VO Error Notes
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <EditPsModal
+          modal={editPsModal}
+          onClose={() =>
+            setEditPsModal({
+              isOpen: false,
+              characterName: "",
+              currentPs: "",
+              newPs: "",
+            })
+          }
+          onSave={handleSaveSinglePs}
+          onRemove={handleRemoveSinglePs}
+          onChangeNewPs={(val) => setEditPsModal((prev) => ({ ...prev, newPs: val }))}
+        />
 
-        {/* Modal for Wrong Cast Character Selection */}
-        {wrongCastModal.isOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-border rounded-xl shadow-2xl p-5 w-full max-w-4xl flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div>
-                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                    <Users className="w-5 h-5 text-amber-600" />
-                    Select Correct Character for Wrong Cast
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Line for <b className="text-foreground font-semibold">{wrongCastModal.currentCharacter}</b> was assigned to the wrong cast. Pick the correct intended character:
-                  </p>
-                </div>
-                <button
-                  onClick={() => setWrongCastModal({ isOpen: false, currentCharacter: "" })}
-                  className="p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* 7 Rows X N Columns Grid */}
-              <div className="p-3 bg-muted/20 border rounded-lg overflow-x-auto max-w-full">
-                <div className="grid grid-rows-7 grid-flow-col gap-1.5 min-w-max">
-                  {wrongCastCharacterOptions.map((item, idx) => {
-                    const isUnused = item.lineCount === 0
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => handleSelectWrongCastCharacter(item.characterName)}
-                        className={`px-2.5 py-1.5 rounded-md border text-xs transition-all flex items-center justify-between gap-2.5 min-w-[125px] shadow-2xs group active:scale-95 cursor-pointer whitespace-nowrap ${
-                          isUnused
-                            ? "border-border/50 bg-muted/30 text-muted-foreground opacity-50 hover:opacity-100 hover:border-amber-400 hover:text-foreground"
-                            : "border-border bg-card hover:bg-amber-500/10 hover:border-amber-500 text-foreground font-semibold"
-                        }`}
-                      >
-                        <span className={isUnused ? "font-normal text-muted-foreground" : "font-bold group-hover:text-amber-700"}>
-                          {item.characterName}
-                        </span>
-                        <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-bold ${
-                            isUnused
-                              ? "bg-muted/80 text-muted-foreground"
-                              : "bg-amber-50 text-amber-800 border border-amber-200"
-                          }`}
-                        >
-                          {item.lineCount}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end border-t pt-3">
-                <button
-                  onClick={() => setWrongCastModal({ isOpen: false, currentCharacter: "" })}
-                  className="px-4 py-2 text-xs font-medium border rounded-md hover:bg-muted transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* Modal Confirmation for Resetting All VOA Reports */}
-        {isResetVoaModalOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-border rounded-xl shadow-2xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center gap-3 border-b pb-3">
-                <div className="p-2.5 rounded-full bg-red-100 text-red-600 flex-shrink-0">
-                  <RotateCcw className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">Reset All VOA Reports</h3>
-                  <p className="text-xs text-muted-foreground">Mark all lines as Inputted & clear all report entries</p>
-                </div>
-              </div>
-
-              <p className="text-xs text-foreground leading-relaxed">
-                Are you sure you want to reset all VOA reports? This will set all script lines to Inputted and clear all entries from the report list like a fresh start.
-              </p>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <button
-                  onClick={() => setIsResetVoaModalOpen(false)}
-                  className="px-3.5 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmResetVoaReport}
-                  className="px-3.5 py-1.5 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" /> Confirm Reset All
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* Modal for Editing 3 Timings */}
-        {editTimingModal.isOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-sm p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-primary" />
-                  <h3 className="font-bold text-sm text-foreground">Edit Line Timing</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEditTimingModal({ isOpen: false, lineId: "", startTime: "", endTime: "", batchTime: "" })}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <TimeStepperInput
-                  label="Start Time"
-                  value={editTimingModal.startTime}
-                  onChange={(val) => {
-                    setEditTimingModal((prev) => {
-                      if (isEditBatchOverride) {
-                        const oldStartSec = timeToSeconds(prev.startTime)
-                        const newStartSec = timeToSeconds(val)
-                        if (oldStartSec !== null && newStartSec !== null) {
-                          const delta = newStartSec - oldStartSec
-                          return {
-                            ...prev,
-                            startTime: val,
-                            endTime: shiftTimingValue(prev.endTime, delta),
-                          }
-                        }
-                        return { ...prev, startTime: val }
-                      }
-                      const oldStartSec = timeToSeconds(prev.startTime)
-                      const newStartSec = timeToSeconds(val)
-                      if (oldStartSec !== null && newStartSec !== null) {
-                        const delta = newStartSec - oldStartSec
-                        return {
-                          ...prev,
-                          startTime: val,
-                          endTime: shiftTimingValue(prev.endTime, delta),
-                          batchTime: shiftTimingValue(prev.batchTime, delta),
-                        }
-                      }
-                      return { ...prev, startTime: val }
-                    })
-                  }}
-                  onStep={(delta) => {
-                    setEditTimingModal((prev) => ({
-                      ...prev,
-                      startTime: shiftTimingValue(prev.startTime, delta),
-                      endTime: shiftTimingValue(prev.endTime, delta),
-                      batchTime: isEditBatchOverride ? prev.batchTime : shiftTimingValue(prev.batchTime, delta),
-                    }))
-                  }}
-                  placeholder="e.g. 00:00:16"
-                />
-                <TimeStepperInput
-                  label="End Time"
-                  value={editTimingModal.endTime}
-                  onChange={(val) => setEditTimingModal({ ...editTimingModal, endTime: val })}
-                  onStep={(delta) => {
-                    setEditTimingModal((prev) => ({
-                      ...prev,
-                      endTime: shiftTimingValue(prev.endTime, delta),
-                    }))
-                  }}
-                  placeholder="e.g. 00:00:18"
-                />
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-foreground">Batch Time</span>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditBatchOverride(!isEditBatchOverride)}
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded border flex items-center gap-1 transition-colors cursor-pointer ${
-                        isEditBatchOverride
-                          ? "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700"
-                          : "bg-muted text-muted-foreground hover:text-foreground border-input"
-                      }`}
-                      title={isEditBatchOverride ? "Batch time is unlinked (Manual Override active)" : "Click to unlink & override Batch Time manually"}
-                    >
-                      {isEditBatchOverride ? <Unlink className="w-3 h-3 text-amber-600" /> : <Link className="w-3 h-3 text-muted-foreground" />}
-                      <span>{isEditBatchOverride ? "Manual Override" : "Linked"}</span>
-                    </button>
-                  </div>
-                  <TimeStepperInput
-                    label=""
-                    value={editTimingModal.batchTime}
-                    onChange={(val) => {
-                      setEditTimingModal((prev) => {
-                        if (isEditBatchOverride) {
-                          return { ...prev, batchTime: val }
-                        }
-                        const oldBatchSec = timeToSeconds(prev.batchTime)
-                        const newBatchSec = timeToSeconds(val)
-                        if (oldBatchSec !== null && newBatchSec !== null) {
-                          const delta = newBatchSec - oldBatchSec
-                          return {
-                            ...prev,
-                            batchTime: val,
-                            startTime: shiftTimingValue(prev.startTime, delta),
-                            endTime: shiftTimingValue(prev.endTime, delta),
-                          }
-                        }
-                        return { ...prev, batchTime: val }
-                      })
-                    }}
-                    onStep={(delta) => {
-                      setEditTimingModal((prev) => {
-                        if (isEditBatchOverride) {
-                          return {
-                            ...prev,
-                            batchTime: shiftTimingValue(prev.batchTime, delta),
-                          }
-                        }
-                        return {
-                          ...prev,
-                          startTime: shiftTimingValue(prev.startTime, delta),
-                          endTime: shiftTimingValue(prev.endTime, delta),
-                          batchTime: shiftTimingValue(prev.batchTime, delta),
-                        }
-                      })
-                    }}
-                    placeholder="e.g. 00:04:22"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 border-t pt-3">
-                <button
-                  type="button"
-                  onClick={() => setEditTimingModal({ isOpen: false, lineId: "", startTime: "", endTime: "", batchTime: "" })}
-                  className="px-3.5 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveEditTiming}
-                  className="px-4 py-1.5 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md shadow-sm transition-colors cursor-pointer"
-                >
-                  Save Timing
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal for Adding Line */}
-        {addLineModal.isOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-md p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div className="flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-primary" />
-                  <h3 className="font-bold text-sm text-foreground">
-                    {addLineModal.position === "before" ? "Add Line Before" : "Add Line After"}
-                  </h3>
-                  {addLineModal.afterEps && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary font-mono text-muted-foreground">
-                      EP {addLineModal.afterEps.padStart(3, "0")}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => setAddLineModal({ isOpen: false, position: "after", refLineId: "", afterEps: "", character: "", lineText: "", status: "Inputted", startTime: "", endTime: "", batchTime: "" })}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                {/* Character selection */}
-                <div>
-                  <label className="block font-semibold text-foreground mb-1">
-                    Character Name <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddLineCharSelectOpen(!isAddLineCharSelectOpen)}
-                      className="w-full h-9 px-3 text-xs rounded-md border border-input bg-background text-foreground hover:bg-muted/50 flex items-center justify-between font-medium cursor-pointer transition-colors shadow-2xs"
-                    >
-                      <span className={addLineModal.character ? "font-bold text-foreground" : "text-muted-foreground"}>
-                        {addLineModal.character || "Select Character..."}
-                      </span>
-                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                    </button>
-
-                    {isAddLineCharSelectOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-50"
-                          onClick={() => setIsAddLineCharSelectOpen(false)}
-                        />
-                        <div className="absolute left-0 right-0 top-full mt-1 z-55 bg-popover border border-border rounded-lg shadow-2xl p-1.5 flex flex-col space-y-1.5 animate-in fade-in zoom-in-95 duration-100 text-left">
-                          <div className="relative p-0.5">
-                            <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-2.5" />
-                            <input
-                              type="text"
-                              placeholder="Search character..."
-                              value={addLineCharSearchQuery}
-                              onChange={(e) => setAddLineCharSearchQuery(e.target.value)}
-                              className="w-full h-7 pl-7 pr-6 text-xs rounded border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
-                              autoFocus
-                            />
-                            {addLineCharSearchQuery && (
-                              <button
-                                type="button"
-                                onClick={() => setAddLineCharSearchQuery("")}
-                                className="absolute right-2 top-2 p-0.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors cursor-pointer"
-                                title="Clear search"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-
-                          <div className="overflow-y-auto space-y-0.5 max-h-48 pr-0.5">
-                            {filteredAddLineCharacters.map((charName) => {
-                              const isSelected = addLineModal.character === charName
-                              return (
-                                <button
-                                  key={charName}
-                                  type="button"
-                                  onClick={() => {
-                                    setAddLineModal({ ...addLineModal, character: charName })
-                                    setIsAddLineCharSelectOpen(false)
-                                    setAddLineCharSearchQuery("")
-                                  }}
-                                  className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                                    isSelected
-                                      ? "bg-primary text-primary-foreground font-bold"
-                                      : "text-foreground hover:bg-muted"
-                                  }`}
-                                >
-                                  <span>{charName}</span>
-                                  {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
-                                </button>
-                              )
-                            })}
-                            {filteredAddLineCharacters.length === 0 && (
-                              <div className="p-3 text-center text-xs text-muted-foreground">
-                                No matching characters found
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Line Status */}
-                <div>
-                  <label className="block font-semibold text-foreground mb-1">
-                    Line Status
-                  </label>
-                  <select
-                    value={addLineModal.status || "Inputted"}
-                    onChange={(e) => setAddLineModal({ ...addLineModal, status: e.target.value as ScriptLineStatus })}
-                    className="w-full h-8 px-2.5 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium"
-                  >
-                    {SCRIPT_LINE_STATUSES.map((st) => (
-                      <option key={st} value={st}>
-                        {st}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Timing Inputs with Steppers */}
-                <div className="grid grid-cols-3 gap-2">
-                  <TimeStepperInput
-                    label="Start Time"
-                    value={addLineModal.startTime || ""}
-                    onChange={(val) => {
-                      setAddLineModal((prev) => {
-                        if (isAddLineBatchOverride) {
-                          const oldStartSec = timeToSeconds(prev.startTime || "")
-                          const newStartSec = timeToSeconds(val)
-                          if (oldStartSec !== null && newStartSec !== null) {
-                            const delta = newStartSec - oldStartSec
-                            return {
-                              ...prev,
-                              startTime: val,
-                              endTime: shiftTimingValue(prev.endTime || "", delta),
-                            }
-                          }
-                          return { ...prev, startTime: val }
-                        }
-                        const oldStartSec = timeToSeconds(prev.startTime || "")
-                        const newStartSec = timeToSeconds(val)
-                        if (oldStartSec !== null && newStartSec !== null) {
-                          const delta = newStartSec - oldStartSec
-                          return {
-                            ...prev,
-                            startTime: val,
-                            endTime: shiftTimingValue(prev.endTime || "", delta),
-                            batchTime: shiftTimingValue(prev.batchTime || "", delta),
-                          }
-                        }
-                        return { ...prev, startTime: val }
-                      })
-                    }}
-                    onStep={(delta) => {
-                      setAddLineModal((prev) => ({
-                        ...prev,
-                        startTime: shiftTimingValue(prev.startTime || "", delta),
-                        endTime: shiftTimingValue(prev.endTime || "", delta),
-                        batchTime: isAddLineBatchOverride ? (prev.batchTime || "") : shiftTimingValue(prev.batchTime || "", delta),
-                      }))
-                    }}
-                    placeholder="e.g. 00:00:16"
-                  />
-                  <TimeStepperInput
-                    label="End Time"
-                    value={addLineModal.endTime || ""}
-                    onChange={(val) => setAddLineModal({ ...addLineModal, endTime: val })}
-                    onStep={(delta) => {
-                      setAddLineModal((prev) => ({
-                        ...prev,
-                        endTime: shiftTimingValue(prev.endTime || "", delta),
-                      }))
-                    }}
-                    placeholder="e.g. 00:00:18"
-                  />
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-semibold text-foreground truncate">Batch Time</span>
-                      <button
-                        type="button"
-                        onClick={() => setIsAddLineBatchOverride(!isAddLineBatchOverride)}
-                        className={`text-[9px] font-bold px-1 py-0.5 rounded border flex items-center gap-0.5 transition-colors cursor-pointer ${
-                          isAddLineBatchOverride
-                            ? "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700"
-                            : "bg-muted text-muted-foreground hover:text-foreground border-input"
-                        }`}
-                        title={isAddLineBatchOverride ? "Batch time is unlinked (Manual Override active)" : "Click to unlink & override Batch Time manually"}
-                      >
-                        {isAddLineBatchOverride ? <Unlink className="w-2.5 h-2.5 text-amber-600" /> : <Link className="w-2.5 h-2.5 text-muted-foreground" />}
-                        <span>{isAddLineBatchOverride ? "Override" : "Linked"}</span>
-                      </button>
-                    </div>
-                    <TimeStepperInput
-                      label=""
-                      value={addLineModal.batchTime || ""}
-                      onChange={(val) => {
-                        setAddLineModal((prev) => {
-                          if (isAddLineBatchOverride) {
-                            return { ...prev, batchTime: val }
-                          }
-                          const oldBatchSec = timeToSeconds(prev.batchTime || "")
-                          const newBatchSec = timeToSeconds(val)
-                          if (oldBatchSec !== null && newBatchSec !== null) {
-                            const delta = newBatchSec - oldBatchSec
-                            return {
-                              ...prev,
-                              batchTime: val,
-                              startTime: shiftTimingValue(prev.startTime || "", delta),
-                              endTime: shiftTimingValue(prev.endTime || "", delta),
-                            }
-                          }
-                          return { ...prev, batchTime: val }
-                        })
-                      }}
-                      onStep={(delta) => {
-                        setAddLineModal((prev) => {
-                          if (isAddLineBatchOverride) {
-                            return {
-                              ...prev,
-                              batchTime: shiftTimingValue(prev.batchTime || "", delta),
-                            }
-                          }
-                          return {
-                            ...prev,
-                            startTime: shiftTimingValue(prev.startTime || "", delta),
-                            endTime: shiftTimingValue(prev.endTime || "", delta),
-                            batchTime: shiftTimingValue(prev.batchTime || "", delta),
-                          }
-                        })
-                      }}
-                      placeholder="e.g. 00:04:22"
-                    />
-                  </div>
-                </div>
-
-                {/* Line Text */}
-                <div>
-                  <label className="block font-semibold text-foreground mb-1">
-                    Script Line Text <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    placeholder="Write dialogue/script line here..."
-                    value={addLineModal.lineText}
-                    onChange={(e) => setAddLineModal({ ...addLineModal, lineText: e.target.value })}
-                    className="w-full min-h-[80px] p-3 text-xs font-mono rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 border-t pt-3">
-                <button
-                  type="button"
-                  onClick={() => setAddLineModal({ isOpen: false, position: "after", refLineId: "", afterEps: "", character: "", lineText: "", status: "Inputted", startTime: "", endTime: "", batchTime: "" })}
-                  className="px-3.5 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={!addLineModal.character || !addLineModal.lineText.trim()}
-                  onClick={handleSaveAddLine}
-                  className="px-4 py-1.5 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 rounded-md shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Line</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal for Editing Master VO Artist */}
-        {editArtistModal.isOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-            <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-sm p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-primary" />
-                  <h3 className="font-bold text-sm text-foreground">Change VO Artist</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setEditArtistModal({
-                      isOpen: false,
-                      characterName: "",
-                      currentArtist: "",
-                      newArtist: "",
-                    })
-                  }
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
-                    Character Name
-                  </label>
-                  <div className="font-bold text-xs text-foreground bg-muted/50 px-3 py-2 rounded-md border border-border/60">
-                    {editArtistModal.characterName}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground block mb-1">
-                    VO Artist Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editArtistModal.newArtist}
-                    onChange={(e) =>
-                      setEditArtistModal((prev) => ({ ...prev, newArtist: e.target.value }))
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault()
-                        handleSaveVoArtist()
-                      }
-                      if (e.key === "Escape") {
-                        setEditArtistModal({
-                          isOpen: false,
-                          characterName: "",
-                          currentArtist: "",
-                          newArtist: "",
-                        })
-                      }
-                    }}
-                    placeholder="Enter artist name..."
-                    autoFocus
-                    className="w-full text-xs font-medium px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setEditArtistModal({
-                      isOpen: false,
-                      characterName: "",
-                      currentArtist: "",
-                      newArtist: "",
-                    })
-                  }
-                  className="px-3 py-1.5 text-xs font-semibold rounded-md border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveVoArtist}
-                  disabled={!editArtistModal.newArtist.trim()}
-                  className="px-4 py-1.5 text-xs font-bold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Save</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Edit / Add Single PS Modal */}
-        {editPsModal.isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-            <div className="w-full max-w-sm bg-card border rounded-xl shadow-2xl p-5 space-y-4">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-500">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-foreground">
-                    {editPsModal.currentPs ? "Edit Pitch/Speed (PS)" : "Add New Pitch/Speed (PS)"}
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setEditPsModal({
-                      isOpen: false,
-                      characterName: "",
-                      currentPs: "",
-                      newPs: "",
-                    })
-                  }
-                  className="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[11px] font-medium text-muted-foreground block mb-1">
-                    Character
-                  </label>
-                  <div className="text-xs font-bold px-3 py-2 bg-muted/50 rounded-md text-foreground font-mono">
-                    {editPsModal.characterName}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-medium text-muted-foreground block mb-1">
-                    Pitch / Speed Value (e.g. +2/+10 or 0/-5)
-                  </label>
-                  <input
-                    type="text"
-                    value={editPsModal.newPs}
-                    onChange={(e) =>
-                      setEditPsModal((prev) => ({
-                        ...prev,
-                        newPs: e.target.value,
-                      }))
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && editPsModal.newPs.trim()) {
-                        handleSaveSinglePs()
-                      } else if (e.key === "Escape") {
-                        setEditPsModal({
-                          isOpen: false,
-                          characterName: "",
-                          currentPs: "",
-                          newPs: "",
-                        })
-                      }
-                    }}
-                    placeholder="Enter PS (e.g. +2/+5)..."
-                    autoFocus
-                    className="w-full text-xs font-mono font-medium px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-2 border-t">
-                {editPsModal.currentPs ? (
-                  <button
-                    type="button"
-                    onClick={handleRemoveSinglePs}
-                    className="px-2.5 py-1.5 text-xs font-semibold rounded-md text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                  >
-                    Clear PS
-                  </button>
-                ) : (
-                  <div />
-                )}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEditPsModal({
-                        isOpen: false,
-                        characterName: "",
-                        currentPs: "",
-                        newPs: "",
-                      })
-                    }
-                    className="px-3 py-1.5 text-xs font-semibold rounded-md border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveSinglePs}
-                    disabled={!editPsModal.newPs.trim()}
-                    className="px-4 py-1.5 text-xs font-bold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Save</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
