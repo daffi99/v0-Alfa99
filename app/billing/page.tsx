@@ -6,6 +6,7 @@ import type { Task } from "@/components/kanban-board"
 import { DurationInput } from "@/components/duration-input"
 import { ChevronDown, ChevronUp, MoreVertical, Check, RotateCcw } from "lucide-react"
 import { BillingMonthPicker } from "@/components/billing-month-picker"
+import { LogoLoader } from "@/components/logo-loader"
 
 type BillingRow = {
   task: Task
@@ -399,7 +400,7 @@ export default function BillingPage() {
   }
 
   if (isLoading) {
-    return <div className="p-8">Loading billing data...</div>
+    return <LogoLoader label="Loading billing data" />
   }
 
   // Filter and Sort keys
