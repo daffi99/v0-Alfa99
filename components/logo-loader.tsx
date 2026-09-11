@@ -16,9 +16,12 @@ export function LogoLoader({
   return (
     <div className={`flex flex-col items-center justify-center w-full select-none ${className}`}>
       <div className="flex flex-col items-center space-y-3">
-        {/* Small Logo with gentle breathing animation */}
+        {/* Small Logo with smooth spinning animation */}
         <div className="relative flex items-center justify-center">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden transition-transform animate-pulse">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden"
+            style={{ animation: "logo-spin 2s linear infinite" }}
+          >
             <img
               src="/logo_kanban.png"
               alt="Logo"
@@ -40,6 +43,17 @@ export function LogoLoader({
           <p className="text-[11px] text-muted-foreground/70">{sublabel}</p>
         )}
       </div>
+
+      <style jsx>{`
+        @keyframes logo-spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   )
 }
