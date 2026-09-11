@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo, useRef, useEffect } from "react"
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import {
   FileText,
   Users,
@@ -33,6 +33,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { normalizeMultilinesInQuotes, getDistinctEpisodeRanges, type ScriptData, type ScriptLine, type MasterArtistMapping, type ScriptLineStatus } from "./script-wizard-modal"
+import { ScriptLineRow } from "./script-sheet/script-line-row"
 import { EditPsModal } from "./script-sheet/modals/edit-ps-modal"
 import { EditArtistModal } from "./script-sheet/modals/edit-artist-modal"
 import { ResetVoaModal } from "./script-sheet/modals/reset-voa-modal"
@@ -104,6 +105,15 @@ export function ScriptSheetModal({
 }: ScriptSheetModalProps) {
   const [activeTab, setActiveTab] = useState<"lines" | "master" | "summary" | "episodes" | "report">("lines")
   const [data, setData] = useState<ScriptData>(scriptData)
+  const dataRef = useRef(data)
+  dataRef.current = data
+  const onSaveRef = useRef(onSave)
+  onSaveRef.current = onSave
+  const onUpdateProgressRef = useRef(onUpdateProgress)
+  onUpdateProgressRef.current = onUpdateProgress
+  const localProgressRef = useRef(localProgress)
+  localProgressRef.current = localProgress
+
   const [localProgress, setLocalProgress] = useState<Record<string, any>>(taskProgress || {})
   const [isProgressExpanded, setIsProgressExpanded] = useState(true)
   const [isCheckVoMode, setIsCheckVoMode] = useState(false)
@@ -198,6 +208,11 @@ export function ScriptSheetModal({
   // Navigate to Script lines tab & auto-scroll to specified line
   const handleNavigateToScriptLine = (lineId?: string) => {
     if (!lineId) return
+
+    const targetLineIdx = dataRef.current.lines.findIndex((l) => l.id === lineId)
+    if (targetLineIdx !== -1) {
+      setVisibleCount((prev) => Math.max(prev, targetLineIdx + 50))
+    }
 
     // Set flag so scroll restoration useEffect doesn't fight or overwrite this navigation
     isNavigatingToLineRef.current = true
@@ -295,6 +310,15 @@ export function ScriptSheetModal({
     }
   }
 
+
+  // Progressive rendering state for Script Lines (renders first 80 lines instantly, loads more on scroll)
+  const INITIAL_VISIBLE_COUNT = 80
+  const BATCH_SIZE = 60
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT)
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_COUNT)
+  }, [searchQuery, selectedCharacterFilter, selectedStatusFilter, isHideNotUsed])
   // Column Widths for Script Lines Table
   const [colWidths, setColWidths] = useState<{
     character: number
@@ -396,13 +420,24 @@ export function ScriptSheetModal({
   const lastScrollTopRef = useRef<number>(0)
   const scrollStorageKey = useMemo(() => `script_scroll_${taskTitle.replace(/\s+/g, "_")}`, [taskTitle])
 
-  // Save scroll position for Tab 1 to sessionStorage
+  // Save scroll position for Tab 1 to sessionStorage & infinite load more rows
   const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const top = e.currentTarget.scrollTop
+    const target = e.currentTarget
+    const top = target.scrollTop
     lastScrollTopRef.current = top
     try {
       sessionStorage.setItem(scrollStorageKey, top.toString())
     } catch (err) {}
+
+    // Seamless infinite loading as user scrolls down near bottom
+    if (target.scrollHeight - top - target.clientHeight < 500) {
+      setVisibleCount((prev) => {
+        if (prev < filteredLines.length) {
+          return Math.min(filteredLines.length, prev + BATCH_SIZE)
+        }
+        return prev
+      })
+    }
   }
 
   // Summary Tab Scroll Container Ref & Persistent Scroll Position Memory State (Tab 3: Character Summary)
@@ -584,6 +619,34 @@ export function ScriptSheetModal({
       )
     )
   }, [data.masterArtists, data.lines])
+
+
+  const handleOpenAddLineModal = useCallback((position: "before" | "after", line: ScriptLine, isOno?: boolean) => {
+    const defaultTime = computeDefaultTiming(line)
+    setAddLineModal({
+      isOpen: true,
+      position,
+      refLineId: line.id,
+      afterEps: line.eps || "",
+      character: line.character || "",
+      lineText: isOno ? "Onomatopoeia" : "",
+      status: isOno ? "Onomatopoeia" : "Inputted",
+      startTime: defaultTime.startTime,
+      endTime: defaultTime.endTime,
+      batchTime: line.batchTime || "",
+    })
+  }, [])
+
+  const handleOpenEditTimingModal = useCallback((line: ScriptLine, prevLine?: ScriptLine) => {
+    const defaultTime = computeDefaultTiming(prevLine)
+    setEditTimingModal({
+      isOpen: true,
+      lineId: line.id,
+      startTime: line.startTime || defaultTime.startTime,
+      endTime: line.endTime || defaultTime.endTime,
+      batchTime: line.batchTime || "",
+    })
+  }, [])
 
   // Save New Line
   const handleSaveAddLine = () => {
@@ -832,6 +895,11 @@ export function ScriptSheetModal({
     })
     return map
   }, [filteredLines])
+
+  // Progressive sliced lines for DOM table
+  const displayedLines = useMemo(() => {
+    return filteredLines.slice(0, visibleCount)
+  }, [filteredLines, visibleCount])
 
   // Character Summary Calculation (Tab 3)
   const characterSummaries = useMemo(() => {
@@ -2438,31 +2506,16 @@ export function ScriptSheetModal({
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {filteredLines.map((line, idx) => {
+                    {displayedLines.map((line, idx) => {
                       const currentEps = line.eps ? line.eps.trim().padStart(3, "0") : "Unknown"
                       const prevEps =
-                        idx > 0 && filteredLines[idx - 1].eps
-                          ? filteredLines[idx - 1].eps.trim().padStart(3, "0")
+                        idx > 0 && displayedLines[idx - 1].eps
+                          ? displayedLines[idx - 1].eps.trim().padStart(3, "0")
                           : null
                       const showDivider = idx === 0 || currentEps !== prevEps
                       const countInEp = filteredLinesEpCountMap.get(currentEps) || 0
 
-                      const displayLineText = line.lineText
-                        ? line.lineText
-                            .replace(/Missing Onomatopoeia/gi, "Onomatopoeia")
-                            .replace(/\\N/gi, " ")
-                            .replace(/[\r\n]+/g, " ")
-                            .replace(/\s+/g, " ")
-                            .trim()
-                        : ""
-
-                      const prevLine = idx > 0 ? filteredLines[idx - 1] : undefined
-                      const currStartSec = timeToSeconds(line.startTime)
-                      const prevEndSec = timeToSeconds(prevLine?.endTime || prevLine?.startTime)
-
-                      const isNoRange = !!line.startTime && (!line.endTime || line.endTime === "-" || line.startTime === line.endTime)
-                      const isOverlap = currStartSec !== null && prevEndSec !== null && currStartSec <= prevEndSec
-                      const isSpecialTimingMark = line.status === "Onomatopoeia" || line.status === "Missing Onomatopoeia"
+                      const prevLine = idx > 0 ? displayedLines[idx - 1] : undefined
 
                       const lineEpNum = parseInt(line.eps.replace(/\D/g, ""), 10)
                       const rangeIndex = distinctRanges.findIndex((r) => lineEpNum >= r.start && lineEpNum <= r.end)
@@ -2481,352 +2534,55 @@ export function ScriptSheetModal({
                       }
 
                       return (
-                        <React.Fragment key={line.id}>
-                          {showDivider && (
-                            <tr className="bg-indigo-50/80 dark:bg-indigo-950/50 border-y-2 border-indigo-200 dark:border-indigo-800">
-                              <td colSpan={isCaptionTask ? 9 : 8} className="px-3 py-1.5">
-                                <div className="flex items-center gap-2">
-                                  <span className="px-2 py-0.5 rounded bg-indigo-600 text-white font-mono font-bold text-xs shadow-xs">
-                                    EPISODE {currentEps}
-                                  </span>
-                                  <span className="text-xs font-semibold text-indigo-900 dark:text-indigo-200">
-                                    {countInEp} {countInEp === 1 ? "line" : "lines"} in this episode
-                                  </span>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                          {(() => {
-                            const isVoError = line.status === "VO Error" || Boolean(line.voErrorNote)
-                            const isBeluman = line.status === "Beluman"
-                            const isNotUsed = line.status === "Not used"
-                            const charStyle = characterColors[line.character]
-                            return (
-                              <tr
-                                id={`script-line-${line.id}`}
-                                style={!isVoError && !isBeluman && !isNotUsed ? charStyle : undefined}
-                                className={`transition-all duration-300 ${
-                                  highlightedLineId === line.id
-                                    ? "bg-amber-300/80 dark:bg-amber-500/50 ring-2 ring-amber-500 z-30 shadow-md animate-pulse"
-                                    : isVoError
-                                    ? "bg-amber-500/15 hover:bg-amber-500/20"
-                                    : isBeluman
-                                    ? "bg-red-500/10 hover:bg-red-500/15"
-                                    : isNotUsed
-                                    ? "bg-slate-100/80 dark:bg-slate-900/40 text-muted-foreground hover:bg-slate-200/60 dark:hover:bg-slate-800/50"
-                                    : "hover:brightness-95 dark:hover:brightness-125"
-                                } ${openLineStatusDropdown === line.id || openRowActionDropdown === line.id ? "relative z-40" : ""}`}
-                              >
-                                <td className="p-2 text-center border-r font-mono text-[11px] font-bold">
-                                  {line.eps ? line.eps.trim().padStart(3, "0") : "-"}
-                                </td>
-                                 <td className="p-1.5 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden">
-                                   {line.startTime && line.startTime !== "-" ? (
-                                     <button
-                                       type="button"
-                                       onClick={() => handleCopyStartTime(line.id, line.startTime)}
-                                       className="w-full px-1 py-0.5 rounded hover:bg-muted/80 hover:text-foreground active:scale-95 transition-all cursor-pointer inline-flex items-center justify-center gap-1 font-mono text-[10px]"
-                                       title={`Click to copy timecode (${formatToFullTimecode(line.startTime)})`}
-                                     >
-                                       {isSpecialTimingMark ? (
-                                         <span
-                                           className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold border border-amber-400/40 text-[10px]"
-                                           title={
-                                             isOverlap
-                                               ? "Overlapping start time"
-                                               : isNoRange
-                                               ? "No range timing"
-                                               : "Missing Onomatopoeia timing"
-                                           }
-                                         >
-                                           {formatDisplayTiming(line.startTime)}
-                                         </span>
-                                       ) : (
-                                         <span>{formatDisplayTiming(line.startTime)}</span>
-                                       )}
-                                       {copiedTimingLineId === line.id && (
-                                         <Check className="w-3 h-3 text-emerald-600 flex-shrink-0 animate-in zoom-in-50" />
-                                       )}
-                                     </button>
-                                   ) : (
-                                     "-"
-                                   )}
-                                 </td>
-                                 <td className="p-1.5 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden">
-                                   {isSpecialTimingMark && line.endTime && line.endTime !== "-" ? (
-                                     <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]">
-                                       {formatDisplayTiming(line.endTime)}
-                                     </span>
-                                   ) : (
-                                     formatDisplayTiming(line.endTime)
-                                   )}
-                                 </td>
-                                 <td className="p-1.5 text-center border-r font-mono text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden">
-                                   {isSpecialTimingMark && line.batchTime && line.batchTime !== "-" ? (
-                                     <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono font-bold border border-amber-400/40 text-[10px]">
-                                       {formatDisplayTiming(line.batchTime)}
-                                     </span>
-                                   ) : (
-                                     formatDisplayTiming(line.batchTime)
-                                   )}
-                                   {timelineBatchTime && (
-                                     <div className="text-[9px] text-purple-700 dark:text-purple-400 font-mono font-medium leading-tight mt-0.5 truncate" title={`Timeline offset (+${range1Duration}): ${timelineBatchTime}`}>
-                                       {timelineBatchTime}
-                                     </div>
-                                   )}
-                                 </td>
-                                <td
-                                  style={{ width: `${colWidths.character}px`, minWidth: `${colWidths.character}px`, maxWidth: `${colWidths.character}px` }}
-                                  className="p-2 border-r font-semibold text-[10px] whitespace-nowrap truncate overflow-hidden"
-                                  title={line.character}
-                                >
-                                  {line.character}
-                                </td>
-                                <td
-                                  style={{ width: `${colWidths.scriptText}px`, minWidth: `${colWidths.scriptText}px`, maxWidth: `${colWidths.scriptText}px` }}
-                                  className="p-2 border-r whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed font-medium"
-                                  title={displayLineText}
-                                >
-                                  {line.status === "Onomatopoeia" || line.status === "Missing Onomatopoeia" ? (
-                                    <span className="px-2 py-0.5 rounded-full bg-fuchsia-500/20 text-fuchsia-800 dark:text-fuchsia-200 font-bold border border-fuchsia-400/40 text-[11px]">
-                                      {displayLineText}
-                                    </span>
-                                  ) : (
-                                    displayLineText
-                                  )}
-                                </td>
-                                {isCaptionTask && (
-                                  <td
-                                    style={{ width: `${colWidths.voErrorNote}px`, minWidth: `${colWidths.voErrorNote}px`, maxWidth: `${colWidths.voErrorNote}px` }}
-                                    className="p-2 border-r text-[10px] text-red-600 font-semibold"
-                                  >
-                                    <div className="flex items-center gap-1">
-                                      <input
-                                        type="text"
-                                        placeholder="Note..."
-                                        value={line.voErrorNote || ""}
-                                        onChange={(e) => handleUpdateVoErrorNote(line.id, e.target.value)}
-                                        className="w-full bg-transparent text-red-600 font-medium placeholder:text-muted-foreground/30 outline-none border-b border-transparent focus:border-red-400 text-[10px] py-0"
-                                      />
-                                      {line.voErrorNote && (
-                                        <button
-                                          onClick={() => handleUpdateVoErrorNote(line.id, "")}
-                                          className="p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
-                                          title="Remove VO Error Note"
-                                        >
-                                          <X className="w-3 h-3" />
-                                        </button>
-                                      )}
-                                    </div>
-                                  </td>
-                                )}
-                                <td className="p-2 border-r text-center">
-                                  <div className={`relative inline-block text-center ${openLineStatusDropdown === line.id ? "z-40" : ""}`}>
-                                    <button
-                                      type="button"
-                                      onClick={() => setOpenLineStatusDropdown(openLineStatusDropdown === line.id ? null : line.id)}
-                                      className={`h-5 text-[10px] px-2 rounded-full font-bold transition-all border outline-none cursor-pointer flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap ${
-                                        STATUS_STYLE_MAP[line.status]?.bg || "bg-gray-100"
-                                      } ${STATUS_STYLE_MAP[line.status]?.text || "text-gray-800"} ${
-                                        STATUS_STYLE_MAP[line.status]?.border || "border-gray-200"
-                                      }`}
-                                    >
-                                      <span>{STATUS_STYLE_MAP[line.status]?.label || line.status}</span>
-                                      <ChevronDown className="w-2.5 h-2.5 opacity-70" />
-                                    </button>
-
-                                    {openLineStatusDropdown === line.id && (
-                                      <>
-                                        <div
-                                          className="fixed inset-0 z-40"
-                                          onClick={() => setOpenLineStatusDropdown(null)}
-                                        />
-                                        <div
-                                          className={`absolute left-1/2 -translate-x-1/2 ${
-                                            idx >= filteredLines.length - 6 && idx >= 6 ? "bottom-full mb-1" : "top-full mt-1"
-                                          } z-50 w-36 min-w-[140px] max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
-                                        >
-                                          {SCRIPT_LINE_STATUSES.map((st) => {
-                                            const style = STATUS_STYLE_MAP[st]
-                                            const isSelected = line.status === st || (st === "Onomatopoeia" && line.status === "Missing Onomatopoeia")
-                                            return (
-                                              <button
-                                                key={st}
-                                                type="button"
-                                                onClick={() => {
-                                                  handleUpdateLineStatus(line.id, st)
-                                                  setOpenLineStatusDropdown(null)
-                                                }}
-                                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${
-                                                  isSelected
-                                                    ? "bg-primary/10 text-foreground font-bold"
-                                                    : "text-foreground hover:bg-muted"
-                                                }`}
-                                              >
-                                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${style?.bg || "bg-gray-300"} border ${style?.border || "border-gray-400"}`} />
-                                                <span className="flex-1 text-left text-foreground">{style?.label || st}</span>
-                                                {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
-                                              </button>
-                                            )
-                                          })}
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="p-2 text-center">
-                                  <div className={`relative inline-block text-center ${openRowActionDropdown === line.id ? "z-40" : ""}`}>
-                                    <button
-                                      type="button"
-                                      onClick={() => setOpenRowActionDropdown(openRowActionDropdown === line.id ? null : line.id)}
-                                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                                      title="Actions"
-                                    >
-                                      <MoreVertical className="w-4 h-4" />
-                                    </button>
-
-                                    {openRowActionDropdown === line.id && (
-                                      <>
-                                        <div
-                                          className="fixed inset-0 z-40"
-                                          onClick={() => setOpenRowActionDropdown(null)}
-                                        />
-                                        <div
-                                          className={`absolute right-0 ${
-                                            idx >= filteredLines.length - 4 && idx >= 4 ? "bottom-full mb-1" : "top-full mt-1"
-                                          } z-50 w-48 bg-card border border-border rounded-lg shadow-xl p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 text-left`}
-                                        >
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              handleCopyScriptLineText(line.id, displayLineText || line.lineText || "")
-                                              setOpenRowActionDropdown(null)
-                                            }}
-                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
-                                          >
-                                            {copiedScriptLineId === line.id ? (
-                                              <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                                            ) : (
-                                              <Copy className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                                            )}
-                                            <span>{copiedScriptLineId === line.id ? "Copied Script!" : "Copy Script Line"}</span>
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const defaultTime = computeDefaultTiming(line)
-                                              setAddLineModal({
-                                                isOpen: true,
-                                                position: "before",
-                                                refLineId: line.id,
-                                                afterEps: line.eps || "",
-                                                character: line.character || "",
-                                                lineText: "",
-                                                status: "Inputted",
-                                                startTime: defaultTime.startTime,
-                                                endTime: defaultTime.endTime,
-                                                batchTime: line.batchTime || "",
-                                              })
-                                              setOpenRowActionDropdown(null)
-                                            }}
-                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
-                                          >
-                                            <Plus className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                                            <span>Add Line Before</span>
-                                          </button>
-
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const defaultTime = computeDefaultTiming(line)
-                                              setAddLineModal({
-                                                isOpen: true,
-                                                position: "after",
-                                                refLineId: line.id,
-                                                afterEps: line.eps || "",
-                                                character: line.character || "",
-                                                lineText: "",
-                                                status: "Inputted",
-                                                startTime: defaultTime.startTime,
-                                                endTime: defaultTime.endTime,
-                                                batchTime: line.batchTime || "",
-                                              })
-                                              setOpenRowActionDropdown(null)
-                                            }}
-                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
-                                          >
-                                            <Plus className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                                            <span>Add Line After</span>
-                                          </button>
-
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const defaultTime = computeDefaultTiming(line)
-                                              setAddLineModal({
-                                                isOpen: true,
-                                                position: "after",
-                                                refLineId: line.id,
-                                                afterEps: line.eps || "",
-                                                character: line.character || "",
-                                                lineText: "Onomatopoeia",
-                                                status: "Onomatopoeia",
-                                                startTime: defaultTime.startTime,
-                                                endTime: defaultTime.endTime,
-                                                batchTime: line.batchTime || "",
-                                              })
-                                              setOpenRowActionDropdown(null)
-                                            }}
-                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/40 rounded-md transition-colors cursor-pointer"
-                                          >
-                                            <Sparkles className="w-3.5 h-3.5 text-fuchsia-500 flex-shrink-0" />
-                                            <span>Add Onomatopoeia</span>
-                                          </button>
-
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const defaultTime = computeDefaultTiming(prevLine)
-                                              setEditTimingModal({
-                                                isOpen: true,
-                                                lineId: line.id,
-                                                startTime: line.startTime || defaultTime.startTime,
-                                                endTime: line.endTime || defaultTime.endTime,
-                                                batchTime: line.batchTime || "",
-                                              })
-                                              setOpenRowActionDropdown(null)
-                                            }}
-                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted rounded-md transition-colors cursor-pointer"
-                                          >
-                                            <Clock className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                                            <span>Edit Timing</span>
-                                          </button>
-
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              handleDeleteLine(line.id)
-                                              setOpenRowActionDropdown(null)
-                                            }}
-                                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md transition-colors cursor-pointer"
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5 flex-shrink-0" />
-                                            <span>Delete Line</span>
-                                          </button>
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            )
-                          })()}
-                        </React.Fragment>
+                        <ScriptLineRow
+                          key={line.id}
+                          line={line}
+                          prevLine={prevLine}
+                          idx={idx}
+                          showDivider={showDivider}
+                          currentEps={currentEps}
+                          countInEp={countInEp}
+                          isCaptionTask={Boolean(isCaptionTask)}
+                          charStyle={characterColors[line.character]}
+                          isHighlighted={highlightedLineId === line.id}
+                          isStatusDropdownOpen={openLineStatusDropdown === line.id}
+                          isActionDropdownOpen={openRowActionDropdown === line.id}
+                          isTimingCopied={copiedTimingLineId === line.id}
+                          isScriptLineCopied={copiedScriptLineId === line.id}
+                          colWidths={colWidths}
+                          timelineBatchTime={timelineBatchTime}
+                          totalLinesCount={displayedLines.length}
+                          onCopyStartTime={handleCopyStartTime}
+                          onCopyScriptLineText={handleCopyScriptLineText}
+                          onUpdateVoErrorNote={handleUpdateVoErrorNote}
+                          onUpdateLineStatus={handleUpdateLineStatus}
+                          onOpenStatusDropdown={setOpenLineStatusDropdown}
+                          onOpenActionDropdown={setOpenRowActionDropdown}
+                          onOpenAddLineModal={handleOpenAddLineModal}
+                          onOpenEditTimingModal={handleOpenEditTimingModal}
+                          onDeleteLine={handleDeleteLine}
+                        />
                       )
                     })}
+                    {displayedLines.length < filteredLines.length && (
+                      <tr>
+                        <td colSpan={isCaptionTask ? 9 : 8} className="p-3 text-center bg-muted/20 text-xs text-muted-foreground">
+                          <div className="flex items-center justify-center gap-2">
+                            <span>Showing {displayedLines.length} of {filteredLines.length} lines</span>
+                            <button
+                              type="button"
+                              onClick={() => setVisibleCount(filteredLines.length)}
+                              className="px-2.5 py-1 text-xs font-bold text-primary hover:bg-primary/10 rounded-md transition-colors cursor-pointer"
+                            >
+                              Load all {filteredLines.length} lines
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {filteredLines.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                        <td colSpan={isCaptionTask ? 9 : 8} className="p-8 text-center text-muted-foreground">
                           No script lines found.
                         </td>
                       </tr>
