@@ -1150,6 +1150,16 @@ export function ScriptSheetModal({
     })
   }, [data.lines, searchQuery, selectedCharacterFilter, selectedStatusFilter, isHideNotUsed])
 
+  // Pre-calculate line counts per episode for filtered lines (O(N) instead of O(N^2) inside render loop)
+  const filteredLinesEpCountMap = useMemo(() => {
+    const map = new Map<string, number>()
+    filteredLines.forEach((l) => {
+      const epsKey = l.eps ? l.eps.trim().padStart(3, "0") : "Unknown"
+      map.set(epsKey, (map.get(epsKey) || 0) + 1)
+    })
+    return map
+  }, [filteredLines])
+
   // Character Summary Calculation (Tab 3)
   const characterSummaries = useMemo(() => {
     const summaryMap = new Map<
@@ -2762,9 +2772,7 @@ export function ScriptSheetModal({
                           ? filteredLines[idx - 1].eps.trim().padStart(3, "0")
                           : null
                       const showDivider = idx === 0 || currentEps !== prevEps
-                      const countInEp = filteredLines.filter(
-                        (l) => (l.eps ? l.eps.trim().padStart(3, "0") : "Unknown") === currentEps
-                      ).length
+                      const countInEp = filteredLinesEpCountMap.get(currentEps) || 0
 
                       const displayLineText = line.lineText
                         ? line.lineText
