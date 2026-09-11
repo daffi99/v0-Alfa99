@@ -111,10 +111,10 @@ export function ScriptSheetModal({
   onSaveRef.current = onSave
   const onUpdateProgressRef = useRef(onUpdateProgress)
   onUpdateProgressRef.current = onUpdateProgress
-  const localProgressRef = useRef(localProgress)
-  localProgressRef.current = localProgress
 
   const [localProgress, setLocalProgress] = useState<Record<string, any>>(taskProgress || {})
+  const localProgressRef = useRef(localProgress)
+  localProgressRef.current = localProgress
   const [isProgressExpanded, setIsProgressExpanded] = useState(true)
   const [isCheckVoMode, setIsCheckVoMode] = useState(false)
   const [isHideNotUsed, setIsHideNotUsed] = useState(false)
@@ -201,6 +201,15 @@ export function ScriptSheetModal({
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null)
   const [copiedCharName, setCopiedCharName] = useState<string | null>(null)
   const [copiedScriptLineId, setCopiedScriptLineId] = useState<string | null>(null)
+
+  // Progressive rendering state for Script Lines (renders first 80 lines instantly, loads more on scroll)
+  const INITIAL_VISIBLE_COUNT = 80
+  const BATCH_SIZE = 60
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT)
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_COUNT)
+  }, [searchQuery, selectedCharacterFilter, selectedStatusFilter, isHideNotUsed])
 
   // Highlighted line ID when navigating from VOA report
   const [highlightedLineId, setHighlightedLineId] = useState<string | null>(null)
@@ -311,14 +320,6 @@ export function ScriptSheetModal({
   }
 
 
-  // Progressive rendering state for Script Lines (renders first 80 lines instantly, loads more on scroll)
-  const INITIAL_VISIBLE_COUNT = 80
-  const BATCH_SIZE = 60
-  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT)
-
-  useEffect(() => {
-    setVisibleCount(INITIAL_VISIBLE_COUNT)
-  }, [searchQuery, selectedCharacterFilter, selectedStatusFilter, isHideNotUsed])
   // Column Widths for Script Lines Table
   const [colWidths, setColWidths] = useState<{
     character: number
