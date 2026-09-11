@@ -28,6 +28,8 @@ import {
   Link,
   Unlink,
   Pencil,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { normalizeMultilinesInQuotes, getDistinctEpisodeRanges, type ScriptData, type ScriptLine, type MasterArtistMapping, type ScriptLineStatus } from "./script-wizard-modal"
 
@@ -424,6 +426,8 @@ export function ScriptSheetModal({
   const [localProgress, setLocalProgress] = useState<Record<string, any>>(taskProgress || {})
   const [isProgressExpanded, setIsProgressExpanded] = useState(true)
   const [isCheckVoMode, setIsCheckVoMode] = useState(false)
+  const [isHideNotUsed, setIsHideNotUsed] = useState(false)
+  const isNavigatingToLineRef = useRef<boolean>(false)
 
   const isSingleEpisodeCard = useMemo(() => {
     // 1. Check explicit episodeRanges
@@ -502,17 +506,53 @@ export function ScriptSheetModal({
   // Navigate to Script lines tab & auto-scroll to specified line
   const handleNavigateToScriptLine = (lineId?: string) => {
     if (!lineId) return
+
+    // Set flag so scroll restoration useEffect doesn't fight or overwrite this navigation
+    isNavigatingToLineRef.current = true
+
     setSearchQuery("")
     setSelectedCharacterFilter("all")
     setSelectedStatusFilter("all")
     setActiveTab("lines")
     setHighlightedLineId(lineId)
-    setTimeout(() => {
+
+    // Robust scroll: retry polling until element exists in DOM (up to 1.5 seconds)
+    let attempts = 0
+    const maxAttempts = 30
+    const checkAndScroll = () => {
+      const container = scrollContainerRef.current
       const el = document.getElementById(`script-line-${lineId}`)
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" })
+
+      if (container && el) {
+        // Calculate offset relative to the scroll container
+        const containerRect = container.getBoundingClientRect()
+        const elRect = el.getBoundingClientRect()
+        const relativeTop = elRect.top - containerRect.top + container.scrollTop
+        const targetScrollTop = Math.max(0, relativeTop - container.clientHeight / 2 + el.clientHeight / 2)
+
+        container.scrollTo({ top: targetScrollTop, behavior: "smooth" })
+        lastScrollTopRef.current = targetScrollTop
+        try {
+          sessionStorage.setItem(scrollStorageKey, targetScrollTop.toString())
+        } catch (err) {}
+
+        // Release flag after animation completes
+        setTimeout(() => {
+          isNavigatingToLineRef.current = false
+        }, 500)
+        return
       }
-    }, 120)
+
+      attempts++
+      if (attempts < maxAttempts) {
+        setTimeout(checkAndScroll, 50)
+      } else {
+        isNavigatingToLineRef.current = false
+      }
+    }
+
+    setTimeout(checkAndScroll, 40)
+
     setTimeout(() => {
       setHighlightedLineId((prev) => (prev === lineId ? null : prev))
     }, 3500)
@@ -739,6 +779,7 @@ export function ScriptSheetModal({
       } catch (err) {}
 
       const applyScroll = () => {
+        if (isNavigatingToLineRef.current) return
         if (scrollContainerRef.current && targetTop > 0) {
           scrollContainerRef.current.scrollTop = targetTop
           lastScrollTopRef.current = targetTop
@@ -1068,6 +1109,7 @@ export function ScriptSheetModal({
   // Filtered script lines for Tab 1
   const filteredLines = useMemo(() => {
     return data.lines.filter((line) => {
+      if (isHideNotUsed && line.status === "Not used") return false
       const matchesSearch =
         line.lineText.toLowerCase().includes(searchQuery.toLowerCase()) ||
         line.character.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1082,7 +1124,7 @@ export function ScriptSheetModal({
         lineIssueStatus === selectedStatusFilter
       return matchesSearch && matchesChar && matchesStatus
     })
-  }, [data.lines, searchQuery, selectedCharacterFilter, selectedStatusFilter])
+  }, [data.lines, searchQuery, selectedCharacterFilter, selectedStatusFilter, isHideNotUsed])
 
   // Character Summary Calculation (Tab 3)
   const characterSummaries = useMemo(() => {
@@ -1227,6 +1269,10 @@ export function ScriptSheetModal({
   // Filtered Character Summaries for Tab 3 (search query + VOA dropdown filter + Status filter)
   const filteredCharacterSummaries = useMemo(() => {
     return activeCharacterSummaries.filter((cs) => {
+      if (isHideNotUsed && cs.linesCount > 0 && cs.notUsedLinesCount === cs.linesCount) {
+        return false
+      }
+
       const query = summarySearchQuery.trim().toLowerCase()
       const matchesQuery =
         !query ||
@@ -1253,7 +1299,7 @@ export function ScriptSheetModal({
 
       return matchesQuery && matchesVoa && matchesStatus
     })
-  }, [activeCharacterSummaries, summarySearchQuery, summaryVoaFilter, summaryStatusFilter])
+  }, [activeCharacterSummaries, summarySearchQuery, summaryVoaFilter, summaryStatusFilter, isHideNotUsed])
 
   // Unused characters (with 0 lines)
   const unusedCharacterSummaries = useMemo(() => {
@@ -1263,8 +1309,12 @@ export function ScriptSheetModal({
   // Episode Character Summary Calculation (Tab 4)
   const episodeCharacterSummaries = useMemo(() => {
     // Map overall line count per character across all episodes
+    const linesToProcess = isHideNotUsed
+      ? data.lines.filter((l) => l.status !== "Not used")
+      : data.lines
+
     const overallCharLineMap = new Map<string, number>()
-    data.lines.forEach((line) => {
+    linesToProcess.forEach((line) => {
       if (!line.character) return
       const charKey = line.character.trim()
       overallCharLineMap.set(charKey, (overallCharLineMap.get(charKey) || 0) + 1)
@@ -1272,7 +1322,7 @@ export function ScriptSheetModal({
 
     const epMap = new Map<string, Map<string, number>>()
 
-    data.lines.forEach((line) => {
+    linesToProcess.forEach((line) => {
       if (!line.eps || !line.character) return
       const epsKey = line.eps.trim()
       const charKey = line.character.trim()
@@ -1307,7 +1357,7 @@ export function ScriptSheetModal({
     })
 
     return episodes.sort((a, b) => Number(a.eps) - Number(b.eps))
-  }, [data.lines])
+  }, [data.lines, isHideNotUsed])
 
   // Total sum of all episode character counts across all episode rows
   const totalEpisodeCharCountSum = useMemo(() => {
@@ -2062,6 +2112,27 @@ export function ScriptSheetModal({
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsHideNotUsed(!isHideNotUsed)}
+              className={`px-3 py-1.5 text-xs border rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                isHideNotUsed
+                  ? "bg-slate-700 text-white border-slate-700 dark:bg-slate-200 dark:text-slate-900 font-semibold shadow-2xs"
+                  : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+              title={isHideNotUsed ? "Showing all lines (Click to hide 'Not used')" : "Hiding 'Not used' lines across all tabs"}
+            >
+              {isHideNotUsed ? (
+                <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+              ) : (
+                <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+              )}
+              <span>Hide Not Used</span>
+              {isHideNotUsed && notUsedCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-400 text-slate-900 font-mono font-bold">
+                  {notUsedCount} hidden
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setIsCheckVoMode(!isCheckVoMode)}
               className={`px-3 py-1.5 text-xs border rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
                 isCheckVoMode
@@ -2278,7 +2349,7 @@ export function ScriptSheetModal({
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            <FileText className="w-3.5 h-3.5" /> Script Lines ({data.lines.length})
+            <FileText className="w-3.5 h-3.5" /> Script Lines ({isHideNotUsed ? data.lines.filter((l) => l.status !== "Not used").length : data.lines.length})
           </button>
 
           <button
@@ -2289,7 +2360,7 @@ export function ScriptSheetModal({
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            <BarChart3 className="w-3.5 h-3.5" /> Character Summary ({activeCharacterSummaries.length})
+            <BarChart3 className="w-3.5 h-3.5" /> Character Summary ({filteredCharacterSummaries.length})
           </button>
 
           <button
