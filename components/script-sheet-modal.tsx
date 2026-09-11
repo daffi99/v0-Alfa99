@@ -30,6 +30,7 @@ import {
   Pencil,
   Eye,
   EyeOff,
+  Loader2,
 } from "lucide-react"
 import { normalizeMultilinesInQuotes, getDistinctEpisodeRanges, type ScriptData, type ScriptLine, type MasterArtistMapping, type ScriptLineStatus } from "./script-wizard-modal"
 
@@ -427,7 +428,18 @@ export function ScriptSheetModal({
   const [isProgressExpanded, setIsProgressExpanded] = useState(true)
   const [isCheckVoMode, setIsCheckVoMode] = useState(false)
   const [isHideNotUsed, setIsHideNotUsed] = useState(false)
+  const [isTogglingHideNotUsed, setIsTogglingHideNotUsed] = useState(false)
   const isNavigatingToLineRef = useRef<boolean>(false)
+
+  const handleToggleHideNotUsed = () => {
+    setIsTogglingHideNotUsed(true)
+    setTimeout(() => {
+      setIsHideNotUsed((prev) => !prev)
+      setTimeout(() => {
+        setIsTogglingHideNotUsed(false)
+      }, 250)
+    }, 150)
+  }
 
   const isSingleEpisodeCard = useMemo(() => {
     // 1. Check explicit episodeRanges
@@ -2124,21 +2136,24 @@ export function ScriptSheetModal({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsHideNotUsed(!isHideNotUsed)}
-              className={`px-3 py-1.5 text-xs border rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              onClick={handleToggleHideNotUsed}
+              disabled={isTogglingHideNotUsed}
+              className={`px-3 py-1.5 text-xs border rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer disabled:opacity-70 disabled:cursor-wait ${
                 isHideNotUsed
                   ? "bg-slate-700 text-white border-slate-700 dark:bg-slate-200 dark:text-slate-900 font-semibold shadow-2xs"
                   : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
               }`}
               title={isHideNotUsed ? "Showing all lines (Click to hide 'Not used')" : "Hiding 'Not used' lines across all tabs"}
             >
-              {isHideNotUsed ? (
+              {isTogglingHideNotUsed ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+              ) : isHideNotUsed ? (
                 <EyeOff className="w-3.5 h-3.5 text-amber-400" />
               ) : (
                 <Eye className="w-3.5 h-3.5 text-muted-foreground" />
               )}
-              <span>Hide Not Used</span>
-              {isHideNotUsed && notUsedCount > 0 && (
+              <span>{isTogglingHideNotUsed ? "Filtering..." : "Hide Not Used"}</span>
+              {!isTogglingHideNotUsed && isHideNotUsed && notUsedCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-400 text-slate-900 font-mono font-bold">
                   {notUsedCount} hidden
                 </span>
@@ -2415,7 +2430,17 @@ export function ScriptSheetModal({
         </div>
 
         {/* Tab Content Container */}
-        <div className="flex-1 overflow-hidden p-4 flex flex-col bg-background">
+        <div className="flex-1 overflow-hidden p-4 flex flex-col bg-background relative">
+          {/* Subtle loading overlay when toggling Hide Not Used */}
+          {isTogglingHideNotUsed && (
+            <div className="absolute inset-0 z-40 bg-background/60 backdrop-blur-xs flex items-center justify-center animate-in fade-in duration-100">
+              <div className="flex items-center gap-2.5 px-4 py-2 bg-card border border-border shadow-lg rounded-lg text-xs font-semibold text-foreground">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span>{isHideNotUsed ? "Showing all lines..." : "Hiding not used lines..."}</span>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: SCRIPT LINES MANAGER */}
           {activeTab === "lines" && (
             <div className="flex-1 flex flex-col overflow-hidden space-y-3">
