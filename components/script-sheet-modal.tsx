@@ -504,6 +504,7 @@ export function ScriptSheetModal({
   const [summarySearchQuery, setSummarySearchQuery] = useState("")
   const [summaryVoaFilter, setSummaryVoaFilter] = useState("ALL")
   const [summaryStatusFilter, setSummaryStatusFilter] = useState("ALL")
+  const [summaryPitchFilter, setSummaryPitchFilter] = useState("ALL")
 
   // Restore scroll positions upon render / modal open / tab switch / data update
   useEffect(() => {
@@ -1042,7 +1043,14 @@ export function ScriptSheetModal({
     return Array.from(artists).sort((a, b) => a.localeCompare(b))
   }, [activeCharacterSummaries])
 
-  // Filtered Character Summaries for Tab 3 (search query + VOA dropdown filter + Status filter)
+  // Count of active characters with pitch
+  const withPitchCount = useMemo(() => {
+    return activeCharacterSummaries.filter(
+      (cs) => cs.ps && cs.ps !== "-" && cs.ps.trim() !== ""
+    ).length
+  }, [activeCharacterSummaries])
+
+  // Filtered Character Summaries for Tab 3 (search query + VOA dropdown filter + Status filter + Pitch filter)
   const filteredCharacterSummaries = useMemo(() => {
     return activeCharacterSummaries.filter((cs) => {
       if (isHideNotUsed && cs.linesCount > 0 && cs.notUsedLinesCount === cs.linesCount) {
@@ -1073,14 +1081,31 @@ export function ScriptSheetModal({
         matchesStatus = cs.notUsedLinesCount > 0
       }
 
-      return matchesQuery && matchesVoa && matchesStatus
+      const hasPitch = Boolean(cs.ps && cs.ps !== "-" && cs.ps.trim() !== "")
+      let matchesPitch = true
+      if (summaryPitchFilter === "WITH_PITCH") {
+        matchesPitch = hasPitch
+      } else if (summaryPitchFilter === "WITHOUT_PITCH") {
+        matchesPitch = !hasPitch
+      }
+
+      return matchesQuery && matchesVoa && matchesStatus && matchesPitch
     })
-  }, [activeCharacterSummaries, summarySearchQuery, summaryVoaFilter, summaryStatusFilter, isHideNotUsed])
+  }, [activeCharacterSummaries, summarySearchQuery, summaryVoaFilter, summaryStatusFilter, summaryPitchFilter, isHideNotUsed])
 
   // Unused characters (with 0 lines)
   const unusedCharacterSummaries = useMemo(() => {
-    return characterSummaries.filter((cs) => cs.linesCount === 0)
-  }, [characterSummaries])
+    return characterSummaries.filter((cs) => {
+      if (cs.linesCount !== 0) return false
+      if (summaryPitchFilter === "WITH_PITCH") {
+        return Boolean(cs.ps && cs.ps !== "-" && cs.ps.trim() !== "")
+      }
+      if (summaryPitchFilter === "WITHOUT_PITCH") {
+        return !cs.ps || cs.ps === "-" || cs.ps.trim() === ""
+      }
+      return true
+    })
+  }, [characterSummaries, summaryPitchFilter])
 
   // Episode Character Summary Calculation (Tab 4)
   const episodeCharacterSummaries = useMemo(() => {
@@ -1887,30 +1912,32 @@ export function ScriptSheetModal({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleToggleHideNotUsed}
-              disabled={isTogglingHideNotUsed}
-              className={`px-3 py-1.5 text-xs border rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer disabled:opacity-70 disabled:cursor-wait ${
-                isHideNotUsed
-                  ? "bg-slate-700 text-white border-slate-700 dark:bg-slate-200 dark:text-slate-900 font-semibold shadow-2xs"
-                  : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
-              }`}
-              title={isHideNotUsed ? "Showing all lines (Click to hide 'Not used')" : "Hiding 'Not used' lines across all tabs"}
-            >
-              {isTogglingHideNotUsed ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
-              ) : isHideNotUsed ? (
-                <EyeOff className="w-3.5 h-3.5 text-amber-400" />
-              ) : (
-                <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-              )}
-              <span>{isTogglingHideNotUsed ? "Filtering..." : "Hide Not Used"}</span>
-              {!isTogglingHideNotUsed && isHideNotUsed && notUsedCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-400 text-slate-900 font-mono font-bold">
-                  {notUsedCount} hidden
-                </span>
-              )}
-            </button>
+            {notUsedCount > 0 && (
+              <button
+                onClick={handleToggleHideNotUsed}
+                disabled={isTogglingHideNotUsed}
+                className={`px-3 py-1.5 text-xs border rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer disabled:opacity-70 disabled:cursor-wait ${
+                  isHideNotUsed
+                    ? "bg-slate-700 text-white border-slate-700 dark:bg-slate-200 dark:text-slate-900 font-semibold shadow-2xs"
+                    : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                }`}
+                title={isHideNotUsed ? "Showing all lines (Click to hide 'Not used')" : "Hiding 'Not used' lines across all tabs"}
+              >
+                {isTogglingHideNotUsed ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                ) : isHideNotUsed ? (
+                  <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+                ) : (
+                  <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                )}
+                <span>{isTogglingHideNotUsed ? "Filtering..." : "Hide Not Used"}</span>
+                {!isTogglingHideNotUsed && isHideNotUsed && notUsedCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-400 text-slate-900 font-mono font-bold">
+                    {notUsedCount} hidden
+                  </span>
+                )}
+              </button>
+            )}
             <button
               onClick={() => setIsCheckVoMode(!isCheckVoMode)}
               className={`px-3 py-1.5 text-xs border rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap ${
@@ -2791,13 +2818,24 @@ export function ScriptSheetModal({
                     <option value="NOT_USED">Not used</option>
                   </select>
 
-                  {(summarySearchQuery || summaryVoaFilter !== "ALL" || summaryStatusFilter !== "ALL") && (
+                  <select
+                    value={summaryPitchFilter}
+                    onChange={(e) => setSummaryPitchFilter(e.target.value)}
+                    className="h-8 px-2.5 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-medium cursor-pointer max-w-[160px] truncate"
+                  >
+                    <option value="ALL">All Pitch / PS</option>
+                    <option value="WITH_PITCH">With Pitch only ({withPitchCount})</option>
+                    <option value="WITHOUT_PITCH">No Pitch ({activeCharacterSummaries.length - withPitchCount})</option>
+                  </select>
+
+                  {(summarySearchQuery || summaryVoaFilter !== "ALL" || summaryStatusFilter !== "ALL" || summaryPitchFilter !== "ALL") && (
                     <button
                       type="button"
                       onClick={() => {
                         setSummarySearchQuery("")
                         setSummaryVoaFilter("ALL")
                         setSummaryStatusFilter("ALL")
+                        setSummaryPitchFilter("ALL")
                       }}
                       className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer font-medium whitespace-nowrap"
                     >
