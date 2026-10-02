@@ -73,6 +73,7 @@ import {
   getBatchTimeRange,
   formatReportTitle,
   normalizeCharKey,
+  getVoReportGroupKey,
   formatEpisodeRangeNumbers,
   formatEpisodeRanges,
   shiftTimingValue,
@@ -816,11 +817,7 @@ export function ScriptSheetModal({
         if (!origStatus || origStatus === "Inputted" || origStatus === "Not used") return
 
         const eps = (line.eps || "").trim()
-        const normKey = normalizeCharKey(targetChar)
-        const groupKey =
-          origStatus === "Beluman"
-            ? `${normKey}__${origStatus}`
-            : `${normKey}__${origStatus}__${eps}`
+        const groupKey = getVoReportGroupKey(targetChar, origStatus, eps, line.id)
 
         groupTotalMap.set(groupKey, (groupTotalMap.get(groupKey) || 0) + 1)
         if (line.status === "Inputted") {
@@ -1214,11 +1211,7 @@ export function ScriptSheetModal({
       if (!lineIssueStatus || lineIssueStatus === "Inputted" || lineIssueStatus === "Not used") return
 
       const eps = (line.eps || "").trim()
-      const normKey = normalizeCharKey(targetChar)
-      const groupKey =
-        lineIssueStatus === "Beluman"
-          ? `${normKey}__${lineIssueStatus}`
-          : `${normKey}__${lineIssueStatus}__${eps}`
+      const groupKey = getVoReportGroupKey(targetChar, lineIssueStatus, eps, line.id)
 
       if (!charStatusMap.has(groupKey)) {
         charStatusMap.set(groupKey, {
@@ -1271,7 +1264,8 @@ export function ScriptSheetModal({
     }> = []
 
     charStatusMap.forEach(({ character, status, epsSet, startTimeSet, endTimeSet, batchTimeSet, totalLines, inputtedLines, firstLineId }, groupKey) => {
-      const isResolved = !!checkedVoReportKeys[groupKey] || (totalLines > 0 && inputtedLines === totalLines)
+      const legacyGroupKey = `${normalizeCharKey(character)}__${status}__${Array.from(epsSet)[0] || ""}`
+      const isResolved = !!checkedVoReportKeys[groupKey] || !!checkedVoReportKeys[legacyGroupKey] || (totalLines > 0 && inputtedLines === totalLines)
       const actor = masterMap.get(normalizeCharKey(character)) || "Unassigned"
       let suffix = STATUS_REPORT_SUFFIX_MAP[status] || ""
 
@@ -1341,7 +1335,10 @@ export function ScriptSheetModal({
 
     return reports.sort((a, b) => {
       if (a.isResolved !== b.isResolved) return a.isResolved ? 1 : -1
-      return a.minEps - b.minEps
+      if (a.minEps !== b.minEps) return a.minEps - b.minEps
+      const aTime = timeToSeconds(a.startTimeFormatted) ?? 0
+      const bTime = timeToSeconds(b.startTimeFormatted) ?? 0
+      return aTime - bTime
     })
   }, [data.lines, data.masterArtists, taskTitle, localProgress.voReportChecks])
 
@@ -1702,8 +1699,13 @@ export function ScriptSheetModal({
     const groupChar = parts[0]?.toLowerCase() || ""
     const originalStatus = parts[1] || ""
     const groupEps = parts[2]?.trim() || ""
+    const groupLineId = parts[3]?.trim() || ""
 
     const matchesGroup = (line: ScriptLine) => {
+      if (groupLineId) {
+        return line.id === groupLineId
+      }
+
       const lineChar = (line.character || "").trim()
       const correctChar = (line.correctCharacter || "").trim()
       const targetChar = line.status === "Wrong Cast" && correctChar ? correctChar : lineChar
@@ -2178,7 +2180,7 @@ export function ScriptSheetModal({
             }`}
           >
             <Zap className="w-3.5 h-3.5 text-amber-500" /> VOA Report
-            {belumanCount > 0 && (
+            {missingReports.length > 0 && (
               <span className="ml-1 px-1.5 py-0.2 bg-red-500 text-white rounded-full text-[10px] font-bold">
                 {missingReports.length}
               </span>
@@ -3433,7 +3435,7 @@ export function ScriptSheetModal({
                 <div className="flex items-center gap-2 text-amber-900">
                   <Zap className="w-4 h-4 text-amber-600" />
                   <span>
-                    Auto-generated <b>{missingReports.length}</b> missing VOA audio report entries for lines marked <b>Beluman</b>.
+                    Auto-generated <b>{missingReports.length}</b> missing/issue VOA audio report entries.
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

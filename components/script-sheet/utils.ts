@@ -199,6 +199,17 @@ export function normalizeCharKey(name: string): string {
     .trim()
 }
 
+export function getVoReportGroupKey(targetChar: string, issueStatus: string, eps: string, lineId?: string): string {
+  const normKey = normalizeCharKey(targetChar)
+  if (issueStatus === "Beluman") {
+    return `${normKey}__${issueStatus}`
+  }
+  if (issueStatus === "Onomatopoeia" || issueStatus === "Missing Onomatopoeia") {
+    return `${normKey}__${issueStatus}__${eps}__${lineId || ""}`
+  }
+  return `${normKey}__${issueStatus}__${eps}`
+}
+
 export function formatEpisodeRangeNumbers(epsList: string[]): string {
   if (!epsList || epsList.length === 0) return "000"
 
